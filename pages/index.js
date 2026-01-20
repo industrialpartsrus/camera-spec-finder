@@ -8,67 +8,112 @@ export default function CameraSpecFinder() {
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleImageUpload = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setIsProcessingImage(true);
+// Add this helper function at the top of your component, before the handleImageUpload function
 
-    try {
-      const base64Data = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = () => reject(new Error('Failed to read image'));
-        reader.readAsDataURL(file);
-      });
+const compressImage = (file, maxWidth = 1200, quality = 0.8) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
 
-      // Call YOUR API route instead of Anthropic directly (secure!)
-      const response = await fetch('/api/process-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          imageData: base64Data, 
-          mimeType: file.type || 'image/jpeg' 
-        })
-      });
+        // Resize if image is too large
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
 
-      const data = await response.json();
-      const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
-      
-      console.log('Image response:', text);
-      
-      const brandMatch = text.match(/BRAND:\s*([^\|]+)/i);
-      const partMatch = text.match(/PART:\s*(.+)/i);
-      
-      let brand = brandMatch?.[1]?.trim() || '';
-      let part = partMatch?.[1]?.trim() || '';
-      
-      if (!brand || !part) {
-        const altBrand = text.match(/(?:brand|make|manufacturer)[:=\s]+([^\n,]+)/i);
-        const altPart = text.match(/(?:model|part|number|p\/n|part#)[:=\s]+([^\n,]+)/i);
-        brand = brand || altBrand?.[1]?.trim() || '';
-        part = part || altPart?.[1]?.trim() || '';
-      }
-      
-      if (brand && part) {
-        setBrandName(brand);
-        setPartNumber(part);
-        setTimeout(() => addToQueueWithValues(brand, part), 300);
-      } else if (brand || part) {
-        setBrandName(brand);
-        setPartNumber(part);
-        alert(`Found ${brand ? 'brand' : 'part number'} only. Please enter the missing information.`);
-      } else {
-        alert('Could not read nameplate clearly. Please enter information manually.');
-      }
-      
-    } catch (error) {
-      console.error('Image error:', error);
-      alert('Error reading image. Please try again or enter manually.');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to base64 with compression
+        canvas.toBlob(
+          (blob) => {
+            const compressedReader = new FileReader();
+            compressedReader.readAsDataURL(blob);
+            compressedReader.onloadend = () => {
+              const base64data = compressedReader.result.split(',')[1];
+              resolve(base64data);
+            };
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+};
+
+// Then update your handleImageUpload function to use compression:
+
+const handleImageUpload = async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  setIsProcessingImage(true);
+
+  try {
+    // Compress image before sending (max 1200px width, 80% quality)
+    const base64Data = await compressImage(file, 1200, 0.8);
+
+    // Call YOUR API route instead of Anthropic directly (secure!)
+    const response = await fetch('/api/process-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        imageData: base64Data, 
+        mimeType: 'image/jpeg' // Always JPEG after compression
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
+    
+    console.log('Image response:', text);
+    
+    const brandMatch = text.match(/BRAND:\s*([^\|]+)/i);
+    const partMatch = text.match(/PART:\s*(.+)/i);
+    
+    let brand = brandMatch?.[1]?.trim() || '';
+    let part = partMatch?.[1]?.trim() || '';
+    
+    if (!brand || !part) {
+      const altBrand = text.match(/(?:brand|make|manufacturer)[:=\s]+([^\n,]+)/i);
+      const altPart = text.match(/(?:model|part|number|p\/n|part#)[:=\s]+([^\n,]+)/i);
+      brand = brand || altBrand?.[1]?.trim() || '';
+      part = part || altPart?.[1]?.trim() || '';
     }
     
-    setIsProcessingImage(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
+    if (brand && part) {
+      setBrandName(brand);
+      setPartNumber(part);
+      setTimeout(() => addToQueueWithValues(brand, part), 300);
+    } else if (brand || part) {
+      setBrandName(brand);
+      setPartNumber(part);
+      alert(`Found ${brand ? 'brand' : 'part number'} only. Please enter the missing information.`);
+    } else {
+      alert('Could not read nameplate clearly. Please enter information manually.');
+    }
+    
+  } catch (error) {
+    console.error('Image error:', error);
+    alert('Error reading image. Please try again or enter manually.');
+  }
+  
+  setIsProcessingImage(false);
+  if (fileInputRef.current) fileInputRef.current.value = '';
+};
+  
 
   const addToQueueWithValues = (brand, part) => {
     if (!brand.trim() || !part.trim()) {
