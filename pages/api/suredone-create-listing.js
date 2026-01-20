@@ -20,8 +20,9 @@ export default async function handler(req, res) {
     let aiNumber = 1; // Default starting number
     
     try {
-      // Search for products with SKU starting with "AI"
-      const searchResponse = await fetch(`${SUREDONE_URL}/search/items/sku:AI*`, {
+      // Search for products with SKU containing "AI" using SureDone's search API
+      // Use the editor endpoint with a search query
+      const searchResponse = await fetch(`${SUREDONE_URL}/editor/items?search=sku:AI`, {
         method: 'GET',
         headers: {
           'X-Auth-User': SUREDONE_USER,
@@ -31,23 +32,35 @@ export default async function handler(req, res) {
       
       if (searchResponse.ok) {
         const searchData = await searchResponse.json();
-        console.log('Existing AI SKUs found:', searchData);
+        console.log('Search response:', searchData);
         
-        // Find the highest AI number
-        if (searchData.items && searchData.items.length > 0) {
-          const aiSkus = searchData.items
-            .map(item => item.sku)
-            .filter(sku => sku && sku.startsWith('AI'))
-            .map(sku => {
-              const match = sku.match(/^AI(\d+)/);
-              return match ? parseInt(match[1], 10) : 0;
-            });
+        // Parse the response to find AI SKUs
+        if (searchData && typeof searchData === 'object') {
+          const skus = [];
           
-          if (aiSkus.length > 0) {
-            const maxNumber = Math.max(...aiSkus);
+          // SureDone returns items as numbered keys (1, 2, 3, etc.)
+          for (const key in searchData) {
+            if (key !== 'result' && key !== 'message' && key !== 'type' && key !== 'time') {
+              const item = searchData[key];
+              if (item && item.sku && item.sku.startsWith('AI')) {
+                const match = item.sku.match(/^AI(\d+)/);
+                if (match) {
+                  skus.push(parseInt(match[1], 10));
+                }
+              }
+            }
+          }
+          
+          console.log('Found AI SKU numbers:', skus);
+          
+          if (skus.length > 0) {
+            const maxNumber = Math.max(...skus);
             aiNumber = maxNumber + 1;
+            console.log('Next AI number will be:', aiNumber);
           }
         }
+      } else {
+        console.log('Search returned status:', searchResponse.status);
       }
     } catch (searchError) {
       console.log('Could not search for existing SKUs, starting from AI0001:', searchError.message);
