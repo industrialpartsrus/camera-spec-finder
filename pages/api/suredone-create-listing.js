@@ -64,9 +64,8 @@ export default async function handler(req, res) {
     // Build form data according to SureDone v1 API format
     const formData = new URLSearchParams();
     
-    // Required identifier field
-    formData.append('identifier', sku);
-    formData.append('action', 'start'); // Try 'start' instead of 'add' for new products
+    // Set action to 'add' for creating new products in the system
+    formData.append('action', 'add');
     
     // Product fields
     const fields = {
