@@ -120,6 +120,7 @@ export default function CameraSpecFinder() {
       console.log('Response received');
       const data = await response.json();
       console.log('Data parsed, has content:', !!data.content);
+      console.log('Full API response:', JSON.stringify(data, null, 2));
       
       const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
       console.log('Text length:', text.length);
