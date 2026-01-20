@@ -64,50 +64,43 @@ export default async function handler(req, res) {
     // Build form data according to SureDone v1 API format
     const formData = new URLSearchParams();
     
-    // Set action to 'add' for creating new products in the system
-    formData.append('action', 'add');
+    // Tell SureDone we're using a GUID identifier
+    formData.append('identifier', 'guid');
+    formData.append('guid', sku);
     
-    // Product fields
-    const fields = {
-      sku: sku, // Add SKU to fields
-      title: product.title,
-      longdescription: product.description,
-      price: product.price || '0.00',
-      stock: product.stock || '1',
-      condition: 'New',
-      brand: product.brand,
-      mpn: product.partNumber,
-    };
+    // Add all product fields directly (NOT as JSON)
+    formData.append('sku', sku);
+    formData.append('title', product.title);
+    formData.append('longdescription', product.description);
+    formData.append('price', product.price || '0.00');
+    formData.append('stock', product.stock || '1');
+    formData.append('condition', 'New');
+    formData.append('brand', product.brand);
+    formData.append('mpn', product.partNumber);
 
     // Add meta description and keywords
     if (product.metaDescription) {
-      fields.metadescription = product.metaDescription;
+      formData.append('metadescription', product.metaDescription);
     }
     if (product.metaKeywords) {
-      fields.keywords = product.metaKeywords;
+      formData.append('keywords', product.metaKeywords);
     }
 
     // Add eBay category if provided
     if (product.ebayCategory) {
-      fields.ebaycategory = product.ebayCategory;
+      formData.append('ebaycategory', product.ebayCategory);
     }
 
     // Add specifications as custom fields
     if (product.specifications && product.specifications.length > 0) {
       product.specifications.forEach((spec, index) => {
-        fields[`customfield${index + 1}`] = spec;
+        formData.append(`customfield${index + 1}`, spec);
       });
     }
 
-    // Convert fields object to JSON string for the 'fields' parameter
-    formData.append('fields', JSON.stringify(fields));
-
     console.log('Sending to SureDone SKU:', sku);
-    console.log('Fields:', JSON.stringify(fields, null, 2));
 
-    // For new items, use guid parameter instead of identifier
-    // guid allows SureDone to create a new item, identifier is for existing items
-    const response = await fetch(`${SUREDONE_URL}/editor/items/add?guid=${sku}`, {
+    const response = await fetch(`${SUREDONE_URL}/editor/items/add`, {
       method: 'POST',
       headers: {
         'X-Auth-User': SUREDONE_USER,
