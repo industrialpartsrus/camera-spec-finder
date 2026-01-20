@@ -18,19 +18,19 @@ export default async function handler(req, res) {
     // Create product in SureDone using v1 API editor endpoint
     // Docs: https://app.suredone.com/v1/editor/{type}/{action}
     
-    // Generate a unique identifier - use GUID format for auto SKU generation
-    // SureDone will auto-generate the SKU if we use guid type
-    const uniqueId = `${product.brand}${product.partNumber}${Date.now()}`.replace(/[^a-zA-Z0-9]/g, '');
+    // Generate a clean SKU - alphanumeric only
+    const sku = product.sku || `${product.brand}${product.partNumber}`.replace(/[^a-zA-Z0-9]/g, '');
     
     // Build form data according to SureDone v1 API format
     const formData = new URLSearchParams();
     
-    // Try using guid instead of identifier to let SureDone auto-generate SKU
-    formData.append('guid', uniqueId);
-    formData.append('action', 'add');
+    // Required identifier field
+    formData.append('identifier', sku);
+    formData.append('action', 'start'); // Try 'start' instead of 'add' for new products
     
     // Product fields
     const fields = {
+      sku: sku, // Add SKU to fields
       title: product.title,
       longdescription: product.description,
       price: product.price || '0.00',
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     // Convert fields object to JSON string for the 'fields' parameter
     formData.append('fields', JSON.stringify(fields));
 
-    console.log('Sending to SureDone with GUID:', uniqueId);
+    console.log('Sending to SureDone SKU:', sku);
     console.log('Fields:', JSON.stringify(fields, null, 2));
 
     const response = await fetch(`${SUREDONE_URL}/editor/items/add`, {
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
       res.status(200).json({ 
         success: true, 
         message: 'Product created in SureDone',
-        sku: data.sku || data.guid || uniqueId // Return whatever SureDone generated
+        sku: data.sku || sku
       });
     } else {
       res.status(400).json({ 
