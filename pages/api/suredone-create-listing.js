@@ -15,11 +15,51 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Generate SKU with AI prefix and auto-increment
+    // First, search SureDone for existing AI SKUs to find the next number
+    let aiNumber = 1; // Default starting number
+    
+    try {
+      // Search for products with SKU starting with "AI"
+      const searchResponse = await fetch(`${SUREDONE_URL}/search/items/sku:AI*`, {
+        method: 'GET',
+        headers: {
+          'X-Auth-User': SUREDONE_USER,
+          'X-Auth-Token': SUREDONE_TOKEN
+        }
+      });
+      
+      if (searchResponse.ok) {
+        const searchData = await searchResponse.json();
+        console.log('Existing AI SKUs found:', searchData);
+        
+        // Find the highest AI number
+        if (searchData.items && searchData.items.length > 0) {
+          const aiSkus = searchData.items
+            .map(item => item.sku)
+            .filter(sku => sku && sku.startsWith('AI'))
+            .map(sku => {
+              const match = sku.match(/^AI(\d+)/);
+              return match ? parseInt(match[1], 10) : 0;
+            });
+          
+          if (aiSkus.length > 0) {
+            const maxNumber = Math.max(...aiSkus);
+            aiNumber = maxNumber + 1;
+          }
+        }
+      }
+    } catch (searchError) {
+      console.log('Could not search for existing SKUs, starting from AI0001:', searchError.message);
+    }
+    
+    // Format as AI0001, AI0002, etc. (4 digits with leading zeros)
+    const sku = `AI${String(aiNumber).padStart(4, '0')}`;
+    
+    console.log('Generated SKU:', sku);
+    
     // Create product in SureDone using v1 API editor endpoint
     // Docs: https://app.suredone.com/v1/editor/{type}/{action}
-    
-    // Generate a clean SKU - alphanumeric only
-    const sku = product.sku || `${product.brand}${product.partNumber}`.replace(/[^a-zA-Z0-9]/g, '');
     
     // Build form data according to SureDone v1 API format
     const formData = new URLSearchParams();
