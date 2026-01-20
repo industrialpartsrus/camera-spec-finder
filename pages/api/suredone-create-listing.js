@@ -5,90 +5,103 @@ export default async function handler(req, res) {
 
   const { product } = req.body;
 
-  // SureDone API v3 credentials from environment variables
+  // SureDone API credentials from environment variables
   const SUREDONE_USER = process.env.SUREDONE_USER;
   const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
-  const SUREDONE_URL = process.env.SUREDONE_URL || 'https://api.suredone.com/v3';
+  const SUREDONE_URL = process.env.SUREDONE_URL || 'https://app.suredone.com/v1';
 
   if (!SUREDONE_USER || !SUREDONE_TOKEN) {
     return res.status(500).json({ error: 'SureDone credentials not configured' });
   }
 
   try {
-    // Create product in SureDone using v3 API
-    // Docs: https://suredone.com/resources/developers/api-v3/
+    // Create product in SureDone using v1 API editor endpoint
+    // Docs: https://app.suredone.com/v1/editor/{type}/{action}
     
     const sku = product.sku || `${product.brand}-${product.partNumber}`.replace(/\s+/g, '-');
     
-    // Build the product data object
-    const productData = {
-      sku: sku,
+    // Build form data according to SureDone v1 API format
+    const formData = new URLSearchParams();
+    
+    // Required fields
+    formData.append('identifier', sku);
+    formData.append('action', 'add');
+    
+    // Product fields
+    const fields = {
       title: product.title,
       longdescription: product.description,
       price: product.price || '0.00',
       stock: product.stock || '1',
       condition: 'New',
-      // Add meta description
-      metadescription: product.metaDescription || '',
-      // Add keywords
-      keywords: product.metaKeywords || '',
-      // Brand and MPN
       brand: product.brand,
       mpn: product.partNumber,
     };
 
-    // Add eBay-specific fields if category is provided
+    // Add meta description and keywords
+    if (product.metaDescription) {
+      fields.metadescription = product.metaDescription;
+    }
+    if (product.metaKeywords) {
+      fields.keywords = product.metaKeywords;
+    }
+
+    // Add eBay category if provided
     if (product.ebayCategory) {
-      productData.ebaycategory = product.ebayCategory;
-      productData.ebaytitle = product.title;
+      fields.ebaycategory = product.ebayCategory;
     }
 
     // Add specifications as custom fields
     if (product.specifications && product.specifications.length > 0) {
       product.specifications.forEach((spec, index) => {
-        productData[`customfield${index + 1}`] = spec;
+        fields[`customfield${index + 1}`] = spec;
       });
     }
 
-    console.log('Sending to SureDone:', sku);
+    // Convert fields object to JSON string for the 'fields' parameter
+    formData.append('fields', JSON.stringify(fields));
 
-    const response = await fetch(`${SUREDONE_URL}/products`, {
+    console.log('Sending to SureDone:', sku);
+    console.log('Fields:', JSON.stringify(fields, null, 2));
+
+    const response = await fetch(`${SUREDONE_URL}/editor/items/add`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'X-Auth-User': SUREDONE_USER,
-        'X-Auth-Token': SUREDONE_TOKEN
+        'X-Auth-Token': SUREDONE_TOKEN,
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: JSON.stringify(productData)
+      body: formData.toString()
     });
 
     console.log('SureDone response status:', response.status);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('SureDone error:', errorText);
-      return res.status(response.status).json({ 
+    const responseText = await response.text();
+    console.log('SureDone response:', responseText);
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Failed to parse SureDone response:', responseText.substring(0, 500));
+      return res.status(500).json({ 
         success: false,
-        error: `SureDone API error: ${response.status}`,
-        details: errorText.substring(0, 500)
+        error: 'Invalid response from SureDone',
+        details: responseText.substring(0, 500)
       });
     }
 
-    const data = await response.json();
-    console.log('SureDone response:', data);
-    
-    // v3 API returns different success format
-    if (data.result === 'success' || data.sku) {
+    if (data.result === 'success') {
       res.status(200).json({ 
         success: true, 
         message: 'Product created in SureDone',
-        sku: data.sku || sku
+        sku: sku
       });
     } else {
       res.status(400).json({ 
         success: false, 
-        error: data.message || data.error || 'SureDone API error',
-        details: JSON.stringify(data)
+        error: data.message || 'SureDone API error',
+        details: data
       });
     }
     
