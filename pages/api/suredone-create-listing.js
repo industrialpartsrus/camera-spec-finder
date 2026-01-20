@@ -105,7 +105,9 @@ export default async function handler(req, res) {
     console.log('Sending to SureDone SKU:', sku);
     console.log('Fields:', JSON.stringify(fields, null, 2));
 
-    const response = await fetch(`${SUREDONE_URL}/editor/items/add`, {
+    // For new items, use guid parameter instead of identifier
+    // guid allows SureDone to create a new item, identifier is for existing items
+    const response = await fetch(`${SUREDONE_URL}/editor/items/add?guid=${sku}`, {
       method: 'POST',
       headers: {
         'X-Auth-User': SUREDONE_USER,
