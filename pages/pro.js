@@ -1,0 +1,426 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, User, RefreshCw, Edit2 } from 'lucide-react';
+
+// Condition options
+const CONDITION_OPTIONS = [
+  { value: 'new_in_box', label: 'New In Box (NIB)' },
+  { value: 'new_open_box', label: 'New - Open Box (NOBOX)' },
+  { value: 'new_missing_hardware', label: 'New - Missing Hardware (NMISS)' },
+  { value: 'like_new_excellent', label: 'Excellent - Barely Used (LN-EX)' },
+  { value: 'used_very_good', label: 'Used - Very Good (VG)' },
+  { value: 'used_good', label: 'Used - Good (GOOD)' },
+  { value: 'used_fair', label: 'Used - Fair (FAIR)' },
+  { value: 'for_parts', label: 'For Parts or Not Working (FPNW)' }
+];
+
+const CONDITION_NOTES = {
+  'new_in_box': 'New item in original manufacturer packaging. Unopened and unused. Includes all original components, manuals, and hardware. We warranty all items for 30 days.',
+  'new_open_box': 'New item, factory seal broken or packaging removed. All original components included. Never used. We warranty all items for 30 days.',
+  'new_missing_hardware': 'New item, may be missing original packaging, manuals, or minor hardware. Fully functional and unused. We warranty all items for 30 days.',
+  'like_new_excellent': 'Previously owned, appears barely used with minimal signs of wear. Tested and fully functional. We warranty all items for 30 days.',
+  'used_very_good': 'Previously used, shows light cosmetic wear from normal use. Tested and fully functional. We warranty all items for 30 days.',
+  'used_good': 'Previously used, shows signs of wear or discoloration due to normal use. Tested and fully functional. We warranty all items for 30 days.',
+  'used_fair': 'Previously used, shows moderate to heavy wear. May have cosmetic damage. Tested and fully functional. We warranty all items for 30 days.',
+  'for_parts': 'Item sold as-is for parts or repair. Not tested or may not be fully functional. No warranty provided.'
+};
+
+export default function ProListingBuilder() {
+  const [queue, setQueue] = useState([]);
+  const [brandName, setBrandName] = useState('');
+  const [partNumber, setPartNumber] = useState('');
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [isNameSet, setIsNameSet] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    loadSharedQueue();
+    const interval = setInterval(loadSharedQueue, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadSharedQueue = async () => {
+    try {
+      const result = await window.storage.list('proitem:', true);
+      if (result && result.keys) {
+        const items = await Promise.all(
+          result.keys.map(async key => {
+            try {
+              const data = await window.storage.get(key, true);
+              return data ? JSON.parse(data.value) : null;
+            } catch {
+              return null;
+            }
+          })
+        );
+        setQueue(items.filter(Boolean).sort((a, b) => b.id - a.id));
+      }
+    } catch (error) {
+      console.error('Load error:', error);
+    }
+  };
+
+  const saveItemToShared = async (item) => {
+    try {
+      await window.storage.set(`proitem:${item.id}`, JSON.stringify(item), true);
+      await loadSharedQueue();
+    } catch (error) {
+      console.error('Save error:', error);
+    }
+  };
+
+  const compressImage = (file, maxWidth = 1200, quality = 0.8) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob((blob) => {
+            const compressedReader = new FileReader();
+            compressedReader.readAsDataURL(blob);
+            compressedReader.onloadend = () => {
+              resolve(compressedReader.result.split(',')[1]);
+            };
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+  };
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsProcessingImage(true);
+
+    try {
+      const base64Data = await compressImage(file);
+      const response = await fetch('/api/process-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData: base64Data, mimeType: 'image/jpeg' })
+      });
+
+      const data = await response.json();
+      const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
+      
+      const brandMatch = text.match(/BRAND:\s*([^\|]+)/i);
+      const partMatch = text.match(/PART:\s*(.+)/i);
+      
+      let brand = brandMatch?.[1]?.trim() || '';
+      let part = partMatch?.[1]?.trim() || '';
+      
+      if (brand && part) {
+        addToQueueWithValues(brand, part);
+      } else {
+        alert('Could not extract info. Please enter manually.');
+      }
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+    
+    setIsProcessingImage(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const addToQueueWithValues = async (brand, part) => {
+    if (!brand.trim() || !part.trim()) {
+      alert('Enter brand and part number');
+      return;
+    }
+
+    const newItem = {
+      id: Date.now(),
+      brand: brand.trim(),
+      partNumber: part.trim(),
+      status: 'pending',
+      workStatus: 'unclaimed',
+      claimedBy: null,
+      createdBy: userName || 'Unknown',
+      title: '',
+      description: '',
+      specifications: [],
+      condition: 'used_good',
+      conditionNotes: CONDITION_NOTES['used_good'],
+      price: '',
+      shelf: '',
+      boxLength: '',
+      boxWidth: '',
+      boxHeight: '',
+      weight: '',
+      error: null
+    };
+
+    await saveItemToShared(newItem);
+    setBrandName('');
+    setPartNumber('');
+    setSelectedItem(newItem.id);
+    setTimeout(() => processItem(newItem.id), 500);
+  };
+
+  const addToQueue = () => addToQueueWithValues(brandName, partNumber);
+
+  const processItem = async (itemId) => {
+    let item = queue.find(q => q.id === itemId);
+    if (!item) {
+      try {
+        const data = await window.storage.get(`proitem:${itemId}`, true);
+        if (data) item = JSON.parse(data.value);
+      } catch (error) {
+        return;
+      }
+    }
+    
+    if (!item || item.status === 'complete' || item.status === 'searching') return;
+
+    await saveItemToShared({ ...item, status: 'searching' });
+
+    try {
+      const response = await fetch('/api/search-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand: item.brand, partNumber: item.partNumber })
+      });
+
+      const data = await response.json();
+      const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      
+      if (!jsonMatch) throw new Error('No data');
+
+      const product = JSON.parse(jsonMatch[0]);
+      
+      await saveItemToShared({
+        ...item,
+        status: 'complete',
+        title: product.title || `${item.brand} ${item.partNumber}`,
+        description: product.description || '',
+        specifications: Array.isArray(product.specifications) ? product.specifications : []
+      });
+    } catch (error) {
+      await saveItemToShared({ ...item, status: 'error', error: error.message });
+    }
+  };
+
+  const claimItem = async (itemId) => {
+    const item = queue.find(q => q.id === itemId);
+    if (!item) return;
+    await saveItemToShared({ ...item, workStatus: 'claimed', claimedBy: userName });
+    setSelectedItem(itemId);
+  };
+
+  const updateField = async (itemId, field, value) => {
+    const item = queue.find(q => q.id === itemId);
+    if (!item) return;
+    await saveItemToShared({ ...item, [field]: value });
+  };
+
+  const updateCondition = async (itemId, conditionValue) => {
+    const item = queue.find(q => q.id === itemId);
+    if (!item) return;
+    await saveItemToShared({ ...item, condition: conditionValue, conditionNotes: CONDITION_NOTES[conditionValue] });
+  };
+
+  const deleteItem = async (itemId) => {
+    try {
+      await window.storage.delete(`proitem:${itemId}`, true);
+      if (selectedItem === itemId) setSelectedItem(null);
+      await loadSharedQueue();
+    } catch (error) {
+      console.error('Delete error:', error);
+    }
+  };
+
+  const stats = {
+    total: queue.length,
+    unclaimed: queue.filter(q => q.workStatus === 'unclaimed' && q.status === 'complete').length,
+    claimed: queue.filter(q => q.workStatus === 'claimed').length,
+    mine: queue.filter(q => q.claimedBy === userName).length
+  };
+
+  if (!isNameSet) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-6">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
+          <h1 className="text-2xl font-bold mb-4">Pro Listing Builder</h1>
+          <p className="text-gray-600 mb-6">Enter your name to begin</p>
+          <input
+            type="text"
+            placeholder="Your Name"
+            value={userName}
+            onChange={e => setUserName(e.target.value)}
+            onKeyPress={e => e.key === 'Enter' && userName.trim() && setIsNameSet(true)}
+            className="w-full px-4 py-3 border rounded-lg mb-4"
+          />
+          <button onClick={() => userName.trim() && setIsNameSet(true)} disabled={!userName.trim()} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            Start
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const selected = queue.find(q => q.id === selectedItem);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b px-6 py-4">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-bold">Pro Listing Builder</h1>
+            <p className="text-sm text-gray-600">Logged in: <span className="font-semibold">{userName}</span></p>
+          </div>
+          <button onClick={loadSharedQueue} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Sync
+          </button>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="px-3 py-2 bg-blue-50 rounded-lg"><span className="text-xs text-blue-600">Total: </span><span className="font-bold text-blue-800">{stats.total}</span></div>
+          <div className="px-3 py-2 bg-yellow-50 rounded-lg"><span className="text-xs text-yellow-600">Unclaimed: </span><span className="font-bold text-yellow-800">{stats.unclaimed}</span></div>
+          <div className="px-3 py-2 bg-purple-50 rounded-lg"><span className="text-xs text-purple-600">In Progress: </span><span className="font-bold text-purple-800">{stats.claimed}</span></div>
+          <div className="px-3 py-2 bg-green-50 rounded-lg"><span className="text-xs text-green-600">Mine: </span><span className="font-bold text-green-800">{stats.mine}</span></div>
+        </div>
+      </div>
+
+      <div className="flex h-[calc(100vh-180px)]">
+        {/* LEFT - Queue */}
+        <div className="w-80 bg-white border-r overflow-y-auto">
+          <div className="p-4 border-b">
+            <h2 className="font-semibold mb-3">Add Item</h2>
+            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageUpload} className="hidden" id="cam" />
+            <label htmlFor="cam" className="w-full px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer flex items-center justify-center gap-2 text-sm mb-2">
+              <Camera className="w-4 h-4" />
+              {isProcessingImage ? 'Processing...' : 'Scan'}
+            </label>
+            <input type="text" placeholder="Brand" value={brandName} onChange={e => setBrandName(e.target.value)} className="w-full px-3 py-2 border rounded-lg mb-2 text-sm" />
+            <input type="text" placeholder="Part" value={partNumber} onChange={e => setPartNumber(e.target.value)} onKeyPress={e => e.key === 'Enter' && addToQueue()} className="w-full px-3 py-2 border rounded-lg mb-2 text-sm" />
+            <button onClick={addToQueue} className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              <Plus className="w-4 h-4 inline mr-1" />
+              Add
+            </button>
+          </div>
+
+          <div className="p-2">
+            <h3 className="text-sm font-semibold text-gray-600 mb-2 px-2">Queue ({queue.length})</h3>
+            {queue.map(item => (
+              <div key={item.id} onClick={() => item.status === 'complete' && setSelectedItem(item.id)} className={`p-3 mb-2 rounded-lg border cursor-pointer ${selectedItem === item.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      {item.status === 'searching' && <Loader className="w-4 h-4 text-blue-500 animate-spin" />}
+                      {item.status === 'complete' && <CheckCircle className="w-4 h-4 text-green-500" />}
+                      {item.status === 'error' && <AlertCircle className="w-4 h-4 text-red-500" />}
+                      <span className="text-sm font-semibold text-gray-800 truncate">{item.brand}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
+                    {item.claimedBy && <p className="text-xs text-purple-600 mt-1"><User className="w-3 h-3 inline" /> {item.claimedBy}</p>}
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-1 rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* CENTER - Editor */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {selected ? (
+            <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold">{selected.brand} {selected.partNumber}</h2>
+                  <p className="text-sm text-gray-500">Status: {selected.status}</p>
+                </div>
+                {selected.workStatus === 'unclaimed' && selected.status === 'complete' && (
+                  <button onClick={() => claimItem(selected.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Claim
+                  </button>
+                )}
+              </div>
+
+              {selected.status === 'complete' && selected.claimedBy === userName && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Title ({selected.title.length}/80)</label>
+                    <input type="text" value={selected.title} onChange={e => updateField(selected.id, 'title', e.target.value.slice(0, 80))} className="w-full px-3 py-2 border rounded-lg" maxLength={80} />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Description</label>
+                    <textarea value={selected.description} onChange={e => updateField(selected.id, 'description', e.target.value)} className="w-full px-3 py-2 border rounded-lg h-32" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Condition</label>
+                    <select value={selected.condition} onChange={e => updateCondition(selected.id, e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+                      {CONDITION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                    <p className="text-xs text-gray-600 mt-2">{selected.conditionNotes}</p>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-4">
+                    <div><label className="block text-xs font-semibold mb-1">Length</label><input type="text" placeholder="in" value={selected.boxLength} onChange={e => updateField(selected.id, 'boxLength', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
+                    <div><label className="block text-xs font-semibold mb-1">Width</label><input type="text" placeholder="in" value={selected.boxWidth} onChange={e => updateField(selected.id, 'boxWidth', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
+                    <div><label className="block text-xs font-semibold mb-1">Height</label><input type="text" placeholder="in" value={selected.boxHeight} onChange={e => updateField(selected.id, 'boxHeight', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
+                    <div><label className="block text-xs font-semibold mb-1">Weight</label><input type="text" placeholder="lbs" value={selected.weight} onChange={e => updateField(selected.id, 'weight', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><label className="block text-sm font-semibold mb-2">Price ($)</label><input type="text" placeholder="0.00" value={selected.price} onChange={e => updateField(selected.id, 'price', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
+                    <div><label className="block text-sm font-semibold mb-2">Shelf</label><input type="text" placeholder="A1" value={selected.shelf} onChange={e => updateField(selected.id, 'shelf', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
+                  </div>
+
+                  <button className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">Send to SureDone</button>
+                </div>
+              )}
+
+              {selected.status === 'searching' && <div className="text-center py-12 text-gray-500">AI searching...</div>}
+              {selected.status === 'error' && <div className="text-center py-12 text-red-500">Error: {selected.error}</div>}
+              {selected.claimedBy && selected.claimedBy !== userName && <div className="text-center py-12 text-gray-500">Processing by {selected.claimedBy}</div>}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-400">
+              <div className="text-center"><Search className="w-16 h-16 mx-auto mb-4 opacity-50" /><p>Select an item to begin</p></div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT - Preview */}
+        <div className="w-80 bg-white border-l p-4">
+          <h3 className="font-semibold mb-4">Preview</h3>
+          {selected && selected.status === 'complete' ? (
+            <div className="space-y-3 text-sm">
+              <div className="border rounded p-2 bg-gray-50"><p className="font-semibold text-gray-700">Title</p><p className="text-gray-900">{selected.title || 'Generating...'}</p></div>
+              <div className="border rounded p-2 bg-gray-50"><p className="font-semibold text-gray-700">Condition</p><p className="text-gray-900">{CONDITION_OPTIONS.find(c => c.value === selected.condition)?.label}</p></div>
+              <div className="border rounded p-2 bg-gray-50"><p className="font-semibold text-gray-700">Price</p><p className="text-gray-900">{selected.price ? `$${selected.price}` : 'Not set'}</p></div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">No preview</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
