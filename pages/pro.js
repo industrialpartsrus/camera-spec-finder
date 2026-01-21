@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, User, RefreshCw, Edit2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, User, Edit2 } from 'lucide-react';
 
-// Condition options
 const CONDITION_OPTIONS = [
   { value: 'new_in_box', label: 'New In Box (NIB)' },
   { value: 'new_open_box', label: 'New - Open Box (NOBOX)' },
@@ -33,42 +32,6 @@ export default function ProListingBuilder() {
   const [isNameSet, setIsNameSet] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    loadSharedQueue();
-    const interval = setInterval(loadSharedQueue, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadSharedQueue = async () => {
-    try {
-      const result = await window.storage.list('proitem:', true);
-      if (result && result.keys) {
-        const items = await Promise.all(
-          result.keys.map(async key => {
-            try {
-              const data = await window.storage.get(key, true);
-              return data ? JSON.parse(data.value) : null;
-            } catch {
-              return null;
-            }
-          })
-        );
-        setQueue(items.filter(Boolean).sort((a, b) => b.id - a.id));
-      }
-    } catch (error) {
-      console.error('Load error:', error);
-    }
-  };
-
-  const saveItemToShared = async (item) => {
-    try {
-      await window.storage.set(`proitem:${item.id}`, JSON.stringify(item), true);
-      await loadSharedQueue();
-    } catch (error) {
-      console.error('Save error:', error);
-    }
-  };
 
   const compressImage = (file, maxWidth = 1200, quality = 0.8) => {
     return new Promise((resolve, reject) => {
@@ -132,8 +95,11 @@ export default function ProListingBuilder() {
         addToQueueWithValues(brand, part);
       } else {
         alert('Could not extract info. Please enter manually.');
+        setBrandName(brand);
+        setPartNumber(part);
       }
     } catch (error) {
+      console.error('Image error:', error);
       alert('Error: ' + error.message);
     }
     
@@ -141,7 +107,7 @@ export default function ProListingBuilder() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const addToQueueWithValues = async (brand, part) => {
+  const addToQueueWithValues = (brand, part) => {
     if (!brand.trim() || !part.trim()) {
       alert('Enter brand and part number');
       return;
@@ -152,8 +118,6 @@ export default function ProListingBuilder() {
       brand: brand.trim(),
       partNumber: part.trim(),
       status: 'pending',
-      workStatus: 'unclaimed',
-      claimedBy: null,
       createdBy: userName || 'Unknown',
       title: '',
       description: '',
@@ -169,31 +133,25 @@ export default function ProListingBuilder() {
       error: null
     };
 
-    await saveItemToShared(newItem);
+    setQueue(prev => [newItem, ...prev]);
     setBrandName('');
     setPartNumber('');
     setSelectedItem(newItem.id);
-    setTimeout(() => processItem(newItem.id), 500);
+    
+    processItem(newItem.id);
   };
 
   const addToQueue = () => addToQueueWithValues(brandName, partNumber);
 
   const processItem = async (itemId) => {
-    let item = queue.find(q => q.id === itemId);
-    if (!item) {
-      try {
-        const data = await window.storage.get(`proitem:${itemId}`, true);
-        if (data) item = JSON.parse(data.value);
-      } catch (error) {
-        return;
-      }
-    }
-    
-    if (!item || item.status === 'complete' || item.status === 'searching') return;
-
-    await saveItemToShared({ ...item, status: 'searching' });
+    setQueue(prev => prev.map(q => 
+      q.id === itemId ? { ...q, status: 'searching' } : q
+    ));
 
     try {
+      const item = queue.find(q => q.id === itemId);
+      if (!item) return;
+
       const response = await fetch('/api/search-product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -208,52 +166,45 @@ export default function ProListingBuilder() {
 
       const product = JSON.parse(jsonMatch[0]);
       
-      await saveItemToShared({
-        ...item,
-        status: 'complete',
-        title: product.title || `${item.brand} ${item.partNumber}`,
-        description: product.description || '',
-        specifications: Array.isArray(product.specifications) ? product.specifications : []
-      });
+      setQueue(prev => prev.map(q => 
+        q.id === itemId ? {
+          ...q,
+          status: 'complete',
+          title: product.title || `${item.brand} ${item.partNumber}`,
+          description: product.description || '',
+          specifications: Array.isArray(product.specifications) ? product.specifications : []
+        } : q
+      ));
     } catch (error) {
-      await saveItemToShared({ ...item, status: 'error', error: error.message });
+      console.error('Processing error:', error);
+      setQueue(prev => prev.map(q => 
+        q.id === itemId ? { ...q, status: 'error', error: error.message } : q
+      ));
     }
   };
 
-  const claimItem = async (itemId) => {
-    const item = queue.find(q => q.id === itemId);
-    if (!item) return;
-    await saveItemToShared({ ...item, workStatus: 'claimed', claimedBy: userName });
-    setSelectedItem(itemId);
+  const updateField = (itemId, field, value) => {
+    setQueue(prev => prev.map(q => 
+      q.id === itemId ? { ...q, [field]: value } : q
+    ));
   };
 
-  const updateField = async (itemId, field, value) => {
-    const item = queue.find(q => q.id === itemId);
-    if (!item) return;
-    await saveItemToShared({ ...item, [field]: value });
+  const updateCondition = (itemId, conditionValue) => {
+    setQueue(prev => prev.map(q => 
+      q.id === itemId ? { ...q, condition: conditionValue, conditionNotes: CONDITION_NOTES[conditionValue] } : q
+    ));
   };
 
-  const updateCondition = async (itemId, conditionValue) => {
-    const item = queue.find(q => q.id === itemId);
-    if (!item) return;
-    await saveItemToShared({ ...item, condition: conditionValue, conditionNotes: CONDITION_NOTES[conditionValue] });
-  };
-
-  const deleteItem = async (itemId) => {
-    try {
-      await window.storage.delete(`proitem:${itemId}`, true);
-      if (selectedItem === itemId) setSelectedItem(null);
-      await loadSharedQueue();
-    } catch (error) {
-      console.error('Delete error:', error);
-    }
+  const deleteItem = (itemId) => {
+    setQueue(prev => prev.filter(q => q.id !== itemId));
+    if (selectedItem === itemId) setSelectedItem(null);
   };
 
   const stats = {
     total: queue.length,
-    unclaimed: queue.filter(q => q.workStatus === 'unclaimed' && q.status === 'complete').length,
-    claimed: queue.filter(q => q.workStatus === 'claimed').length,
-    mine: queue.filter(q => q.claimedBy === userName).length
+    complete: queue.filter(q => q.status === 'complete').length,
+    searching: queue.filter(q => q.status === 'searching').length,
+    error: queue.filter(q => q.status === 'error').length
   };
 
   if (!isNameSet) {
@@ -288,27 +239,21 @@ export default function ProListingBuilder() {
             <h1 className="text-2xl font-bold">Pro Listing Builder</h1>
             <p className="text-sm text-gray-600">Logged in: <span className="font-semibold">{userName}</span></p>
           </div>
-          <button onClick={loadSharedQueue} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Sync
-          </button>
         </div>
 
         <div className="flex gap-4">
           <div className="px-3 py-2 bg-blue-50 rounded-lg"><span className="text-xs text-blue-600">Total: </span><span className="font-bold text-blue-800">{stats.total}</span></div>
-          <div className="px-3 py-2 bg-yellow-50 rounded-lg"><span className="text-xs text-yellow-600">Unclaimed: </span><span className="font-bold text-yellow-800">{stats.unclaimed}</span></div>
-          <div className="px-3 py-2 bg-purple-50 rounded-lg"><span className="text-xs text-purple-600">In Progress: </span><span className="font-bold text-purple-800">{stats.claimed}</span></div>
-          <div className="px-3 py-2 bg-green-50 rounded-lg"><span className="text-xs text-green-600">Mine: </span><span className="font-bold text-green-800">{stats.mine}</span></div>
+          <div className="px-3 py-2 bg-yellow-50 rounded-lg"><span className="text-xs text-yellow-600">Searching: </span><span className="font-bold text-yellow-800">{stats.searching}</span></div>
+          <div className="px-3 py-2 bg-green-50 rounded-lg"><span className="text-xs text-green-600">Complete: </span><span className="font-bold text-green-800">{stats.complete}</span></div>
+          <div className="px-3 py-2 bg-red-50 rounded-lg"><span className="text-xs text-red-600">Errors: </span><span className="font-bold text-red-800">{stats.error}</span></div>
         </div>
       </div>
 
       <div className="flex h-[calc(100vh-180px)]">
-        {/* LEFT - Queue */}
         <div className="w-80 bg-white border-r overflow-y-auto">
           <div className="p-4 border-b">
             <h2 className="font-semibold mb-3">Add Item</h2>
             
-            {/* Camera and Upload Buttons */}
             <div className="flex gap-2 mb-2">
               <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageUpload} className="hidden" id="cam" />
               <label htmlFor="cam" className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer flex items-center justify-center gap-2 text-sm">
@@ -333,7 +278,7 @@ export default function ProListingBuilder() {
           <div className="p-2">
             <h3 className="text-sm font-semibold text-gray-600 mb-2 px-2">Queue ({queue.length})</h3>
             {queue.map(item => (
-              <div key={item.id} onClick={() => item.status === 'complete' && setSelectedItem(item.id)} className={`p-3 mb-2 rounded-lg border cursor-pointer ${selectedItem === item.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}>
+              <div key={item.id} onClick={() => setSelectedItem(item.id)} className={`p-3 mb-2 rounded-lg border cursor-pointer ${selectedItem === item.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -343,7 +288,6 @@ export default function ProListingBuilder() {
                       <span className="text-sm font-semibold text-gray-800 truncate">{item.brand}</span>
                     </div>
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
-                    {item.claimedBy && <p className="text-xs text-purple-600 mt-1"><User className="w-3 h-3 inline" /> {item.claimedBy}</p>}
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-1 rounded">
                     <X className="w-4 h-4" />
@@ -354,7 +298,6 @@ export default function ProListingBuilder() {
           </div>
         </div>
 
-        {/* CENTER - Editor */}
         <div className="flex-1 overflow-y-auto p-6">
           {selected ? (
             <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm p-6">
@@ -363,14 +306,9 @@ export default function ProListingBuilder() {
                   <h2 className="text-2xl font-bold">{selected.brand} {selected.partNumber}</h2>
                   <p className="text-sm text-gray-500">Status: {selected.status}</p>
                 </div>
-                {selected.workStatus === 'unclaimed' && selected.status === 'complete' && (
-                  <button onClick={() => claimItem(selected.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Claim
-                  </button>
-                )}
               </div>
 
-              {selected.status === 'complete' && selected.claimedBy === userName && (
+              {selected.status === 'complete' && (
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-semibold mb-2">Title ({selected.title.length}/80)</label>
@@ -408,7 +346,6 @@ export default function ProListingBuilder() {
 
               {selected.status === 'searching' && <div className="text-center py-12 text-gray-500">AI searching...</div>}
               {selected.status === 'error' && <div className="text-center py-12 text-red-500">Error: {selected.error}</div>}
-              {selected.claimedBy && selected.claimedBy !== userName && <div className="text-center py-12 text-gray-500">Processing by {selected.claimedBy}</div>}
             </div>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
@@ -417,7 +354,6 @@ export default function ProListingBuilder() {
           )}
         </div>
 
-        {/* RIGHT - Preview */}
         <div className="w-80 bg-white border-l p-4">
           <h3 className="font-semibold mb-4">Preview</h3>
           {selected && selected.status === 'complete' ? (
