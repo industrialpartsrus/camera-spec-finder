@@ -138,20 +138,19 @@ export default function ProListingBuilder() {
     setPartNumber('');
     setSelectedItem(newItem.id);
     
-    processItem(newItem.id);
+    // Pass the item directly to avoid state timing issues
+    processItem(newItem);
   };
 
   const addToQueue = () => addToQueueWithValues(brandName, partNumber);
 
-  const processItem = async (itemId) => {
+  const processItem = async (item) => {
+    // Update status to searching
     setQueue(prev => prev.map(q => 
-      q.id === itemId ? { ...q, status: 'searching' } : q
+      q.id === item.id ? { ...q, status: 'searching' } : q
     ));
 
     try {
-      const item = queue.find(q => q.id === itemId);
-      if (!item) return;
-
       const response = await fetch('/api/search-product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,7 +166,7 @@ export default function ProListingBuilder() {
       const product = JSON.parse(jsonMatch[0]);
       
       setQueue(prev => prev.map(q => 
-        q.id === itemId ? {
+        q.id === item.id ? {
           ...q,
           status: 'complete',
           title: product.title || `${item.brand} ${item.partNumber}`,
@@ -178,7 +177,7 @@ export default function ProListingBuilder() {
     } catch (error) {
       console.error('Processing error:', error);
       setQueue(prev => prev.map(q => 
-        q.id === itemId ? { ...q, status: 'error', error: error.message } : q
+        q.id === item.id ? { ...q, status: 'error', error: error.message } : q
       ));
     }
   };
