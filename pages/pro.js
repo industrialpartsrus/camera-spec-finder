@@ -241,7 +241,7 @@ export default function ProListingBuilder() {
     try {
       console.log('Sending to SureDone:', item);
       
-      const response = await fetch('/api/add?action=add', {
+      const response = await fetch('/api/suredone-create-listing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
