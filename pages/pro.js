@@ -240,7 +240,7 @@ export default function ProListingBuilder() {
           </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="grid grid-cols-2 lg:flex lg:gap-4 gap-2">
           <div className="px-3 py-2 bg-blue-50 rounded-lg"><span className="text-xs text-blue-600">Total: </span><span className="font-bold text-blue-800">{stats.total}</span></div>
           <div className="px-3 py-2 bg-yellow-50 rounded-lg"><span className="text-xs text-yellow-600">Searching: </span><span className="font-bold text-yellow-800">{stats.searching}</span></div>
           <div className="px-3 py-2 bg-green-50 rounded-lg"><span className="text-xs text-green-600">Complete: </span><span className="font-bold text-green-800">{stats.complete}</span></div>
@@ -248,8 +248,9 @@ export default function ProListingBuilder() {
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-180px)]">
-        <div className="w-80 bg-white border-r overflow-y-auto">
+      <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-180px)]">
+        {/* LEFT PANEL - Queue */}
+        <div className="w-full lg:w-80 bg-white border-b lg:border-r lg:border-b-0 overflow-y-auto max-h-[40vh] lg:max-h-none">
           <div className="p-4 border-b">
             <h2 className="font-semibold mb-3">Add Item</h2>
             
@@ -281,15 +282,15 @@ export default function ProListingBuilder() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      {item.status === 'searching' && <Loader className="w-4 h-4 text-blue-500 animate-spin" />}
-                      {item.status === 'complete' && <CheckCircle className="w-4 h-4 text-green-500" />}
-                      {item.status === 'error' && <AlertCircle className="w-4 h-4 text-red-500" />}
+                      {item.status === 'searching' && <Loader className="w-5 h-5 text-blue-500 animate-spin" />}
+                      {item.status === 'complete' && <CheckCircle className="w-5 h-5 text-green-500" />}
+                      {item.status === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
                       <span className="text-sm font-semibold text-gray-800 truncate">{item.brand}</span>
                     </div>
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-1 rounded">
-                    <X className="w-4 h-4" />
+                  <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-2 rounded ml-2">
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -297,63 +298,83 @@ export default function ProListingBuilder() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* CENTER PANEL - Editor */}
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6">
           {selected ? (
-            <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm p-6">
-              <div className="flex justify-between items-start mb-6">
+            <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm p-4 lg:p-6">
+              <div className="flex justify-between items-start mb-4 lg:mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold">{selected.brand} {selected.partNumber}</h2>
+                  <h2 className="text-xl lg:text-2xl font-bold">{selected.brand} {selected.partNumber}</h2>
                   <p className="text-sm text-gray-500">Status: {selected.status}</p>
                 </div>
               </div>
 
               {selected.status === 'complete' && (
-                <div className="space-y-6">
+                <div className="space-y-4 lg:space-y-6">
                   <div>
                     <label className="block text-sm font-semibold mb-2">Title ({selected.title.length}/80)</label>
-                    <input type="text" value={selected.title} onChange={e => updateField(selected.id, 'title', e.target.value.slice(0, 80))} className="w-full px-3 py-2 border rounded-lg" maxLength={80} />
+                    <input type="text" value={selected.title} onChange={e => updateField(selected.id, 'title', e.target.value.slice(0, 80))} className="w-full px-3 py-2 border rounded-lg text-sm lg:text-base" maxLength={80} />
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold mb-2">Description</label>
-                    <textarea value={selected.description} onChange={e => updateField(selected.id, 'description', e.target.value)} className="w-full px-3 py-2 border rounded-lg h-32" />
+                    <textarea value={selected.description} onChange={e => updateField(selected.id, 'description', e.target.value)} className="w-full px-3 py-2 border rounded-lg h-32 text-sm lg:text-base" />
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold mb-2">Condition</label>
-                    <select value={selected.condition} onChange={e => updateCondition(selected.id, e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+                    <select value={selected.condition} onChange={e => updateCondition(selected.id, e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm lg:text-base">
                       {CONDITION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
                     <p className="text-xs text-gray-600 mt-2">{selected.conditionNotes}</p>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-4">
-                    <div><label className="block text-xs font-semibold mb-1">Length</label><input type="text" placeholder="in" value={selected.boxLength} onChange={e => updateField(selected.id, 'boxLength', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Width</label><input type="text" placeholder="in" value={selected.boxWidth} onChange={e => updateField(selected.id, 'boxWidth', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Height</label><input type="text" placeholder="in" value={selected.boxHeight} onChange={e => updateField(selected.id, 'boxHeight', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Weight</label><input type="text" placeholder="lbs" value={selected.weight} onChange={e => updateField(selected.id, 'weight', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
+                    <div><label className="block text-xs font-semibold mb-1">Length</label><input type="text" placeholder="in" value={selected.boxLength} onChange={e => updateField(selected.id, 'boxLength', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-semibold mb-1">Width</label><input type="text" placeholder="in" value={selected.boxWidth} onChange={e => updateField(selected.id, 'boxWidth', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-semibold mb-1">Height</label><input type="text" placeholder="in" value={selected.boxHeight} onChange={e => updateField(selected.id, 'boxHeight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-semibold mb-1">Weight</label><input type="text" placeholder="lbs" value={selected.weight} onChange={e => updateField(selected.id, 'weight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-semibold mb-2">Price ($)</label><input type="text" placeholder="0.00" value={selected.price} onChange={e => updateField(selected.id, 'price', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
-                    <div><label className="block text-sm font-semibold mb-2">Shelf</label><input type="text" placeholder="A1" value={selected.shelf} onChange={e => updateField(selected.id, 'shelf', e.target.value)} className="w-full px-3 py-2 border rounded-lg" /></div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div><label className="block text-sm font-semibold mb-2">Price ($)</label><input type="text" placeholder="0.00" value={selected.price} onChange={e => updateField(selected.id, 'price', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm lg:text-base" /></div>
+                    <div><label className="block text-sm font-semibold mb-2">Shelf</label><input type="text" placeholder="A1" value={selected.shelf} onChange={e => updateField(selected.id, 'shelf', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm lg:text-base" /></div>
                   </div>
 
-                  <button className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">Send to SureDone</button>
+                  <button className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm lg:text-base">Send to SureDone</button>
                 </div>
               )}
 
-              {selected.status === 'searching' && <div className="text-center py-12 text-gray-500">AI searching...</div>}
-              {selected.status === 'error' && <div className="text-center py-12 text-red-500">Error: {selected.error}</div>}
+              {selected.status === 'searching' && (
+                <div className="text-center py-12">
+                  <Loader className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+                  <p className="text-gray-500">AI searching for product information...</p>
+                  <p className="text-xs text-gray-400 mt-2">This may take 10-30 seconds</p>
+                </div>
+              )}
+              {selected.status === 'error' && (
+                <div className="text-center py-12">
+                  <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                  <p className="text-red-600 font-semibold">Error</p>
+                  <p className="text-sm text-red-500 mt-2">{selected.error}</p>
+                  <button 
+                    onClick={() => processItem(selected)} 
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
+            <div className="flex items-center justify-center h-full text-gray-400 py-20">
               <div className="text-center"><Search className="w-16 h-16 mx-auto mb-4 opacity-50" /><p>Select an item to begin</p></div>
             </div>
           )}
         </div>
 
-        <div className="w-80 bg-white border-l p-4">
+        {/* RIGHT PANEL - Preview (Hidden on mobile) */}
+        <div className="hidden lg:block w-80 bg-white border-l p-4">
           <h3 className="font-semibold mb-4">Preview</h3>
           {selected && selected.status === 'complete' ? (
             <div className="space-y-3 text-sm">
