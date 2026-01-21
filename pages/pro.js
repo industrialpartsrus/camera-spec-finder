@@ -245,18 +245,18 @@ export default function ProListingBuilder() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sku: `AI${item.id}`,
+          sku: `AI${String(item.id).padStart(8, '0')}`, // Format: AI00123456
           title: item.title,
-          longdescription: item.description,
-          price: item.price,
+          longdescription: item.description || '',
+          price: parseFloat(item.price) || 0,
           stock: 1,
           condition: item.condition,
           brand: item.brand,
           mpn: item.partNumber,
-          weight: item.weight || '0',
-          boxlength: item.boxLength || '0',
-          boxwidth: item.boxWidth || '0',
-          boxheight: item.boxHeight || '0'
+          weight: parseFloat(item.weight) || 0,
+          boxlength: parseFloat(item.boxLength) || 0,
+          boxwidth: parseFloat(item.boxWidth) || 0,
+          boxheight: parseFloat(item.boxHeight) || 0
         })
       });
 

@@ -5,15 +5,7 @@ export default async function handler(req, res) {
 
   const { brand, partNumber } = req.body;
 
-  // Debug: Check if API key exists
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY is not set!');
-    return res.status(500).json({ error: 'API key not configured' });
-  }
-
   try {
-    console.log('Calling Anthropic API for:', brand, partNumber);
-    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -43,22 +35,9 @@ Return ONLY valid JSON (no markdown):
       })
     });
 
-    console.log('API response status:', response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API error response:', errorText);
-      return res.status(response.status).json({ 
-        error: `Anthropic API error: ${response.status}`,
-        details: errorText
-      });
-    }
-
     const data = await response.json();
-    console.log('API response received, content blocks:', data.content?.length || 0);
     res.status(200).json(data);
   } catch (error) {
-    console.error('Search product error:', error);
-    res.status(500).json({ error: error.message, stack: error.stack });
+    res.status(500).json({ error: error.message });
   }
 }
