@@ -157,8 +157,8 @@ export default function ProListingBuilder() {
       setPartNumber('');
       setSelectedItem(docRef.id);
       
-      // Start processing
-      setTimeout(() => processItem(docRef.id), 500);
+      // Start processing - pass the data we already have
+      setTimeout(() => processItemById(docRef.id, brand.trim(), part.trim()), 1000);
     } catch (error) {
       console.error('Error adding to queue:', error);
       alert('Error adding item: ' + error.message);
@@ -167,9 +167,19 @@ export default function ProListingBuilder() {
 
   const addToQueue = () => addToQueueWithValues(brandName, partNumber);
 
-  const processItem = async (itemId) => {
-    const item = queue.find(q => q.id === itemId);
-    if (!item) return;
+  const processItemById = async (itemId, brandOverride, partOverride) => {
+    // Try to find in queue first, or use override values
+    let item = queue.find(q => q.id === itemId);
+    
+    if (!item && brandOverride && partOverride) {
+      // Use the values we passed in if item not in queue yet
+      item = { id: itemId, brand: brandOverride, partNumber: partOverride };
+    }
+    
+    if (!item) {
+      console.error('Item not found:', itemId);
+      return;
+    }
 
     console.log('Starting to process item:', item.brand, item.partNumber);
     
@@ -221,6 +231,13 @@ export default function ProListingBuilder() {
         status: 'error',
         error: error.message
       });
+    }
+  };
+
+  const processItem = (itemId) => {
+    const item = queue.find(q => q.id === itemId);
+    if (item) {
+      processItemById(itemId, item.brand, item.partNumber);
     }
   };
 
