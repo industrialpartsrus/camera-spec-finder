@@ -1,0 +1,10226 @@
+{
+  "sagaform": {
+    "name": "Sagaform",
+    "id": "35"
+  },
+  "ofs": {
+    "name": "OFS",
+    "id": "36"
+  },
+  "common good": {
+    "name": "Common Good",
+    "id": "37"
+  },
+  "marathon reduction systems": {
+    "name": "Marathon Reduction Systems",
+    "id": "38"
+  },
+  "omron": {
+    "name": "Omron",
+    "id": "39"
+  },
+  "allen bradley": {
+    "name": "Allen Bradley",
+    "id": "40"
+  },
+  "releco": {
+    "name": "Releco",
+    "id": "41"
+  },
+  "cooper bussmann": {
+    "name": "Cooper Bussmann",
+    "id": "42"
+  },
+  "red lion": {
+    "name": "Red Lion",
+    "id": "43"
+  },
+  "festo": {
+    "name": "Festo",
+    "id": "44"
+  },
+  "siemens": {
+    "name": "Siemens",
+    "id": "46"
+  },
+  "keyence": {
+    "name": "Keyence",
+    "id": "47"
+  },
+  "legris": {
+    "name": "Legris",
+    "id": "48"
+  },
+  "sick": {
+    "name": "Sick",
+    "id": "49"
+  },
+  "wago": {
+    "name": "Wago",
+    "id": "50"
+  },
+  "omega": {
+    "name": "Omega",
+    "id": "51"
+  },
+  "telemecanique": {
+    "name": "Telemecanique",
+    "id": "52"
+  },
+  "mac valves": {
+    "name": "Mac Valves",
+    "id": "53"
+  },
+  "remke": {
+    "name": "Remke",
+    "id": "54"
+  },
+  "westcode": {
+    "name": "Westcode",
+    "id": "55"
+  },
+  "smc": {
+    "name": "SMC",
+    "id": "56"
+  },
+  "spraying systems": {
+    "name": "Spraying Systems",
+    "id": "57"
+  },
+  "setra": {
+    "name": "Setra",
+    "id": "58"
+  },
+  "elmo motion control": {
+    "name": "Elmo Motion Control",
+    "id": "59"
+  },
+  "fusetron": {
+    "name": "Fusetron",
+    "id": "60"
+  },
+  "ferraz shawmut": {
+    "name": "Ferraz Shawmut",
+    "id": "61"
+  },
+  "littelfuse": {
+    "name": "Littelfuse",
+    "id": "62"
+  },
+  "gould shawmut": {
+    "name": "Gould Shawmut",
+    "id": "63"
+  },
+  "pacific scientific": {
+    "name": "Pacific Scientific",
+    "id": "64"
+  },
+  "tokimec": {
+    "name": "Tokimec",
+    "id": "65"
+  },
+  "legrand": {
+    "name": "Legrand",
+    "id": "67"
+  },
+  "bussmann": {
+    "name": "Bussmann",
+    "id": "68"
+  },
+  "edison": {
+    "name": "Edison",
+    "id": "69"
+  },
+  "colson": {
+    "name": "Colson",
+    "id": "70"
+  },
+  "80/20 inc": {
+    "name": "80/20 Inc",
+    "id": "71"
+  },
+  "cutler hammer": {
+    "name": "Cutler Hammer",
+    "id": "72"
+  },
+  "banner engineering": {
+    "name": "Banner Engineering",
+    "id": "73"
+  },
+  "nke": {
+    "name": "NKE",
+    "id": "74"
+  },
+  "turck": {
+    "name": "Turck",
+    "id": "75"
+  },
+  "beckhoff": {
+    "name": "Beckhoff",
+    "id": "76"
+  },
+  "roxtec": {
+    "name": "Roxtec",
+    "id": "77"
+  },
+  "meiki": {
+    "name": "Meiki",
+    "id": "78"
+  },
+  "motoman": {
+    "name": "Motoman",
+    "id": "79"
+  },
+  "marposs": {
+    "name": "Marposs",
+    "id": "80"
+  },
+  "adept technologies": {
+    "name": "Adept Technologies",
+    "id": "81"
+  },
+  "yaskawa": {
+    "name": "Yaskawa",
+    "id": "82"
+  },
+  "lasertechnics": {
+    "name": "Lasertechnics",
+    "id": "83"
+  },
+  "fuji electric": {
+    "name": "Fuji Electric",
+    "id": "84"
+  },
+  "yale": {
+    "name": "Yale",
+    "id": "85"
+  },
+  "abb": {
+    "name": "ABB",
+    "id": "86"
+  },
+  "rexroth": {
+    "name": "Rexroth",
+    "id": "87"
+  },
+  "general electric": {
+    "name": "General Electric",
+    "id": "88"
+  },
+  "parker": {
+    "name": "Parker",
+    "id": "89"
+  },
+  "coe": {
+    "name": "COE",
+    "id": "90"
+  },
+  "orion": {
+    "name": "Orion",
+    "id": "91"
+  },
+  "baldor": {
+    "name": "Baldor",
+    "id": "92"
+  },
+  "reliance electric": {
+    "name": "Reliance Electric",
+    "id": "93"
+  },
+  "daikin": {
+    "name": "Daikin",
+    "id": "94"
+  },
+  "ion exchange": {
+    "name": "Ion Exchange",
+    "id": "95"
+  },
+  "advanced energy": {
+    "name": "Advanced Energy",
+    "id": "96"
+  },
+  "b&r automation": {
+    "name": "B&R Automation",
+    "id": "97"
+  },
+  "gp solar": {
+    "name": "GP Solar",
+    "id": "98"
+  },
+  "nercon": {
+    "name": "Nercon",
+    "id": "99"
+  },
+  "lytron": {
+    "name": "Lytron",
+    "id": "100"
+  },
+  "atlantic coast crushers": {
+    "name": "Atlantic Coast Crushers",
+    "id": "101"
+  },
+  "haz store": {
+    "name": "Haz Store",
+    "id": "102"
+  },
+  "penguin": {
+    "name": "Penguin",
+    "id": "103"
+  },
+  "janome": {
+    "name": "Janome",
+    "id": "104"
+  },
+  "crown": {
+    "name": "Crown",
+    "id": "105"
+  },
+  "qc industries": {
+    "name": "QC Industries",
+    "id": "106"
+  },
+  "ima bfb": {
+    "name": "IMA BFB",
+    "id": "107"
+  },
+  "cold jet": {
+    "name": "Cold Jet",
+    "id": "108"
+  },
+  "grieve": {
+    "name": "Grieve",
+    "id": "109"
+  },
+  "iwaki": {
+    "name": "Iwaki",
+    "id": "110"
+  },
+  "omni metal craft corp.": {
+    "name": "Omni Metal Craft Corp.",
+    "id": "111"
+  },
+  "transnorm": {
+    "name": "Transnorm",
+    "id": "112"
+  },
+  "camco": {
+    "name": "Camco",
+    "id": "113"
+  },
+  "weber": {
+    "name": "Weber",
+    "id": "114"
+  },
+  "norwalt design": {
+    "name": "Norwalt Design",
+    "id": "115"
+  },
+  "atlas copco": {
+    "name": "Atlas Copco",
+    "id": "116"
+  },
+  "demag": {
+    "name": "Demag",
+    "id": "117"
+  },
+  "fanuc": {
+    "name": "Fanuc",
+    "id": "118"
+  },
+  "nordson": {
+    "name": "Nordson",
+    "id": "119"
+  },
+  "american feeder systems": {
+    "name": "American Feeder Systems",
+    "id": "120"
+  },
+  "iai corporation": {
+    "name": "IAI Corporation",
+    "id": "121"
+  },
+  "ima": {
+    "name": "IMA",
+    "id": "122"
+  },
+  "nitto seiko co.": {
+    "name": "Nitto Seiko Co.",
+    "id": "123"
+  },
+  "applied materials": {
+    "name": "Applied Materials",
+    "id": "124"
+  },
+  "mettler toledo": {
+    "name": "Mettler Toledo",
+    "id": "125"
+  },
+  "montech": {
+    "name": "Montech",
+    "id": "126"
+  },
+  "flexlink": {
+    "name": "Flexlink",
+    "id": "128"
+  },
+  "ingenieria & packaging sa": {
+    "name": "Ingenieria & Packaging SA",
+    "id": "129"
+  },
+  "thermatron": {
+    "name": "Thermatron",
+    "id": "130"
+  },
+  "heat seal": {
+    "name": "Heat Seal",
+    "id": "132"
+  },
+  "miyachi": {
+    "name": "Miyachi",
+    "id": "133"
+  },
+  "clausing": {
+    "name": "Clausing",
+    "id": "134"
+  },
+  "t.b. woods": {
+    "name": "T.B. Woods",
+    "id": "135"
+  },
+  "daytronic": {
+    "name": "Daytronic",
+    "id": "136"
+  },
+  "vickers": {
+    "name": "Vickers",
+    "id": "137"
+  },
+  "tdk": {
+    "name": "TDK",
+    "id": "138"
+  },
+  "bison gear": {
+    "name": "Bison Gear",
+    "id": "139"
+  },
+  "dodge": {
+    "name": "Dodge",
+    "id": "140"
+  },
+  "square d": {
+    "name": "Square D",
+    "id": "141"
+  },
+  "ametek": {
+    "name": "Ametek",
+    "id": "142"
+  },
+  "sunx": {
+    "name": "Sunx",
+    "id": "143"
+  },
+  "toshiba": {
+    "name": "Toshiba",
+    "id": "144"
+  },
+  "tsubaki": {
+    "name": "Tsubaki",
+    "id": "145"
+  },
+  "pinnacle": {
+    "name": "Pinnacle",
+    "id": "146"
+  },
+  "cole-parner co.": {
+    "name": "Cole-Parner Co.",
+    "id": "147"
+  },
+  "yokogawa": {
+    "name": "Yokogawa",
+    "id": "148"
+  },
+  "nikki denso actus power": {
+    "name": "Nikki Denso Actus Power",
+    "id": "149"
+  },
+  "iai": {
+    "name": "IAI",
+    "id": "150"
+  },
+  "alpha": {
+    "name": "Alpha",
+    "id": "151"
+  },
+  "asb heating elements ltd.": {
+    "name": "ASB Heating Elements LTD.",
+    "id": "152"
+  },
+  "sew eurodrive": {
+    "name": "Sew Eurodrive",
+    "id": "153"
+  },
+  "tb woods": {
+    "name": "TB Woods",
+    "id": "154"
+  },
+  "sti": {
+    "name": "STI",
+    "id": "155"
+  },
+  "graco": {
+    "name": "Graco",
+    "id": "156"
+  },
+  "ckd": {
+    "name": "CKD",
+    "id": "157"
+  },
+  "mitsubishi": {
+    "name": "Mitsubishi",
+    "id": "158"
+  },
+  "egs": {
+    "name": "EGS",
+    "id": "159"
+  },
+  "itw dynatec": {
+    "name": "ITW Dynatec",
+    "id": "160"
+  },
+  "ati": {
+    "name": "ATI",
+    "id": "161"
+  },
+  "sensopart": {
+    "name": "Sensopart",
+    "id": "162"
+  },
+  "stanley": {
+    "name": "Stanley",
+    "id": "163"
+  },
+  "nitto seiko": {
+    "name": "Nitto Seiko",
+    "id": "164"
+  },
+  "photocraft inc.": {
+    "name": "Photocraft Inc.",
+    "id": "165"
+  },
+  "schunk": {
+    "name": "Schunk",
+    "id": "166"
+  },
+  "power systems": {
+    "name": "Power Systems",
+    "id": "167"
+  },
+  "bosch": {
+    "name": "Bosch",
+    "id": "168"
+  },
+  "star": {
+    "name": "Star",
+    "id": "169"
+  },
+  "cognex": {
+    "name": "Cognex",
+    "id": "170"
+  },
+  "newman": {
+    "name": "Newman",
+    "id": "172"
+  },
+  "superior": {
+    "name": "Superior",
+    "id": "173"
+  },
+  "raymond": {
+    "name": "Raymond",
+    "id": "174"
+  },
+  "sprout bauer": {
+    "name": "Sprout Bauer",
+    "id": "175"
+  },
+  "cram-a-lot": {
+    "name": "Cram-A-Lot",
+    "id": "176"
+  },
+  "mckenzie": {
+    "name": "McKenzie",
+    "id": "177"
+  },
+  "jr automation": {
+    "name": "JR Automation",
+    "id": "178"
+  },
+  "intevac": {
+    "name": "Intevac",
+    "id": "179"
+  },
+  "caterpillar": {
+    "name": "Caterpillar",
+    "id": "180"
+  },
+  "leblond": {
+    "name": "Leblond",
+    "id": "181"
+  },
+  "ms international": {
+    "name": "MS International",
+    "id": "182"
+  },
+  "alco": {
+    "name": "Alco",
+    "id": "183"
+  },
+  "unbranded/generic": {
+    "name": "Unbranded/Generic",
+    "id": "184"
+  },
+  "custom": {
+    "name": "Custom",
+    "id": "185"
+  },
+  "unknown": {
+    "name": "Unknown",
+    "id": "187"
+  },
+  "koch": {
+    "name": "Koch",
+    "id": "188"
+  },
+  "aero-motive": {
+    "name": "Aero-Motive",
+    "id": "189"
+  },
+  "aro fluid power": {
+    "name": "Aro Fluid Power",
+    "id": "190"
+  },
+  "kaeser": {
+    "name": "Kaeser",
+    "id": "191"
+  },
+  "phoenix contact": {
+    "name": "Phoenix Contact",
+    "id": "192"
+  },
+  "miller": {
+    "name": "Miller",
+    "id": "194"
+  },
+  "kuroda": {
+    "name": "Kuroda",
+    "id": "195"
+  },
+  "bimba": {
+    "name": "Bimba",
+    "id": "196"
+  },
+  "c&d technologies": {
+    "name": "C&D Technologies",
+    "id": "197"
+  },
+  "egs sola": {
+    "name": "EGS Sola",
+    "id": "198"
+  },
+  "bk precision": {
+    "name": "BK Precision",
+    "id": "199"
+  },
+  "oriental motor": {
+    "name": "Oriental Motor",
+    "id": "200"
+  },
+  "icp electronics": {
+    "name": "ICP Electronics",
+    "id": "201"
+  },
+  "jefferson electric": {
+    "name": "Jefferson Electric",
+    "id": "202"
+  },
+  "alarm lock": {
+    "name": "Alarm Lock",
+    "id": "203"
+  },
+  "aeg/modicon": {
+    "name": "AEG/Modicon",
+    "id": "204"
+  },
+  "agm": {
+    "name": "AGM",
+    "id": "205"
+  },
+  "acme": {
+    "name": "Acme",
+    "id": "206"
+  },
+  "advance controls inc": {
+    "name": "Advance Controls Inc",
+    "id": "207"
+  },
+  "absolute process instruments": {
+    "name": "Absolute Process Instruments",
+    "id": "208"
+  },
+  "action instruments": {
+    "name": "Action Instruments",
+    "id": "209"
+  },
+  "allenair": {
+    "name": "Allenair",
+    "id": "210"
+  },
+  "ac technology": {
+    "name": "AC Technology",
+    "id": "211"
+  },
+  "aim electra": {
+    "name": "Aim Electra",
+    "id": "212"
+  },
+  "uryu": {
+    "name": "Uryu",
+    "id": "213"
+  },
+  "apc": {
+    "name": "APC",
+    "id": "215"
+  },
+  "schneider": {
+    "name": "Schneider",
+    "id": "216"
+  },
+  "conair": {
+    "name": "Conair",
+    "id": "217"
+  },
+  "bridgeport": {
+    "name": "Bridgeport",
+    "id": "218"
+  },
+  "bison": {
+    "name": "Bison",
+    "id": "219"
+  },
+  "mini-mover": {
+    "name": "Mini-Mover",
+    "id": "221"
+  },
+  "s.t.m.": {
+    "name": "S.T.M.",
+    "id": "222"
+  },
+  "trane": {
+    "name": "Trane",
+    "id": "223"
+  },
+  "chino": {
+    "name": "Chino",
+    "id": "224"
+  },
+  "kistler": {
+    "name": "Kistler",
+    "id": "225"
+  },
+  "morse": {
+    "name": "Morse",
+    "id": "226"
+  },
+  "rees": {
+    "name": "Rees",
+    "id": "227"
+  },
+  "cal test electronics": {
+    "name": "Cal Test Electronics",
+    "id": "228"
+  },
+  "kent": {
+    "name": "Kent",
+    "id": "229"
+  },
+  "balluff": {
+    "name": "Balluff",
+    "id": "230"
+  },
+  "brad harrison": {
+    "name": "Brad Harrison",
+    "id": "231"
+  },
+  "bei industrial encoders": {
+    "name": "BEI Industrial Encoders",
+    "id": "232"
+  },
+  "b&k precision": {
+    "name": "B&K Precision",
+    "id": "234"
+  },
+  "browning": {
+    "name": "Browning",
+    "id": "235"
+  },
+  "bodine electric company": {
+    "name": "Bodine Electric Company",
+    "id": "236"
+  },
+  "boston gear": {
+    "name": "Boston Gear",
+    "id": "237"
+  },
+  "bayside": {
+    "name": "Bayside",
+    "id": "239"
+  },
+  "barksdale": {
+    "name": "Barksdale",
+    "id": "240"
+  },
+  "bearings limited": {
+    "name": "Bearings Limited",
+    "id": "241"
+  },
+  "bell & gossett": {
+    "name": "Bell & Gossett",
+    "id": "243"
+  },
+  "bonfiglioli riduttori": {
+    "name": "BONFIGLIOLI RIDUTTORI",
+    "id": "244"
+  },
+  "belling lee": {
+    "name": "Belling Lee",
+    "id": "245"
+  },
+  "uticor technology": {
+    "name": "Uticor Technology",
+    "id": "247"
+  },
+  "wentech": {
+    "name": "Wentech",
+    "id": "248"
+  },
+  "united electric": {
+    "name": "United Electric",
+    "id": "249"
+  },
+  "viatran": {
+    "name": "Viatran",
+    "id": "250"
+  },
+  "winsystems": {
+    "name": "WinSystems",
+    "id": "251"
+  },
+  "valenite": {
+    "name": "Valenite",
+    "id": "252"
+  },
+  "warner power": {
+    "name": "Warner Power",
+    "id": "253"
+  },
+  "universal dynamics": {
+    "name": "Universal Dynamics",
+    "id": "254"
+  },
+  "watts": {
+    "name": "Watts",
+    "id": "255"
+  },
+  "woodhead": {
+    "name": "Woodhead",
+    "id": "256"
+  },
+  "visolux": {
+    "name": "Visolux",
+    "id": "257"
+  },
+  "vee-arc": {
+    "name": "Vee-Arc",
+    "id": "258"
+  },
+  "ultrafilter international": {
+    "name": "Ultrafilter International",
+    "id": "259"
+  },
+  "versa": {
+    "name": "Versa",
+    "id": "260"
+  },
+  "whitman": {
+    "name": "Whitman",
+    "id": "261"
+  },
+  "weidmuller": {
+    "name": "Weidmuller",
+    "id": "262"
+  },
+  "werma": {
+    "name": "Werma",
+    "id": "263"
+  },
+  "weg": {
+    "name": "WEG",
+    "id": "264"
+  },
+  "w.c. branham inc": {
+    "name": "W.C. Branham Inc",
+    "id": "265"
+  },
+  "veeder root": {
+    "name": "Veeder Root",
+    "id": "266"
+  },
+  "tsuruta electric co.": {
+    "name": "Tsuruta Electric Co.",
+    "id": "267"
+  },
+  "unibrain": {
+    "name": "Unibrain",
+    "id": "268"
+  },
+  "vela": {
+    "name": "Vela",
+    "id": "269"
+  },
+  "turn act": {
+    "name": "Turn Act",
+    "id": "270"
+  },
+  "univision": {
+    "name": "Univision",
+    "id": "271"
+  },
+  "cmc torque systems": {
+    "name": "CMC Torque Systems",
+    "id": "272"
+  },
+  "compact ii": {
+    "name": "Compact II",
+    "id": "273"
+  },
+  "carr lane roemheld": {
+    "name": "Carr Lane Roemheld",
+    "id": "274"
+  },
+  "cincinnati test systems, inc.": {
+    "name": "Cincinnati Test Systems, Inc.",
+    "id": "275"
+  },
+  "chromalox": {
+    "name": "Chromalox",
+    "id": "276"
+  },
+  "chint": {
+    "name": "Chint",
+    "id": "277"
+  },
+  "clippard": {
+    "name": "Clippard",
+    "id": "278"
+  },
+  "cleco": {
+    "name": "Cleco",
+    "id": "279"
+  },
+  "challenger": {
+    "name": "Challenger",
+    "id": "280"
+  },
+  "cefcon": {
+    "name": "Cefcon",
+    "id": "282"
+  },
+  "cello lite": {
+    "name": "Cello Lite",
+    "id": "283"
+  },
+  "cd technologies": {
+    "name": "CD Technologies",
+    "id": "284"
+  },
+  "carlo gavazzi": {
+    "name": "Carlo Gavazzi",
+    "id": "285"
+  },
+  "automation direct": {
+    "name": "Automation Direct",
+    "id": "286"
+  },
+  "anaheim automation": {
+    "name": "Anaheim Automation",
+    "id": "288"
+  },
+  "aspac inc.": {
+    "name": "ASPAC Inc.",
+    "id": "289"
+  },
+  "cosberg": {
+    "name": "Cosberg",
+    "id": "290"
+  },
+  "asahi keiki co.": {
+    "name": "Asahi Keiki Co.",
+    "id": "291"
+  },
+  "contec": {
+    "name": "Contec",
+    "id": "292"
+  },
+  "amlok": {
+    "name": "AMLOK",
+    "id": "293"
+  },
+  "bryant": {
+    "name": "Bryant",
+    "id": "294"
+  },
+  "arrow": {
+    "name": "Arrow",
+    "id": "295"
+  },
+  "cornell": {
+    "name": "Cornell",
+    "id": "296"
+  },
+  "asco": {
+    "name": "Asco",
+    "id": "298"
+  },
+  "burkert": {
+    "name": "Burkert",
+    "id": "299"
+  },
+  "creform": {
+    "name": "Creform",
+    "id": "300"
+  },
+  "buschjost": {
+    "name": "Buschjost",
+    "id": "302"
+  },
+  "astrosyn": {
+    "name": "Astrosyn",
+    "id": "304"
+  },
+  "corcom": {
+    "name": "Corcom",
+    "id": "305"
+  },
+  "athena": {
+    "name": "Athena",
+    "id": "306"
+  },
+  "crouse-hinds": {
+    "name": "Crouse-Hinds",
+    "id": "308"
+  },
+  "amba": {
+    "name": "Amba",
+    "id": "309"
+  },
+  "dynaquip": {
+    "name": "Dynaquip",
+    "id": "310"
+  },
+  "dynisco": {
+    "name": "Dynisco",
+    "id": "312"
+  },
+  "drivecon": {
+    "name": "Drivecon",
+    "id": "313"
+  },
+  "deltrol fluid products": {
+    "name": "Deltrol Fluid Products",
+    "id": "314"
+  },
+  "accu-sort systems": {
+    "name": "Accu-Sort Systems",
+    "id": "316"
+  },
+  "dynapar": {
+    "name": "Dynapar",
+    "id": "317"
+  },
+  "deltron": {
+    "name": "Deltron",
+    "id": "318"
+  },
+  "datalogic": {
+    "name": "Datalogic",
+    "id": "319"
+  },
+  "custom servo motors": {
+    "name": "Custom Servo Motors",
+    "id": "320"
+  },
+  "eaton corp.": {
+    "name": "Eaton Corp.",
+    "id": "321"
+  },
+  "dwyer instruments": {
+    "name": "Dwyer Instruments",
+    "id": "322"
+  },
+  "dynamic laser": {
+    "name": "Dynamic Laser",
+    "id": "323"
+  },
+  "digitec": {
+    "name": "Digitec",
+    "id": "324"
+  },
+  "durakool": {
+    "name": "Durakool",
+    "id": "325"
+  },
+  "delta t systems": {
+    "name": "Delta T Systems",
+    "id": "326"
+  },
+  "dwyer": {
+    "name": "Dwyer",
+    "id": "327"
+  },
+  "denison": {
+    "name": "Denison",
+    "id": "328"
+  },
+  "eaton": {
+    "name": "Eaton",
+    "id": "329"
+  },
+  "minihelic": {
+    "name": "Minihelic",
+    "id": "330"
+  },
+  "eaton cutler hammer": {
+    "name": "Eaton Cutler Hammer",
+    "id": "331"
+  },
+  "daykin": {
+    "name": "Daykin",
+    "id": "332"
+  },
+  "dorrough": {
+    "name": "Dorrough",
+    "id": "333"
+  },
+  "destaco": {
+    "name": "Destaco",
+    "id": "334"
+  },
+  "danfoss": {
+    "name": "Danfoss",
+    "id": "335"
+  },
+  "dorner": {
+    "name": "Dorner",
+    "id": "336"
+  },
+  "dayton": {
+    "name": "Dayton",
+    "id": "337"
+  },
+  "cutler-hammer": {
+    "name": "Cutler-Hammer",
+    "id": "338"
+  },
+  "dengensha": {
+    "name": "Dengensha",
+    "id": "339"
+  },
+  "dispensit liquid control": {
+    "name": "Dispensit Liquid Control",
+    "id": "340"
+  },
+  "federal mogul bearings": {
+    "name": "Federal Mogul Bearings",
+    "id": "341"
+  },
+  "ge-fanuc": {
+    "name": "Ge-Fanuc",
+    "id": "342"
+  },
+  "ee controls": {
+    "name": "EE Controls",
+    "id": "343"
+  },
+  "e&e engineering": {
+    "name": "E&E Engineering",
+    "id": "344"
+  },
+  "efka": {
+    "name": "Efka",
+    "id": "345"
+  },
+  "enerpac": {
+    "name": "Enerpac",
+    "id": "346"
+  },
+  "ebm": {
+    "name": "Ebm",
+    "id": "347"
+  },
+  "fafnir": {
+    "name": "Fafnir",
+    "id": "348"
+  },
+  "efector": {
+    "name": "Efector",
+    "id": "349"
+  },
+  "escort memory systems": {
+    "name": "Escort Memory Systems",
+    "id": "350"
+  },
+  "edwards": {
+    "name": "Edwards",
+    "id": "351"
+  },
+  "facts engineering": {
+    "name": "Facts Engineering",
+    "id": "352"
+  },
+  "horner electric": {
+    "name": "Horner Electric",
+    "id": "353"
+  },
+  "electrocraft": {
+    "name": "ElectroCraft",
+    "id": "354"
+  },
+  "emerson": {
+    "name": "Emerson",
+    "id": "355"
+  },
+  "enerpro": {
+    "name": "Enerpro",
+    "id": "356"
+  },
+  "eta-usa": {
+    "name": "Eta-Usa",
+    "id": "357"
+  },
+  "elco": {
+    "name": "Elco",
+    "id": "358"
+  },
+  "econ": {
+    "name": "Econ",
+    "id": "359"
+  },
+  "economy fuse": {
+    "name": "Economy Fuse",
+    "id": "361"
+  },
+  "entegris": {
+    "name": "Entegris",
+    "id": "362"
+  },
+  "farris": {
+    "name": "Farris",
+    "id": "363"
+  },
+  "efc electtromeccanica": {
+    "name": "EFC Electtromeccanica",
+    "id": "364"
+  },
+  "e.dold and sohne": {
+    "name": "E.Dold and Sohne",
+    "id": "365"
+  },
+  "electro cam": {
+    "name": "Electro Cam",
+    "id": "366"
+  },
+  "electronics corporation of america": {
+    "name": "Electronics Corporation Of America",
+    "id": "368"
+  },
+  "electronics corp of america": {
+    "name": "Electronics Corp Of America",
+    "id": "369"
+  },
+  "crouzet": {
+    "name": "Crouzet",
+    "id": "370"
+  },
+  "furnas": {
+    "name": "Furnas",
+    "id": "371"
+  },
+  "fortress interlocks": {
+    "name": "Fortress Interlocks",
+    "id": "372"
+  },
+  "fukuda co. ltd": {
+    "name": "Fukuda Co. LTD",
+    "id": "373"
+  },
+  "fuji": {
+    "name": "Fuji",
+    "id": "374"
+  },
+  "fuji electric motor co": {
+    "name": "Fuji Electric Motor Co",
+    "id": "375"
+  },
+  "fortress": {
+    "name": "Fortress",
+    "id": "376"
+  },
+  "fumex": {
+    "name": "Fumex",
+    "id": "377"
+  },
+  "sun hydraulics": {
+    "name": "Sun Hydraulics",
+    "id": "378"
+  },
+  "frizlen": {
+    "name": "Frizlen",
+    "id": "379"
+  },
+  "hoffman": {
+    "name": "Hoffman",
+    "id": "380"
+  },
+  "hammond": {
+    "name": "Hammond",
+    "id": "381"
+  },
+  "honeywell": {
+    "name": "Honeywell",
+    "id": "382"
+  },
+  "industrial magnetics": {
+    "name": "INDUSTRIAL MAGNETICS",
+    "id": "384"
+  },
+  "heidenhain": {
+    "name": "Heidenhain",
+    "id": "385"
+  },
+  "industrial timer company": {
+    "name": "Industrial Timer Company",
+    "id": "386"
+  },
+  "hardinge": {
+    "name": "Hardinge",
+    "id": "387"
+  },
+  "ina": {
+    "name": "INA",
+    "id": "388"
+  },
+  "holjeron": {
+    "name": "Holjeron",
+    "id": "389"
+  },
+  "humphrey": {
+    "name": "Humphrey",
+    "id": "390"
+  },
+  "idec": {
+    "name": "Idec",
+    "id": "391"
+  },
+  "horton": {
+    "name": "Horton",
+    "id": "392"
+  },
+  "hytrol": {
+    "name": "Hytrol",
+    "id": "393"
+  },
+  "hyde park": {
+    "name": "Hyde Park",
+    "id": "394"
+  },
+  "hubbell": {
+    "name": "Hubbell",
+    "id": "395"
+  },
+  "hitachi": {
+    "name": "Hitachi",
+    "id": "396"
+  },
+  "isoflux servomotors s.p.a": {
+    "name": "Isoflux Servomotors S.p.a",
+    "id": "397"
+  },
+  "hewlett packard": {
+    "name": "Hewlett Packard",
+    "id": "398"
+  },
+  "international power": {
+    "name": "International Power",
+    "id": "399"
+  },
+  "iko": {
+    "name": "IKO",
+    "id": "400"
+  },
+  "skinner valve": {
+    "name": "Skinner Valve",
+    "id": "401"
+  },
+  "ircon javelin": {
+    "name": "Ircon Javelin",
+    "id": "402"
+  },
+  "instrument transformers inc": {
+    "name": "Instrument Transformers Inc",
+    "id": "403"
+  },
+  "haskel": {
+    "name": "Haskel",
+    "id": "404"
+  },
+  "high pressure equipment": {
+    "name": "High Pressure Equipment",
+    "id": "405"
+  },
+  "idc": {
+    "name": "IDC",
+    "id": "406"
+  },
+  "ingersoll rand": {
+    "name": "Ingersoll Rand",
+    "id": "407"
+  },
+  "grinnell": {
+    "name": "GRINNELL",
+    "id": "408"
+  },
+  "idec izbarl": {
+    "name": "Idec IZBARL",
+    "id": "409"
+  },
+  "sixnet": {
+    "name": "Sixnet",
+    "id": "410"
+  },
+  "hankison": {
+    "name": "Hankison",
+    "id": "411"
+  },
+  "hycon": {
+    "name": "Hycon",
+    "id": "412"
+  },
+  "gtr brother": {
+    "name": "GTR Brother",
+    "id": "413"
+  },
+  "itc": {
+    "name": "ITC",
+    "id": "414"
+  },
+  "groschopp": {
+    "name": "Groschopp",
+    "id": "415"
+  },
+  "jumo": {
+    "name": "Jumo",
+    "id": "416"
+  },
+  "itt hoffman": {
+    "name": "ITT Hoffman",
+    "id": "417"
+  },
+  "kep": {
+    "name": "KEP",
+    "id": "418"
+  },
+  "johnson controls": {
+    "name": "Johnson Controls",
+    "id": "419"
+  },
+  "jokab safety": {
+    "name": "Jokab Safety",
+    "id": "420"
+  },
+  "kenwood": {
+    "name": "Kenwood",
+    "id": "421"
+  },
+  "kalmar": {
+    "name": "Kalmar",
+    "id": "422"
+  },
+  "keb": {
+    "name": "Keb",
+    "id": "423"
+  },
+  "kendeil": {
+    "name": "Kendeil",
+    "id": "424"
+  },
+  "kb electronics": {
+    "name": "KB Electronics",
+    "id": "425"
+  },
+  "merlin gerin": {
+    "name": "Merlin Gerin",
+    "id": "426"
+  },
+  "mean well": {
+    "name": "Mean Well",
+    "id": "427"
+  },
+  "mcdonald": {
+    "name": "McDonald",
+    "id": "428"
+  },
+  "magnaloy": {
+    "name": "Magnaloy",
+    "id": "429"
+  },
+  "miki pully co": {
+    "name": "Miki Pully Co",
+    "id": "430"
+  },
+  "master pneumatic inc": {
+    "name": "Master Pneumatic Inc",
+    "id": "431"
+  },
+  "martin": {
+    "name": "Martin",
+    "id": "432"
+  },
+  "mannesmann rexroth": {
+    "name": "Mannesmann Rexroth",
+    "id": "433"
+  },
+  "mac": {
+    "name": "Mac",
+    "id": "434"
+  },
+  "mgm": {
+    "name": "MGM",
+    "id": "435"
+  },
+  "magpowr": {
+    "name": "Magpowr",
+    "id": "436"
+  },
+  "mitsubishi electric": {
+    "name": "Mitsubishi Electric",
+    "id": "437"
+  },
+  "matsushita": {
+    "name": "Matsushita",
+    "id": "438"
+  },
+  "ohio semitronics": {
+    "name": "Ohio Semitronics",
+    "id": "439"
+  },
+  "numatics": {
+    "name": "Numatics",
+    "id": "440"
+  },
+  "omegadyne inc.": {
+    "name": "Omegadyne Inc.",
+    "id": "441"
+  },
+  "okuma": {
+    "name": "Okuma",
+    "id": "442"
+  },
+  "ohma": {
+    "name": "OHMA",
+    "id": "443"
+  },
+  "ihi control engineering": {
+    "name": "IHI Control Engineering",
+    "id": "444"
+  },
+  "mrc": {
+    "name": "MRC",
+    "id": "445"
+  },
+  "modicon": {
+    "name": "Modicon",
+    "id": "446"
+  },
+  "moline company": {
+    "name": "Moline Company",
+    "id": "447"
+  },
+  "namco": {
+    "name": "Namco",
+    "id": "448"
+  },
+  "nemic lambda": {
+    "name": "Nemic Lambda",
+    "id": "449"
+  },
+  "m-unit": {
+    "name": "M-Unit",
+    "id": "450"
+  },
+  "moeller": {
+    "name": "Moeller",
+    "id": "451"
+  },
+  "nikki denso": {
+    "name": "Nikki Denso",
+    "id": "452"
+  },
+  "mts systems corp.": {
+    "name": "MTS Systems Corp.",
+    "id": "453"
+  },
+  "monarch hydraulics inc": {
+    "name": "Monarch Hydraulics Inc",
+    "id": "454"
+  },
+  "nord gear corp": {
+    "name": "Nord Gear Corp",
+    "id": "455"
+  },
+  "murr elektronik": {
+    "name": "Murr Elektronik",
+    "id": "456"
+  },
+  "nsk": {
+    "name": "NSK",
+    "id": "457"
+  },
+  "npe": {
+    "name": "NPE",
+    "id": "458"
+  },
+  "nsd corporation": {
+    "name": "NSD Corporation",
+    "id": "459"
+  },
+  "lucas ledex": {
+    "name": "Lucas Ledex",
+    "id": "460"
+  },
+  "netstal": {
+    "name": "Netstal",
+    "id": "461"
+  },
+  "nachi": {
+    "name": "Nachi",
+    "id": "462"
+  },
+  "ntn": {
+    "name": "NTN",
+    "id": "463"
+  },
+  "ls mecapion": {
+    "name": "LS Mecapion",
+    "id": "464"
+  },
+  "norgren": {
+    "name": "Norgren",
+    "id": "465"
+  },
+  "nagoya nanome electric": {
+    "name": "Nagoya Nanome Electric",
+    "id": "466"
+  },
+  "hke": {
+    "name": "HKE",
+    "id": "467"
+  },
+  "nec": {
+    "name": "NEC",
+    "id": "468"
+  },
+  "n-tron corporation": {
+    "name": "N-Tron Corporation",
+    "id": "469"
+  },
+  "nadesco": {
+    "name": "Nadesco",
+    "id": "470"
+  },
+  "nibco": {
+    "name": "Nibco",
+    "id": "471"
+  },
+  "mitutoyo": {
+    "name": "Mitutoyo",
+    "id": "472"
+  },
+  "mopar": {
+    "name": "Mopar",
+    "id": "473"
+  },
+  "ls": {
+    "name": "LS",
+    "id": "474"
+  },
+  "nippon oil pump co.": {
+    "name": "Nippon Oil Pump Co.",
+    "id": "475"
+  },
+  "lovato": {
+    "name": "Lovato",
+    "id": "476"
+  },
+  "pepperl+fuchs": {
+    "name": "Pepperl+Fuchs",
+    "id": "477"
+  },
+  "panasonic": {
+    "name": "Panasonic",
+    "id": "478"
+  },
+  "patlite": {
+    "name": "Patlite",
+    "id": "479"
+  },
+  "ortman": {
+    "name": "Ortman",
+    "id": "480"
+  },
+  "oriental motor co. ltd.": {
+    "name": "Oriental Motor Co. Ltd.",
+    "id": "481"
+  },
+  "pfeiffer": {
+    "name": "Pfeiffer",
+    "id": "482"
+  },
+  "peer": {
+    "name": "Peer",
+    "id": "483"
+  },
+  "phd inc.": {
+    "name": "Phd Inc.",
+    "id": "485"
+  },
+  "ono sokki": {
+    "name": "Ono Sokki",
+    "id": "486"
+  },
+  "pearl": {
+    "name": "Pearl",
+    "id": "488"
+  },
+  "vexta": {
+    "name": "Vexta",
+    "id": "489"
+  },
+  "phihong": {
+    "name": "Phihong",
+    "id": "491"
+  },
+  "hg relay": {
+    "name": "HG Relay",
+    "id": "492"
+  },
+  "optex fa": {
+    "name": "Optex FA",
+    "id": "494"
+  },
+  "power patrol": {
+    "name": "Power Patrol",
+    "id": "495"
+  },
+  "sasaki electric corporation": {
+    "name": "Sasaki Electric Corporation",
+    "id": "496"
+  },
+  "schneider automation": {
+    "name": "Schneider Automation",
+    "id": "497"
+  },
+  "schneider automation modicon": {
+    "name": "Schneider Automation Modicon",
+    "id": "498"
+  },
+  "zander": {
+    "name": "ZANDER",
+    "id": "499"
+  },
+  "sas automation": {
+    "name": "SAS Automation",
+    "id": "500"
+  },
+  "pmi motors": {
+    "name": "PMI Motors",
+    "id": "501"
+  },
+  "potter & brumfield": {
+    "name": "Potter & Brumfield",
+    "id": "502"
+  },
+  "rapid": {
+    "name": "Rapid",
+    "id": "503"
+  },
+  "pilz": {
+    "name": "Pilz",
+    "id": "504"
+  },
+  "sanyo machine works ltd.": {
+    "name": "Sanyo Machine Works Ltd.",
+    "id": "505"
+  },
+  "powerex": {
+    "name": "Powerex",
+    "id": "506"
+  },
+  "sanyo denki": {
+    "name": "Sanyo Denki",
+    "id": "507"
+  },
+  "ross & associates": {
+    "name": "Ross & Associates",
+    "id": "508"
+  },
+  "ross": {
+    "name": "Ross",
+    "id": "509"
+  },
+  "regents": {
+    "name": "Regents",
+    "id": "510"
+  },
+  "raytek": {
+    "name": "Raytek",
+    "id": "511"
+  },
+  "redington": {
+    "name": "Redington",
+    "id": "512"
+  },
+  "power one": {
+    "name": "Power One",
+    "id": "513"
+  },
+  "schrader bellows": {
+    "name": "Schrader Bellows",
+    "id": "514"
+  },
+  "sankyo": {
+    "name": "Sankyo",
+    "id": "516"
+  },
+  "plast-o-matic": {
+    "name": "Plast-O-Matic",
+    "id": "517"
+  },
+  "power source": {
+    "name": "Power Source",
+    "id": "518"
+  },
+  "renishaw": {
+    "name": "Renishaw",
+    "id": "519"
+  },
+  "riello": {
+    "name": "Riello",
+    "id": "520"
+  },
+  "schneider electric": {
+    "name": "Schneider Electric",
+    "id": "521"
+  },
+  "rex manufacturing": {
+    "name": "Rex Manufacturing",
+    "id": "522"
+  },
+  "schaffner": {
+    "name": "Schaffner",
+    "id": "523"
+  },
+  "puls dimension": {
+    "name": "Puls Dimension",
+    "id": "524"
+  },
+  "robohand": {
+    "name": "Robohand",
+    "id": "525"
+  },
+  "schmersal": {
+    "name": "Schmersal",
+    "id": "526"
+  },
+  "riduttori": {
+    "name": "Riduttori",
+    "id": "527"
+  },
+  "pro-face": {
+    "name": "Pro-Face",
+    "id": "529"
+  },
+  "rollon": {
+    "name": "Rollon",
+    "id": "530"
+  },
+  "schneider electric buildings": {
+    "name": "Schneider Electric Buildings",
+    "id": "531"
+  },
+  "sankyo sandex": {
+    "name": "Sankyo Sandex",
+    "id": "532"
+  },
+  "stearns": {
+    "name": "Stearns",
+    "id": "533"
+  },
+  "royal industries": {
+    "name": "Royal Industries",
+    "id": "534"
+  },
+  "reign power": {
+    "name": "Reign Power",
+    "id": "535"
+  },
+  "sanyo machine works": {
+    "name": "Sanyo Machine Works",
+    "id": "537"
+  },
+  "purgex": {
+    "name": "PurgeX",
+    "id": "538"
+  },
+  "precision brand": {
+    "name": "Precision Brand",
+    "id": "539"
+  },
+  "rockwell automation": {
+    "name": "Rockwell Automation",
+    "id": "540"
+  },
+  "skf": {
+    "name": "SKF",
+    "id": "541"
+  },
+  "skinner": {
+    "name": "Skinner",
+    "id": "542"
+  },
+  "shindengen electric": {
+    "name": "Shindengen Electric",
+    "id": "543"
+  },
+  "sentra": {
+    "name": "Sentra",
+    "id": "544"
+  },
+  "seal master": {
+    "name": "Seal Master",
+    "id": "545"
+  },
+  "sentec": {
+    "name": "Sentec",
+    "id": "546"
+  },
+  "shinbory denshi": {
+    "name": "Shinbory Denshi",
+    "id": "547"
+  },
+  "sierra instruments inc": {
+    "name": "Sierra Instruments Inc",
+    "id": "548"
+  },
+  "sensortronics": {
+    "name": "Sensortronics",
+    "id": "549"
+  },
+  "signal division": {
+    "name": "Signal Division",
+    "id": "550"
+  },
+  "pac15": {
+    "name": "Pac15",
+    "id": "551"
+  },
+  "sie sensorik": {
+    "name": "Sie Sensorik",
+    "id": "552"
+  },
+  "sella spa": {
+    "name": "Sella SPA",
+    "id": "553"
+  },
+  "servo tecnica": {
+    "name": "Servo Tecnica",
+    "id": "554"
+  },
+  "sharpe": {
+    "name": "Sharpe",
+    "id": "555"
+  },
+  "showa denki": {
+    "name": "Showa Denki",
+    "id": "556"
+  },
+  "simpson": {
+    "name": "Simpson",
+    "id": "557"
+  },
+  "sipco": {
+    "name": "Sipco",
+    "id": "558"
+  },
+  "sumitomo": {
+    "name": "Sumitomo",
+    "id": "559"
+  },
+  "ssac": {
+    "name": "SSAC",
+    "id": "560"
+  },
+  "stracuse electronics": {
+    "name": "Stracuse Electronics",
+    "id": "561"
+  },
+  "sprecher+schuh": {
+    "name": "Sprecher+Schuh",
+    "id": "562"
+  },
+  "spang": {
+    "name": "Spang",
+    "id": "563"
+  },
+  "standard refrigeration company": {
+    "name": "Standard Refrigeration Company",
+    "id": "564"
+  },
+  "sola": {
+    "name": "Sola",
+    "id": "565"
+  },
+  "stm": {
+    "name": "STM",
+    "id": "566"
+  },
+  "tekel": {
+    "name": "Tekel",
+    "id": "567"
+  },
+  "sti guardmaster cadet": {
+    "name": "Sti Guardmaster Cadet",
+    "id": "568"
+  },
+  "spirax sarco": {
+    "name": "Spirax Sarco",
+    "id": "569"
+  },
+  "struthers dunn": {
+    "name": "Struthers Dunn",
+    "id": "570"
+  },
+  "swagelok": {
+    "name": "Swagelok",
+    "id": "571"
+  },
+  "sony": {
+    "name": "Sony",
+    "id": "572"
+  },
+  "telco": {
+    "name": "Telco",
+    "id": "573"
+  },
+  "tc": {
+    "name": "TC",
+    "id": "574"
+  },
+  "taiyo parker": {
+    "name": "Taiyo Parker",
+    "id": "575"
+  },
+  "spectrum illumination": {
+    "name": "Spectrum Illumination",
+    "id": "576"
+  },
+  "tec takabayashi": {
+    "name": "TEC Takabayashi",
+    "id": "577"
+  },
+  "springville": {
+    "name": "Springville",
+    "id": "578"
+  },
+  "stelron": {
+    "name": "Stelron",
+    "id": "579"
+  },
+  "taiyo": {
+    "name": "Taiyo",
+    "id": "580"
+  },
+  "tdk lambda": {
+    "name": "TDK Lambda",
+    "id": "581"
+  },
+  "taco": {
+    "name": "Taco",
+    "id": "582"
+  },
+  "sprecher schuh": {
+    "name": "Sprecher Schuh",
+    "id": "583"
+  },
+  "schneider-kreuznach": {
+    "name": "Schneider-Kreuznach",
+    "id": "584"
+  },
+  "takenaka": {
+    "name": "Takenaka",
+    "id": "585"
+  },
+  "takex": {
+    "name": "Takex",
+    "id": "586"
+  },
+  "superlogics": {
+    "name": "SuperLogics",
+    "id": "587"
+  },
+  "symbol": {
+    "name": "Symbol",
+    "id": "588"
+  },
+  "static clean": {
+    "name": "Static Clean",
+    "id": "589"
+  },
+  "softnoze": {
+    "name": "SOFTNOZE",
+    "id": "590"
+  },
+  "mcdonnell miller": {
+    "name": "Mcdonnell Miller",
+    "id": "591"
+  },
+  "lancast": {
+    "name": "Lancast",
+    "id": "592"
+  },
+  "koyo": {
+    "name": "Koyo",
+    "id": "593"
+  },
+  "tox pressotechnik": {
+    "name": "Tox Pressotechnik",
+    "id": "594"
+  },
+  "thomson industries": {
+    "name": "Thomson Industries",
+    "id": "595"
+  },
+  "york": {
+    "name": "York",
+    "id": "596"
+  },
+  "telmar": {
+    "name": "Telmar",
+    "id": "598"
+  },
+  "timken": {
+    "name": "Timken",
+    "id": "599"
+  },
+  "transfab tms": {
+    "name": "Transfab TMS",
+    "id": "600"
+  },
+  "trans-coil inc.": {
+    "name": "Trans-Coil Inc.",
+    "id": "601"
+  },
+  "yuken": {
+    "name": "Yuken",
+    "id": "602"
+  },
+  "tpc wire & cable": {
+    "name": "TPC Wire & Cable",
+    "id": "603"
+  },
+  "tomantron inc": {
+    "name": "Tomantron Inc",
+    "id": "604"
+  },
+  "tromantron": {
+    "name": "TromanTron",
+    "id": "605"
+  },
+  "tol-o-matic": {
+    "name": "Tol-O-Matic",
+    "id": "606"
+  },
+  "tokyo keiso co., ltd": {
+    "name": "Tokyo Keiso Co., Ltd",
+    "id": "607"
+  },
+  "tokin": {
+    "name": "Tokin",
+    "id": "608"
+  },
+  "thomson": {
+    "name": "Thomson",
+    "id": "610"
+  },
+  "toyooki kogyo co ltd": {
+    "name": "Toyooki Kogyo Co Ltd",
+    "id": "611"
+  },
+  "thomson micron": {
+    "name": "Thomson Micron",
+    "id": "612"
+  },
+  "tork alert": {
+    "name": "Tork Alert",
+    "id": "613"
+  },
+  "tokimec vickers": {
+    "name": "Tokimec Vickers",
+    "id": "614"
+  },
+  "xp": {
+    "name": "XP",
+    "id": "615"
+  },
+  "tr electronic": {
+    "name": "TR Electronic",
+    "id": "616"
+  },
+  "thk omron": {
+    "name": "THK Omron",
+    "id": "617"
+  },
+  "xiamen dongli tung lee": {
+    "name": "Xiamen Dongli Tung Lee",
+    "id": "618"
+  },
+  "yamatake": {
+    "name": "Yamatake",
+    "id": "619"
+  },
+  "electrocube": {
+    "name": "Electrocube",
+    "id": "620"
+  },
+  "thk": {
+    "name": "THK",
+    "id": "621"
+  },
+  "tri-tronics": {
+    "name": "Tri-tronics",
+    "id": "622"
+  },
+  "ziplink": {
+    "name": "Ziplink",
+    "id": "623"
+  },
+  "ziatech motion engineering inc.": {
+    "name": "Ziatech Motion Engineering Inc.",
+    "id": "624"
+  },
+  "tennesse rand inc.": {
+    "name": "Tennesse Rand Inc.",
+    "id": "626"
+  },
+  "grace engineered": {
+    "name": "Grace Engineered",
+    "id": "627"
+  },
+  "pillar corporation": {
+    "name": "Pillar Corporation",
+    "id": "628"
+  },
+  "piab": {
+    "name": "Piab",
+    "id": "629"
+  },
+  "koganei": {
+    "name": "Koganei",
+    "id": "630"
+  },
+  "pana visetter": {
+    "name": "PANA VISETTER",
+    "id": "631"
+  },
+  "sensotec": {
+    "name": "Sensotec",
+    "id": "633"
+  },
+  "apollo": {
+    "name": "Apollo",
+    "id": "634"
+  },
+  "gse": {
+    "name": "GSE",
+    "id": "635"
+  },
+  "dongan": {
+    "name": "Dongan",
+    "id": "636"
+  },
+  "penn": {
+    "name": "Penn",
+    "id": "637"
+  },
+  "tiken": {
+    "name": "Tiken",
+    "id": "638"
+  },
+  "precision bearings": {
+    "name": "Precision Bearings",
+    "id": "639"
+  },
+  "ami bearings": {
+    "name": "AMI Bearings",
+    "id": "640"
+  },
+  "kikusui electronics corp.": {
+    "name": "Kikusui Electronics Corp.",
+    "id": "641"
+  },
+  "ina linear technik": {
+    "name": "INA Linear Technik",
+    "id": "642"
+  },
+  "wittenstein": {
+    "name": "Wittenstein",
+    "id": "643"
+  },
+  "sandisk": {
+    "name": "SanDisk",
+    "id": "644"
+  },
+  "federal mogul": {
+    "name": "Federal Mogul",
+    "id": "645"
+  },
+  "busch": {
+    "name": "Busch",
+    "id": "646"
+  },
+  "wix": {
+    "name": "Wix",
+    "id": "647"
+  },
+  "electronic measurements inc.": {
+    "name": "Electronic Measurements Inc.",
+    "id": "648"
+  },
+  "autonics": {
+    "name": "Autonics",
+    "id": "649"
+  },
+  "saftronics": {
+    "name": "Saftronics",
+    "id": "650"
+  },
+  "vacuum research": {
+    "name": "Vacuum Research",
+    "id": "651"
+  },
+  "emermex": {
+    "name": "Emermex",
+    "id": "652"
+  },
+  "data technology inc.": {
+    "name": "Data Technology Inc.",
+    "id": "653"
+  },
+  "datametrics": {
+    "name": "Datametrics",
+    "id": "654"
+  },
+  "leeson": {
+    "name": "Leeson",
+    "id": "655"
+  },
+  "thomson ind. inc.": {
+    "name": "Thomson Ind. Inc.",
+    "id": "656"
+  },
+  "thomas products ltd.": {
+    "name": "Thomas Products Ltd.",
+    "id": "657"
+  },
+  "fairchild": {
+    "name": "Fairchild",
+    "id": "658"
+  },
+  "nilfisk advance": {
+    "name": "Nilfisk Advance",
+    "id": "659"
+  },
+  "islatrol": {
+    "name": "Islatrol",
+    "id": "660"
+  },
+  "schaevitz": {
+    "name": "Schaevitz",
+    "id": "661"
+  },
+  "fairlane": {
+    "name": "Fairlane",
+    "id": "662"
+  },
+  "leroy somer": {
+    "name": "Leroy Somer",
+    "id": "663"
+  },
+  "nullmatic": {
+    "name": "Nullmatic",
+    "id": "664"
+  },
+  "milwaukee cylinder": {
+    "name": "Milwaukee Cylinder",
+    "id": "665"
+  },
+  "mdi": {
+    "name": "Mdi",
+    "id": "667"
+  },
+  "curtis": {
+    "name": "Curtis",
+    "id": "668"
+  },
+  "stokes": {
+    "name": "Stokes",
+    "id": "669"
+  },
+  "hoerbiger": {
+    "name": "Hoerbiger",
+    "id": "670"
+  },
+  "ivek": {
+    "name": "IVEK",
+    "id": "671"
+  },
+  "kabar": {
+    "name": "Kabar",
+    "id": "672"
+  },
+  "durkopp adler": {
+    "name": "Durkopp Adler",
+    "id": "673"
+  },
+  "lutze": {
+    "name": "Lutze",
+    "id": "675"
+  },
+  "rhino": {
+    "name": "Rhino",
+    "id": "676"
+  },
+  "schurter": {
+    "name": "Schurter",
+    "id": "677"
+  },
+  "bil-jax": {
+    "name": "Bil-Jax",
+    "id": "678"
+  },
+  "tescom": {
+    "name": "Tescom",
+    "id": "679"
+  },
+  "microtech": {
+    "name": "MicroTech",
+    "id": "680"
+  },
+  "lika": {
+    "name": "Lika",
+    "id": "681"
+  },
+  "grundfos": {
+    "name": "Grundfos",
+    "id": "682"
+  },
+  "imperx": {
+    "name": "Imperx",
+    "id": "683"
+  },
+  "tpole": {
+    "name": "TPole",
+    "id": "684"
+  },
+  "ixxat": {
+    "name": "IXXAT",
+    "id": "685"
+  },
+  "keller": {
+    "name": "Keller",
+    "id": "686"
+  },
+  "supermax": {
+    "name": "Supermax",
+    "id": "687"
+  },
+  "kirloskar brothers": {
+    "name": "Kirloskar Brothers",
+    "id": "688"
+  },
+  "summit": {
+    "name": "Summit",
+    "id": "689"
+  },
+  "ge": {
+    "name": "GE",
+    "id": "690"
+  },
+  "branson": {
+    "name": "Branson",
+    "id": "691"
+  },
+  "spencer": {
+    "name": "Spencer",
+    "id": "692"
+  },
+  "lafert servo motors": {
+    "name": "Lafert Servo Motors",
+    "id": "693"
+  },
+  "automation direct stride": {
+    "name": "Automation Direct Stride",
+    "id": "695"
+  },
+  "wilden": {
+    "name": "Wilden",
+    "id": "696"
+  },
+  "eastey": {
+    "name": "Eastey",
+    "id": "697"
+  },
+  "wulftec": {
+    "name": "Wulftec",
+    "id": "698"
+  },
+  "plastic process equipment": {
+    "name": "Plastic Process Equipment",
+    "id": "699"
+  },
+  "videojet": {
+    "name": "Videojet",
+    "id": "700"
+  },
+  "cleaver brooks": {
+    "name": "Cleaver Brooks",
+    "id": "701"
+  },
+  "neptune mixer co.": {
+    "name": "Neptune Mixer Co.",
+    "id": "702"
+  },
+  "fluid power systems": {
+    "name": "Fluid Power Systems",
+    "id": "703"
+  },
+  "lorik": {
+    "name": "Lorik",
+    "id": "704"
+  },
+  "okura": {
+    "name": "Okura",
+    "id": "705"
+  },
+  "zeks": {
+    "name": "Zeks",
+    "id": "706"
+  },
+  "becker": {
+    "name": "Becker",
+    "id": "707"
+  },
+  "solid state": {
+    "name": "Solid State",
+    "id": "710"
+  },
+  "rexnord": {
+    "name": "Rexnord",
+    "id": "711"
+  },
+  "aec": {
+    "name": "AEC",
+    "id": "712"
+  },
+  "lista": {
+    "name": "Lista",
+    "id": "713"
+  },
+  "daniel woodhead": {
+    "name": "Daniel Woodhead",
+    "id": "714"
+  },
+  "leister": {
+    "name": "Leister",
+    "id": "715"
+  },
+  "hms": {
+    "name": "HMS",
+    "id": "716"
+  },
+  "hirschmann": {
+    "name": "Hirschmann",
+    "id": "717"
+  },
+  "comco": {
+    "name": "Comco",
+    "id": "718"
+  },
+  "aeg": {
+    "name": "Aeg",
+    "id": "719"
+  },
+  "performance feeders, inc.": {
+    "name": "Performance Feeders, Inc.",
+    "id": "720"
+  },
+  "limitron": {
+    "name": "Limitron",
+    "id": "721"
+  },
+  "smart vision": {
+    "name": "Smart Vision",
+    "id": "722"
+  },
+  "hydac": {
+    "name": "Hydac",
+    "id": "723"
+  },
+  "mac valve": {
+    "name": "Mac Valve",
+    "id": "724"
+  },
+  "stanley assembly technologies": {
+    "name": "Stanley Assembly Technologies",
+    "id": "725"
+  },
+  "joy": {
+    "name": "Joy",
+    "id": "726"
+  },
+  "american fan company": {
+    "name": "American Fan Company",
+    "id": "727"
+  },
+  "sure tack systems": {
+    "name": "Sure Tack Systems",
+    "id": "728"
+  },
+  "conair franklin": {
+    "name": "Conair Franklin",
+    "id": "729"
+  },
+  "pass&seymour": {
+    "name": "Pass&Seymour",
+    "id": "731"
+  },
+  "alnor": {
+    "name": "Alnor",
+    "id": "732"
+  },
+  "electronic displays": {
+    "name": "Electronic Displays",
+    "id": "733"
+  },
+  "hubbel": {
+    "name": "Hubbel",
+    "id": "734"
+  },
+  "advance illumination": {
+    "name": "Advance illumination",
+    "id": "736"
+  },
+  "lincoln": {
+    "name": "Lincoln",
+    "id": "737"
+  },
+  "tregaskiss": {
+    "name": "Tregaskiss",
+    "id": "738"
+  },
+  "bernstein": {
+    "name": "Bernstein",
+    "id": "739"
+  },
+  "titan industries": {
+    "name": "Titan Industries",
+    "id": "740"
+  },
+  "clipper": {
+    "name": "Clipper",
+    "id": "741"
+  },
+  "mitsuya fan mfg.": {
+    "name": "Mitsuya Fan MFG.",
+    "id": "742"
+  },
+  "sodick": {
+    "name": "Sodick",
+    "id": "743"
+  },
+  "astec": {
+    "name": "Astec",
+    "id": "744"
+  },
+  "tennant": {
+    "name": "Tennant",
+    "id": "745"
+  },
+  "uniflo": {
+    "name": "Uniflo",
+    "id": "746"
+  },
+  "mckinze": {
+    "name": "McKinze",
+    "id": "747"
+  },
+  "gorman rupp": {
+    "name": "Gorman Rupp",
+    "id": "748"
+  },
+  "appleton": {
+    "name": "Appleton",
+    "id": "749"
+  },
+  "klockner moeller": {
+    "name": "Klockner Moeller",
+    "id": "750"
+  },
+  "macromatic": {
+    "name": "Macromatic",
+    "id": "751"
+  },
+  "hokuyo": {
+    "name": "Hokuyo",
+    "id": "752"
+  },
+  "doall": {
+    "name": "DoAll",
+    "id": "753"
+  },
+  "pringle electrical mfg. co.": {
+    "name": "Pringle Electrical MFG. Co.",
+    "id": "754"
+  },
+  "yoshida": {
+    "name": "Yoshida",
+    "id": "755"
+  },
+  "dart controls": {
+    "name": "Dart Controls",
+    "id": "756"
+  },
+  "lasertechnic": {
+    "name": "Lasertechnic",
+    "id": "758"
+  },
+  "kolver": {
+    "name": "Kolver",
+    "id": "759"
+  },
+  "veit": {
+    "name": "Veit",
+    "id": "760"
+  },
+  "lambda": {
+    "name": "Lambda",
+    "id": "761"
+  },
+  "yaskawa electric": {
+    "name": "Yaskawa Electric",
+    "id": "762"
+  },
+  "leonard & bauer": {
+    "name": "Leonard & Bauer",
+    "id": "763"
+  },
+  "power volt": {
+    "name": "Power Volt",
+    "id": "764"
+  },
+  "irax": {
+    "name": "Irax",
+    "id": "765"
+  },
+  "comtrol": {
+    "name": "Comtrol",
+    "id": "766"
+  },
+  "cen-tech": {
+    "name": "Cen-tech",
+    "id": "767"
+  },
+  "linemaster": {
+    "name": "Linemaster",
+    "id": "768"
+  },
+  "electro cam corporation": {
+    "name": "Electro Cam Corporation",
+    "id": "769"
+  },
+  "nissui": {
+    "name": "Nissui",
+    "id": "770"
+  },
+  "westinghouse": {
+    "name": "Westinghouse",
+    "id": "771"
+  },
+  "pearl koygo ltd": {
+    "name": "Pearl Koygo LTD",
+    "id": "772"
+  },
+  "kooltronics": {
+    "name": "KoolTronics",
+    "id": "773"
+  },
+  "kooltronic": {
+    "name": "KoolTronic",
+    "id": "774"
+  },
+  "liebert": {
+    "name": "Liebert",
+    "id": "775"
+  },
+  "tripack": {
+    "name": "Tripack",
+    "id": "776"
+  },
+  "seiki": {
+    "name": "Seiki",
+    "id": "777"
+  },
+  "shimaden": {
+    "name": "Shimaden",
+    "id": "778"
+  },
+  "vestil": {
+    "name": "Vestil",
+    "id": "779"
+  },
+  "padgett": {
+    "name": "Padgett",
+    "id": "780"
+  },
+  "spantech": {
+    "name": "SpanTech",
+    "id": "781"
+  },
+  "tokyo electronics": {
+    "name": "Tokyo Electronics",
+    "id": "782"
+  },
+  "lift company": {
+    "name": "Lift Company",
+    "id": "783"
+  },
+  "royal tractor company": {
+    "name": "Royal Tractor Company",
+    "id": "784"
+  },
+  "industrial heat transfer inc.": {
+    "name": "Industrial Heat Transfer Inc.",
+    "id": "785"
+  },
+  "superior electric": {
+    "name": "Superior Electric",
+    "id": "786"
+  },
+  "metzgar": {
+    "name": "Metzgar",
+    "id": "787"
+  },
+  "brunner eng. & mfg": {
+    "name": "Brunner Eng. & Mfg",
+    "id": "788"
+  },
+  "intralox": {
+    "name": "Intralox",
+    "id": "789"
+  },
+  "eberhard bauer": {
+    "name": "Eberhard Bauer",
+    "id": "790"
+  },
+  "brook crompton": {
+    "name": "Brook Crompton",
+    "id": "791"
+  },
+  "shanklin": {
+    "name": "Shanklin",
+    "id": "792"
+  },
+  "kofloc": {
+    "name": "Kofloc",
+    "id": "793"
+  },
+  "genie": {
+    "name": "Genie",
+    "id": "794"
+  },
+  "horix": {
+    "name": "Horix",
+    "id": "795"
+  },
+  "sanrex": {
+    "name": "SanRex",
+    "id": "796"
+  },
+  "abicor binzel": {
+    "name": "Abicor Binzel",
+    "id": "797"
+  },
+  "hakko": {
+    "name": "Hakko",
+    "id": "798"
+  },
+  "mcdonnell & miller": {
+    "name": "McDonnell & Miller",
+    "id": "799"
+  },
+  "amerivacs": {
+    "name": "Amerivacs",
+    "id": "800"
+  },
+  "komatsu": {
+    "name": "Komatsu",
+    "id": "801"
+  },
+  "tec": {
+    "name": "TEC",
+    "id": "802"
+  },
+  "eagle": {
+    "name": "Eagle",
+    "id": "803"
+  },
+  "ziamen dong": {
+    "name": "Ziamen Dong",
+    "id": "805"
+  },
+  "armstrong": {
+    "name": "Armstrong",
+    "id": "806"
+  },
+  "bosch rexroth": {
+    "name": "Bosch Rexroth",
+    "id": "807"
+  },
+  "generic automation": {
+    "name": "Generic Automation",
+    "id": "808"
+  },
+  "automation components": {
+    "name": "Automation Components",
+    "id": "809"
+  },
+  "amba heraeus": {
+    "name": "Amba Heraeus",
+    "id": "810"
+  },
+  "barton": {
+    "name": "Barton",
+    "id": "811"
+  },
+  "iec": {
+    "name": "IEC",
+    "id": "812"
+  },
+  "baumer electric": {
+    "name": "Baumer Electric",
+    "id": "813"
+  },
+  "fluid controls inc.": {
+    "name": "Fluid Controls Inc.",
+    "id": "815"
+  },
+  "kunkle": {
+    "name": "Kunkle",
+    "id": "816"
+  },
+  "ato": {
+    "name": "ATO",
+    "id": "817"
+  },
+  "ascom energy system": {
+    "name": "Ascom Energy System",
+    "id": "818"
+  },
+  "zebra": {
+    "name": "Zebra",
+    "id": "819"
+  },
+  "lfe instruments": {
+    "name": "LFE Instruments",
+    "id": "820"
+  },
+  "btm": {
+    "name": "BTM",
+    "id": "821"
+  },
+  "block": {
+    "name": "Block",
+    "id": "822"
+  },
+  "moltech": {
+    "name": "Moltech",
+    "id": "823"
+  },
+  "airchecker": {
+    "name": "Airchecker",
+    "id": "824"
+  },
+  "dorner style": {
+    "name": "Dorner Style",
+    "id": "825"
+  },
+  "watlow": {
+    "name": "Watlow",
+    "id": "826"
+  },
+  "suzuki iron works co. ltd": {
+    "name": "Suzuki Iron Works Co. LTD",
+    "id": "827"
+  },
+  "winsmith": {
+    "name": "Winsmith",
+    "id": "828"
+  },
+  "minarik drives": {
+    "name": "Minarik Drives",
+    "id": "829"
+  },
+  "paco pumps": {
+    "name": "Paco Pumps",
+    "id": "830"
+  },
+  "seeka": {
+    "name": "Seeka",
+    "id": "831"
+  },
+  "blue-white": {
+    "name": "Blue-White",
+    "id": "832"
+  },
+  "smith": {
+    "name": "Smith",
+    "id": "833"
+  },
+  "formsprag": {
+    "name": "Formsprag",
+    "id": "834"
+  },
+  "portwell": {
+    "name": "Portwell",
+    "id": "835"
+  },
+  "kingston": {
+    "name": "Kingston",
+    "id": "836"
+  },
+  "doboy": {
+    "name": "Doboy",
+    "id": "837"
+  },
+  "comec": {
+    "name": "Comec",
+    "id": "838"
+  },
+  "sugino": {
+    "name": "Sugino",
+    "id": "839"
+  },
+  "national bulk equipment": {
+    "name": "National Bulk Equipment",
+    "id": "840"
+  },
+  "tamagawa seiki": {
+    "name": "Tamagawa Seiki",
+    "id": "841"
+  },
+  "chuo seisakusho": {
+    "name": "Chuo Seisakusho",
+    "id": "842"
+  },
+  "packard electric": {
+    "name": "Packard Electric",
+    "id": "843"
+  },
+  "odawara automation": {
+    "name": "Odawara Automation",
+    "id": "844"
+  },
+  "quadrel": {
+    "name": "Quadrel",
+    "id": "845"
+  },
+  "uchida-hydromatik": {
+    "name": "Uchida-Hydromatik",
+    "id": "846"
+  },
+  "blackmer": {
+    "name": "Blackmer",
+    "id": "847"
+  },
+  "syron": {
+    "name": "Syron",
+    "id": "848"
+  },
+  "automation devices inc": {
+    "name": "Automation Devices Inc",
+    "id": "849"
+  },
+  "rittal": {
+    "name": "Rittal",
+    "id": "850"
+  },
+  "sullair": {
+    "name": "Sullair",
+    "id": "851"
+  },
+  "airfloat": {
+    "name": "AirFloat",
+    "id": "852"
+  },
+  "mac automation": {
+    "name": "Mac Automation",
+    "id": "853"
+  },
+  "oliver of adrian": {
+    "name": "Oliver of Adrian",
+    "id": "854"
+  },
+  "intel": {
+    "name": "Intel",
+    "id": "855"
+  },
+  "cosel": {
+    "name": "Cosel",
+    "id": "856"
+  },
+  "nippon bearing": {
+    "name": "Nippon Bearing",
+    "id": "857"
+  },
+  "finmotor": {
+    "name": "Finmotor",
+    "id": "858"
+  },
+  "cardinal detecto": {
+    "name": "Cardinal Detecto",
+    "id": "859"
+  },
+  "apa": {
+    "name": "APA",
+    "id": "860"
+  },
+  "madison cable corp": {
+    "name": "Madison Cable Corp",
+    "id": "861"
+  },
+  "manchester tank": {
+    "name": "Manchester Tank",
+    "id": "862"
+  },
+  "metronix": {
+    "name": "Metronix",
+    "id": "863"
+  },
+  "rimage": {
+    "name": "Rimage",
+    "id": "864"
+  },
+  "sartorius": {
+    "name": "Sartorius",
+    "id": "865"
+  },
+  "ilapak": {
+    "name": "Ilapak",
+    "id": "866"
+  },
+  "ishida": {
+    "name": "Ishida",
+    "id": "867"
+  },
+  "autobag": {
+    "name": "Autobag",
+    "id": "868"
+  },
+  "ctm": {
+    "name": "CTM",
+    "id": "869"
+  },
+  "better pack": {
+    "name": "Better Pack",
+    "id": "870"
+  },
+  "label-aire": {
+    "name": "Label-Aire",
+    "id": "871"
+  },
+  "mk conveyor": {
+    "name": "MK Conveyor",
+    "id": "872"
+  },
+  "belcor": {
+    "name": "Belcor",
+    "id": "873"
+  },
+  "hunkar packaging": {
+    "name": "Hunkar Packaging",
+    "id": "874"
+  },
+  "clamco": {
+    "name": "Clamco",
+    "id": "875"
+  },
+  "sinfonia technology co": {
+    "name": "Sinfonia Technology Co",
+    "id": "876"
+  },
+  "marshalltown manufacturing co.": {
+    "name": "Marshalltown Manufacturing Co.",
+    "id": "877"
+  },
+  "cobra": {
+    "name": "Cobra",
+    "id": "878"
+  },
+  "little david": {
+    "name": "Little David",
+    "id": "879"
+  },
+  "bemistape": {
+    "name": "BemisTape",
+    "id": "880"
+  },
+  "philips": {
+    "name": "Philips",
+    "id": "882"
+  },
+  "nippon chemi-con": {
+    "name": "Nippon Chemi-Con",
+    "id": "883"
+  },
+  "powerdsine": {
+    "name": "PowerDsine",
+    "id": "884"
+  },
+  "cisco catalyst": {
+    "name": "Cisco Catalyst",
+    "id": "885"
+  },
+  "scandia": {
+    "name": "Scandia",
+    "id": "886"
+  },
+  "amci": {
+    "name": "AMCI",
+    "id": "887"
+  },
+  "gast": {
+    "name": "Gast",
+    "id": "888"
+  },
+  "applied motion products": {
+    "name": "Applied Motion Products",
+    "id": "889"
+  },
+  "akebono": {
+    "name": "Akebono",
+    "id": "890"
+  },
+  "lenovo": {
+    "name": "Lenovo",
+    "id": "891"
+  },
+  "euro cold": {
+    "name": "Euro Cold",
+    "id": "892"
+  },
+  "fluid research": {
+    "name": "Fluid Research",
+    "id": "893"
+  },
+  "weigh-tronix": {
+    "name": "Weigh-Tronix",
+    "id": "894"
+  },
+  "max-pak": {
+    "name": "Max-Pak",
+    "id": "895"
+  },
+  "gardner denver": {
+    "name": "Gardner Denver",
+    "id": "896"
+  },
+  "pioneer": {
+    "name": "Pioneer",
+    "id": "897"
+  },
+  "werner": {
+    "name": "Werner",
+    "id": "898"
+  },
+  "ethertrak": {
+    "name": "EtherTrak",
+    "id": "899"
+  },
+  "european labelling system": {
+    "name": "European Labelling System",
+    "id": "900"
+  },
+  "gammaflux": {
+    "name": "Gammaflux",
+    "id": "901"
+  },
+  "power flame": {
+    "name": "Power Flame",
+    "id": "902"
+  },
+  "costar": {
+    "name": "Costar",
+    "id": "903"
+  },
+  "systech": {
+    "name": "Systech",
+    "id": "904"
+  },
+  "opteon": {
+    "name": "Opteon",
+    "id": "905"
+  },
+  "advantech": {
+    "name": "Advantech",
+    "id": "906"
+  },
+  "obara corp.": {
+    "name": "Obara Corp.",
+    "id": "907"
+  },
+  "bray controls": {
+    "name": "Bray Controls",
+    "id": "908"
+  },
+  "melton": {
+    "name": "Melton",
+    "id": "909"
+  },
+  "marathon": {
+    "name": "Marathon",
+    "id": "910"
+  },
+  "extol": {
+    "name": "ExTol",
+    "id": "911"
+  },
+  "aaf international": {
+    "name": "AAF International",
+    "id": "912"
+  },
+  "aida engineering ltd": {
+    "name": "Aida Engineering LTD",
+    "id": "913"
+  },
+  "orii corporation": {
+    "name": "Orii Corporation",
+    "id": "914"
+  },
+  "exlar corporation": {
+    "name": "Exlar Corporation",
+    "id": "915"
+  },
+  "partlow": {
+    "name": "Partlow",
+    "id": "916"
+  },
+  "futek": {
+    "name": "Futek",
+    "id": "917"
+  },
+  "lenze": {
+    "name": "Lenze",
+    "id": "918"
+  },
+  "eurotherm controls": {
+    "name": "Eurotherm Controls",
+    "id": "919"
+  },
+  "telesis": {
+    "name": "Telesis",
+    "id": "920"
+  },
+  "delphi": {
+    "name": "Delphi",
+    "id": "921"
+  },
+  "logomat": {
+    "name": "Logomat",
+    "id": "922"
+  },
+  "atek": {
+    "name": "ATek",
+    "id": "923"
+  },
+  "ogura": {
+    "name": "Ogura",
+    "id": "924"
+  },
+  "slb": {
+    "name": "SLB",
+    "id": "925"
+  },
+  "sinfonia": {
+    "name": "Sinfonia",
+    "id": "926"
+  },
+  "national instruments": {
+    "name": "National Instruments",
+    "id": "927"
+  },
+  "associated research": {
+    "name": "Associated Research",
+    "id": "928"
+  },
+  "action pak": {
+    "name": "Action Pak",
+    "id": "929"
+  },
+  "viatran  viatran 108sba2aal70 pressure transducer 0-2000 psi 1/4\" npt": {
+    "name": "Viatran  Viatran 108SBA2AAL70 Pressure Transducer 0-2000 PSI 1/4\" NPT",
+    "id": "3074"
+  },
+  "visolux  visolux ml5-ksu-ga-gl-1504 photoelectric switch new": {
+    "name": "Visolux  Visolux ML5-KSU-GA-GL-1504 Photoelectric Switch New",
+    "id": "3105"
+  },
+  "visolux  pepperl & fuchs 419633 visolux ksu-ll-ir/43 photoelectric sensor new": {
+    "name": "Visolux  PepperL & Fuchs 419633 Visolux KSU-LL-IR/43 PhotoElectric Sensor New",
+    "id": "3275"
+  },
+  "shawbox": {
+    "name": "Shawbox",
+    "id": "4096"
+  },
+  "roach": {
+    "name": "Roach",
+    "id": "4098"
+  },
+  "maple systems": {
+    "name": "Maple Systems",
+    "id": "4099"
+  },
+  "uniop": {
+    "name": "UniOP",
+    "id": "4100"
+  },
+  "seiko epson corporation": {
+    "name": "Seiko Epson Corporation",
+    "id": "4101"
+  },
+  "lebow": {
+    "name": "Lebow",
+    "id": "4102"
+  },
+  "spg": {
+    "name": "SPG",
+    "id": "4103"
+  },
+  "graham motors": {
+    "name": "Graham motors",
+    "id": "4104"
+  },
+  "nissei corp": {
+    "name": "nissei corp",
+    "id": "4105"
+  },
+  "ulvac": {
+    "name": "Ulvac",
+    "id": "4106"
+  },
+  "riken keiki": {
+    "name": "Riken Keiki",
+    "id": "4107"
+  },
+  "leybold": {
+    "name": "Leybold",
+    "id": "4108"
+  },
+  "azco corp.": {
+    "name": "Azco Corp.",
+    "id": "4109"
+  },
+  "berger lichttechnik": {
+    "name": "Berger Lichttechnik",
+    "id": "4110"
+  },
+  "illinois instruments": {
+    "name": "Illinois Instruments",
+    "id": "4111"
+  },
+  "fife": {
+    "name": "Fife",
+    "id": "4112"
+  },
+  "ashcroft": {
+    "name": "Ashcroft",
+    "id": "4113"
+  },
+  "ifm": {
+    "name": "IFM",
+    "id": "4114"
+  },
+  "spire": {
+    "name": "Spire",
+    "id": "4115"
+  },
+  "bst": {
+    "name": "BST",
+    "id": "4116"
+  },
+  "bronkhorst": {
+    "name": "Bronkhorst",
+    "id": "4117"
+  },
+  "hoppmann": {
+    "name": "Hoppmann",
+    "id": "4118"
+  },
+  "apex dynamics": {
+    "name": "Apex Dynamics",
+    "id": "4119"
+  },
+  "quincy": {
+    "name": "Quincy",
+    "id": "4120"
+  },
+  "ic electronics": {
+    "name": "IC Electronics",
+    "id": "4121"
+  },
+  "hk": {
+    "name": "HK",
+    "id": "4122"
+  },
+  "takamura": {
+    "name": "Takamura",
+    "id": "4123"
+  },
+  "mercoid": {
+    "name": "Mercoid",
+    "id": "4124"
+  },
+  "fyh": {
+    "name": "FYH",
+    "id": "4125"
+  },
+  "metrologic": {
+    "name": "Metrologic",
+    "id": "4126"
+  },
+  "sodeca": {
+    "name": "Sodeca",
+    "id": "4127"
+  },
+  "bando densen": {
+    "name": "Bando Densen",
+    "id": "4128"
+  },
+  "dispenser tech": {
+    "name": "Dispenser Tech",
+    "id": "4129"
+  },
+  "agilent": {
+    "name": "Agilent",
+    "id": "4130"
+  },
+  "aec nelmor": {
+    "name": "AEC Nelmor",
+    "id": "4131"
+  },
+  "bst international": {
+    "name": "BST International",
+    "id": "4132"
+  },
+  "pacific scientifc": {
+    "name": "Pacific Scientifc",
+    "id": "4133"
+  },
+  "sealmaster": {
+    "name": "SealMaster",
+    "id": "4134"
+  },
+  "honeywell skinner": {
+    "name": "Honeywell Skinner",
+    "id": "4135"
+  },
+  "turck  turck gkm 32-4m/s600 powerfast molded cordset": {
+    "name": "Turck  Turck GKM 32-4M/S600 Powerfast Molded Cordset",
+    "id": "4136"
+  },
+  "tokin  tokin lf-340 noise filter": {
+    "name": "Tokin  Tokin LF-340 Noise Filter",
+    "id": "4138"
+  },
+  "dynamics research corporation": {
+    "name": "Dynamics Research Corporation",
+    "id": "4139"
+  },
+  "master pneumatic inc.": {
+    "name": "Master Pneumatic Inc.",
+    "id": "4140"
+  },
+  "tr eletronic": {
+    "name": "TR Eletronic",
+    "id": "4141"
+  },
+  "giddings & lewis": {
+    "name": "Giddings & Lewis",
+    "id": "4142"
+  },
+  "tsuruta electric co.   primary 120v sec": {
+    "name": "Tsuruta Electric Co.   Primary 120V Sec",
+    "id": "4143"
+  },
+  "customized": {
+    "name": "Customized",
+    "id": "4144"
+  },
+  "proportion air inc.": {
+    "name": "Proportion Air Inc.",
+    "id": "4145"
+  },
+  "gfc power": {
+    "name": "GFC Power",
+    "id": "4146"
+  },
+  "tempco": {
+    "name": "Tempco",
+    "id": "4147"
+  },
+  "hobart": {
+    "name": "Hobart",
+    "id": "4148"
+  },
+  "tpc wire and cable": {
+    "name": "TPC Wire And Cable",
+    "id": "4149"
+  },
+  "optex": {
+    "name": "Optex",
+    "id": "4150"
+  },
+  "tennessee rand": {
+    "name": "Tennessee Rand",
+    "id": "4151"
+  },
+  "e. dold": {
+    "name": "E. Dold",
+    "id": "4152"
+  },
+  "suzuki": {
+    "name": "Suzuki",
+    "id": "4153"
+  },
+  "sauter": {
+    "name": "Sauter",
+    "id": "4154"
+  },
+  "teapo": {
+    "name": "Teapo",
+    "id": "4155"
+  },
+  "royal": {
+    "name": "Royal",
+    "id": "4156"
+  },
+  "kollmorgen": {
+    "name": "Kollmorgen",
+    "id": "4157"
+  },
+  "star automation": {
+    "name": "Star Automation",
+    "id": "4158"
+  },
+  "marshalltown": {
+    "name": "Marshalltown",
+    "id": "4159"
+  },
+  "printronix": {
+    "name": "Printronix",
+    "id": "4160"
+  },
+  "tape": {
+    "name": "Tape",
+    "id": "4161"
+  },
+  "a&m kinzel": {
+    "name": "A&M Kinzel",
+    "id": "4162"
+  },
+  "thorlabs": {
+    "name": "Thorlabs",
+    "id": "4164"
+  },
+  "weiss": {
+    "name": "Weiss",
+    "id": "4165"
+  },
+  "sato": {
+    "name": "SATO",
+    "id": "4166"
+  },
+  "nirquest": {
+    "name": "NIRQuest",
+    "id": "4167"
+  },
+  "ims": {
+    "name": "IMS",
+    "id": "4168"
+  },
+  "aircel": {
+    "name": "AirCel",
+    "id": "4169"
+  },
+  "kikusui": {
+    "name": "Kikusui",
+    "id": "4170"
+  },
+  "invensys": {
+    "name": "Invensys",
+    "id": "4171"
+  },
+  "t a ultrasonics": {
+    "name": "T A Ultrasonics",
+    "id": "4172"
+  },
+  "monoprice": {
+    "name": "Monoprice",
+    "id": "4173"
+  },
+  "clark": {
+    "name": "Clark",
+    "id": "4174"
+  },
+  "dsk": {
+    "name": "DSK",
+    "id": "4175"
+  },
+  "sem": {
+    "name": "SEM",
+    "id": "4176"
+  },
+  "labelmate": {
+    "name": "Labelmate",
+    "id": "4177"
+  },
+  "rodix": {
+    "name": "Rodix",
+    "id": "4178"
+  },
+  "alemite": {
+    "name": "Alemite",
+    "id": "4179"
+  },
+  "cryogenic experts inc.": {
+    "name": "Cryogenic Experts Inc.",
+    "id": "4180"
+  },
+  "ytm": {
+    "name": "YTM",
+    "id": "4181"
+  },
+  "tym": {
+    "name": "TYM",
+    "id": "4182"
+  },
+  "macgregor": {
+    "name": "MacGregor",
+    "id": "4183"
+  },
+  "interface": {
+    "name": "Interface",
+    "id": "4184"
+  },
+  "west": {
+    "name": "West",
+    "id": "4185"
+  },
+  "ta systems": {
+    "name": "TA Systems",
+    "id": "4186"
+  },
+  "magne corp.": {
+    "name": "Magne Corp.",
+    "id": "4187"
+  },
+  "hercules": {
+    "name": "Hercules",
+    "id": "4188"
+  },
+  "koolant koolers": {
+    "name": "Koolant Koolers",
+    "id": "4189"
+  },
+  "fostoria": {
+    "name": "Fostoria",
+    "id": "4190"
+  },
+  "speedaire": {
+    "name": "Speedaire",
+    "id": "4191"
+  },
+  "hyvair": {
+    "name": "Hyvair",
+    "id": "4192"
+  },
+  "semikron": {
+    "name": "Semikron",
+    "id": "4193"
+  },
+  "teco": {
+    "name": "TECO",
+    "id": "4194"
+  },
+  "microscan": {
+    "name": "Microscan",
+    "id": "4195"
+  },
+  "asy": {
+    "name": "ASY",
+    "id": "4196"
+  },
+  "motortronics": {
+    "name": "Motortronics",
+    "id": "4197"
+  },
+  "aag inc": {
+    "name": "AAG Inc",
+    "id": "4198"
+  },
+  "kontron": {
+    "name": "Kontron",
+    "id": "4199"
+  },
+  "teledyne dalsa": {
+    "name": "Teledyne Dalsa",
+    "id": "4200"
+  },
+  "addi-data": {
+    "name": "Addi-Data",
+    "id": "4201"
+  },
+  "gemco": {
+    "name": "Gemco",
+    "id": "4202"
+  },
+  "crydom": {
+    "name": "Crydom",
+    "id": "4203"
+  },
+  "uline": {
+    "name": "Uline",
+    "id": "4204"
+  },
+  "eagle manufacturing": {
+    "name": "Eagle Manufacturing",
+    "id": "4205"
+  },
+  "copeland": {
+    "name": "Copeland",
+    "id": "4206"
+  },
+  "berger lahr": {
+    "name": "Berger Lahr",
+    "id": "4207"
+  },
+  "mead fluid dynamics": {
+    "name": "Mead Fluid Dynamics",
+    "id": "4208"
+  },
+  "longford equipment international": {
+    "name": "Longford Equipment International",
+    "id": "4209"
+  },
+  "horiuchi machinery": {
+    "name": "Horiuchi Machinery",
+    "id": "4210"
+  },
+  "mgs machine corporation": {
+    "name": "MGS Machine Corporation",
+    "id": "4211"
+  },
+  "streamfeeder": {
+    "name": "Streamfeeder",
+    "id": "4212"
+  },
+  "sommer automatic": {
+    "name": "Sommer Automatic",
+    "id": "4213"
+  },
+  "john deere": {
+    "name": "John Deere",
+    "id": "4214"
+  },
+  "thermo ramsey": {
+    "name": "Thermo Ramsey",
+    "id": "4215"
+  },
+  "intermec": {
+    "name": "Intermec",
+    "id": "4216"
+  },
+  "d-link": {
+    "name": "D-Link",
+    "id": "4217"
+  },
+  "nitra": {
+    "name": "Nitra",
+    "id": "4218"
+  },
+  "hawa": {
+    "name": "Hawa",
+    "id": "4219"
+  },
+  "opto 22": {
+    "name": "Opto 22",
+    "id": "4220"
+  },
+  "baco": {
+    "name": "BACO",
+    "id": "4221"
+  },
+  "ccs": {
+    "name": "CCS",
+    "id": "4222"
+  },
+  "edmund optics": {
+    "name": "Edmund Optics",
+    "id": "4223"
+  },
+  "cleveland machine controls": {
+    "name": "Cleveland Machine Controls",
+    "id": "4224"
+  },
+  "alloyd": {
+    "name": "Alloyd",
+    "id": "4225"
+  },
+  "verity systems": {
+    "name": "Verity Systems",
+    "id": "4226"
+  },
+  "huttinger elektronik": {
+    "name": "Huttinger Elektronik",
+    "id": "4227"
+  },
+  "nestech": {
+    "name": "Nestech",
+    "id": "4228"
+  },
+  "rd ideas": {
+    "name": "RD IDeas",
+    "id": "4229"
+  },
+  "rf ideas": {
+    "name": "RF IDeas",
+    "id": "4230"
+  },
+  "baumuller nurnberg": {
+    "name": "Baumuller Nurnberg",
+    "id": "4231"
+  },
+  "smalley mfg co.": {
+    "name": "Smalley MFG Co.",
+    "id": "4232"
+  },
+  "starview packaging machinery": {
+    "name": "Starview Packaging Machinery",
+    "id": "4233"
+  },
+  "carel": {
+    "name": "Carel",
+    "id": "4234"
+  },
+  "computer identics": {
+    "name": "Computer Identics",
+    "id": "4235"
+  },
+  "nortec": {
+    "name": "Nortec",
+    "id": "4236"
+  },
+  "metaphase": {
+    "name": "Metaphase",
+    "id": "4237"
+  },
+  "rki instruments": {
+    "name": "RKI Instruments",
+    "id": "4238"
+  },
+  "encoder products": {
+    "name": "Encoder Products",
+    "id": "4239"
+  },
+  "gordos": {
+    "name": "Gordos",
+    "id": "4240"
+  },
+  "n2power": {
+    "name": "N2Power",
+    "id": "4241"
+  },
+  "eam": {
+    "name": "EAM",
+    "id": "4242"
+  },
+  "mayr": {
+    "name": "Mayr",
+    "id": "4243"
+  },
+  "nss champ": {
+    "name": "NSS Champ",
+    "id": "4244"
+  },
+  "armm inc.": {
+    "name": "ARMM Inc.",
+    "id": "4245"
+  },
+  "deisslingen": {
+    "name": "Deisslingen",
+    "id": "4246"
+  },
+  "carpanelli motor": {
+    "name": "Carpanelli Motor",
+    "id": "4247"
+  },
+  "g&a goulds pumps": {
+    "name": "G&A Goulds Pumps",
+    "id": "4248"
+  },
+  "takasago": {
+    "name": "Takasago",
+    "id": "4249"
+  },
+  "taketsuna": {
+    "name": "Taketsuna",
+    "id": "4250"
+  },
+  "marvel": {
+    "name": "Marvel",
+    "id": "4251"
+  },
+  "tomar": {
+    "name": "Tomar",
+    "id": "4252"
+  },
+  "shimpo": {
+    "name": "Shimpo",
+    "id": "4253"
+  },
+  "hochiki": {
+    "name": "Hochiki",
+    "id": "4254"
+  },
+  "chicago rawhide": {
+    "name": "Chicago Rawhide",
+    "id": "4255"
+  },
+  "gimex": {
+    "name": "Gimex",
+    "id": "4256"
+  },
+  "tcm": {
+    "name": "TCM",
+    "id": "4257"
+  },
+  "welding technology corp": {
+    "name": "Welding Technology Corp",
+    "id": "4258"
+  },
+  "herman schwabe": {
+    "name": "Herman Schwabe",
+    "id": "4259"
+  },
+  "wellsaw": {
+    "name": "Wellsaw",
+    "id": "4260"
+  },
+  "br automation": {
+    "name": "BR Automation",
+    "id": "4261"
+  },
+  "anritsu": {
+    "name": "Anritsu",
+    "id": "4262"
+  },
+  "rohde & schwarz": {
+    "name": "Rohde & Schwarz",
+    "id": "4263"
+  },
+  "dunkermotoren": {
+    "name": "Dunkermotoren",
+    "id": "4264"
+  },
+  "speedline": {
+    "name": "Speedline",
+    "id": "4265"
+  },
+  "toellner": {
+    "name": "Toellner",
+    "id": "4266"
+  },
+  "epiphan": {
+    "name": "Epiphan",
+    "id": "4267"
+  },
+  "cyberpower": {
+    "name": "CyberPower",
+    "id": "4268"
+  },
+  "prism sound": {
+    "name": "Prism Sound",
+    "id": "4269"
+  },
+  "dsti": {
+    "name": "DSTI",
+    "id": "4270"
+  },
+  "iei": {
+    "name": "IEI",
+    "id": "4271"
+  },
+  "conta-clip": {
+    "name": "Conta-Clip",
+    "id": "4272"
+  },
+  "ivp": {
+    "name": "IVP",
+    "id": "4273"
+  },
+  "moxa": {
+    "name": "Moxa",
+    "id": "4274"
+  },
+  "jai": {
+    "name": "JAI",
+    "id": "4275"
+  },
+  "dow-kev microwave": {
+    "name": "Dow-Kev Microwave",
+    "id": "4276"
+  },
+  "mini-circuits": {
+    "name": "Mini-Circuits",
+    "id": "4277"
+  },
+  "retero belgium": {
+    "name": "Retero Belgium",
+    "id": "4278"
+  },
+  "lantech": {
+    "name": "Lantech",
+    "id": "4279"
+  },
+  "stocker yale canada": {
+    "name": "Stocker Yale Canada",
+    "id": "4280"
+  },
+  "movotec lift systems": {
+    "name": "Movotec Lift Systems",
+    "id": "4281"
+  },
+  "control technology corporation": {
+    "name": "Control Technology Corporation",
+    "id": "4282"
+  },
+  "microboards": {
+    "name": "Microboards",
+    "id": "4283"
+  },
+  "dell": {
+    "name": "Dell",
+    "id": "4284"
+  },
+  "vat": {
+    "name": "VAT",
+    "id": "4285"
+  },
+  "pittman": {
+    "name": "Pittman",
+    "id": "4286"
+  },
+  "honda": {
+    "name": "Honda",
+    "id": "4287"
+  },
+  "weldotron": {
+    "name": "Weldotron",
+    "id": "4288"
+  },
+  "texwrap": {
+    "name": "Texwrap",
+    "id": "4289"
+  },
+  "laros": {
+    "name": "LaRos",
+    "id": "4290"
+  },
+  "hawker": {
+    "name": "Hawker",
+    "id": "4291"
+  },
+  "nmb": {
+    "name": "NMB",
+    "id": "4292"
+  },
+  "plymovent": {
+    "name": "PlymoVent",
+    "id": "4293"
+  },
+  "gimatic": {
+    "name": "Gimatic",
+    "id": "4294"
+  },
+  "daiden": {
+    "name": "Daiden",
+    "id": "4295"
+  },
+  "wsb": {
+    "name": "WSB",
+    "id": "4296"
+  },
+  "sonitek": {
+    "name": "Sonitek",
+    "id": "4297"
+  },
+  "kato tekko co. ltd": {
+    "name": "Kato Tekko Co. LTD",
+    "id": "4298"
+  },
+  "rkc instrument": {
+    "name": "RKC Instrument",
+    "id": "4299"
+  },
+  "juniper pneumatics": {
+    "name": "Juniper Pneumatics",
+    "id": "4300"
+  },
+  "harting": {
+    "name": "Harting",
+    "id": "4301"
+  },
+  "imaje": {
+    "name": "Imaje",
+    "id": "4302"
+  },
+  "okamoto": {
+    "name": "Okamoto",
+    "id": "4303"
+  },
+  "landis": {
+    "name": "Landis",
+    "id": "4304"
+  },
+  "neytech": {
+    "name": "NeyTech",
+    "id": "4305"
+  },
+  "shinagawa densen": {
+    "name": "Shinagawa Densen",
+    "id": "4306"
+  },
+  "atc": {
+    "name": "ATC",
+    "id": "4307"
+  },
+  "donaldson torit": {
+    "name": "Donaldson Torit",
+    "id": "4308"
+  },
+  "zero-max": {
+    "name": "Zero-Max",
+    "id": "4309"
+  },
+  "sonotec": {
+    "name": "Sonotec",
+    "id": "4310"
+  },
+  "marzocchi": {
+    "name": "Marzocchi",
+    "id": "4311"
+  },
+  "bunting magnetics": {
+    "name": "Bunting Magnetics",
+    "id": "4312"
+  },
+  "ssd drives": {
+    "name": "SSD Drives",
+    "id": "4313"
+  },
+  "melsec": {
+    "name": "Melsec",
+    "id": "4314"
+  },
+  "andritz sprout bauer": {
+    "name": "Andritz Sprout Bauer",
+    "id": "4315"
+  },
+  "rix": {
+    "name": "RIX",
+    "id": "4316"
+  },
+  "kice": {
+    "name": "Kice",
+    "id": "4317"
+  },
+  "okaya": {
+    "name": "Okaya",
+    "id": "4318"
+  },
+  "kawasaki": {
+    "name": "Kawasaki",
+    "id": "4319"
+  },
+  "imcs": {
+    "name": "IMCS",
+    "id": "4320"
+  },
+  "x-rite": {
+    "name": "X-Rite",
+    "id": "4321"
+  },
+  "ogino seiki": {
+    "name": "Ogino Seiki",
+    "id": "4322"
+  },
+  "hbm": {
+    "name": "HBM",
+    "id": "4323"
+  },
+  "process sensors": {
+    "name": "Process Sensors",
+    "id": "4324"
+  },
+  "yushin": {
+    "name": "Yushin",
+    "id": "4325"
+  },
+  "air force 1": {
+    "name": "Air Force 1",
+    "id": "4326"
+  },
+  "orbitform": {
+    "name": "Orbitform",
+    "id": "4327"
+  },
+  "future design controls": {
+    "name": "Future Design Controls",
+    "id": "4328"
+  },
+  "tokinarc": {
+    "name": "Tokinarc",
+    "id": "4329"
+  },
+  "uas": {
+    "name": "UAS",
+    "id": "4330"
+  },
+  "hot melt technologies": {
+    "name": "Hot Melt Technologies",
+    "id": "4331"
+  },
+  "rosenthal": {
+    "name": "Rosenthal",
+    "id": "4332"
+  },
+  "deluxe stitcher": {
+    "name": "Deluxe Stitcher",
+    "id": "4333"
+  },
+  "proheat": {
+    "name": "Proheat",
+    "id": "4334"
+  },
+  "host automation": {
+    "name": "Host Automation",
+    "id": "4335"
+  },
+  "contemporary controls": {
+    "name": "Contemporary Controls",
+    "id": "4336"
+  },
+  "seco": {
+    "name": "SECO",
+    "id": "4337"
+  },
+  "introl design": {
+    "name": "Introl Design",
+    "id": "4338"
+  },
+  "vacon": {
+    "name": "Vacon",
+    "id": "4339"
+  },
+  "xiris": {
+    "name": "Xiris",
+    "id": "4340"
+  },
+  "loveshaw": {
+    "name": "Loveshaw",
+    "id": "4341"
+  },
+  "scotch": {
+    "name": "Scotch",
+    "id": "4342"
+  },
+  "grove gear": {
+    "name": "Grove Gear",
+    "id": "4343"
+  },
+  "cas": {
+    "name": "CAS",
+    "id": "4344"
+  },
+  "fantech": {
+    "name": "Fantech",
+    "id": "4345"
+  },
+  "markem": {
+    "name": "Markem",
+    "id": "4346"
+  },
+  "quantronix": {
+    "name": "Quantronix",
+    "id": "4347"
+  },
+  "ebs": {
+    "name": "EBS",
+    "id": "4348"
+  },
+  "kimura": {
+    "name": "Kimura",
+    "id": "4349"
+  },
+  "beijer electronics": {
+    "name": "Beijer Electronics",
+    "id": "4350"
+  },
+  "avtron": {
+    "name": "Avtron",
+    "id": "4351"
+  },
+  "nidec corp": {
+    "name": "Nidec Corp",
+    "id": "4352"
+  },
+  "cp bourg": {
+    "name": "CP Bourg",
+    "id": "4353"
+  },
+  "horizon": {
+    "name": "Horizon",
+    "id": "4354"
+  },
+  "smith heimann": {
+    "name": "Smith Heimann",
+    "id": "4355"
+  },
+  "sollas": {
+    "name": "Sollas",
+    "id": "4356"
+  },
+  "blue bamboo": {
+    "name": "Blue Bamboo",
+    "id": "4357"
+  },
+  "3m": {
+    "name": "3M",
+    "id": "4358"
+  },
+  "global industrial": {
+    "name": "Global Industrial",
+    "id": "4359"
+  },
+  "trantex corporation": {
+    "name": "Trantex Corporation",
+    "id": "4360"
+  },
+  "ait": {
+    "name": "AIT",
+    "id": "4361"
+  },
+  "binks": {
+    "name": "Binks",
+    "id": "4362"
+  },
+  "ashland conveyor products": {
+    "name": "Ashland Conveyor Products",
+    "id": "4363"
+  },
+  "smart move": {
+    "name": "Smart Move",
+    "id": "4364"
+  },
+  "oilgear": {
+    "name": "Oilgear",
+    "id": "4365"
+  },
+  "aerovent": {
+    "name": "Aerovent",
+    "id": "4366"
+  },
+  "b&b electronics": {
+    "name": "B&B Electronics",
+    "id": "4367"
+  },
+  "carol": {
+    "name": "Carol",
+    "id": "4368"
+  },
+  "trak": {
+    "name": "Trak",
+    "id": "4369"
+  },
+  "mack": {
+    "name": "Mack",
+    "id": "4370"
+  },
+  "taylor": {
+    "name": "Taylor",
+    "id": "4371"
+  },
+  "robertshaw": {
+    "name": "Robertshaw",
+    "id": "4372"
+  },
+  "trend": {
+    "name": "Trend",
+    "id": "4373"
+  },
+  "thermo-electra": {
+    "name": "Thermo-Electra",
+    "id": "4374"
+  },
+  "gic thermodynamics": {
+    "name": "GIC Thermodynamics",
+    "id": "4375"
+  },
+  "micro switch": {
+    "name": "Micro Switch",
+    "id": "4376"
+  },
+  "tel-tru": {
+    "name": "Tel-Tru",
+    "id": "4377"
+  },
+  "senisys": {
+    "name": "Senisys",
+    "id": "4378"
+  },
+  "precision multiple controls": {
+    "name": "Precision Multiple Controls",
+    "id": "4379"
+  },
+  "banner": {
+    "name": "Banner",
+    "id": "4380"
+  },
+  "falcon": {
+    "name": "Falcon",
+    "id": "4381"
+  },
+  "unimax": {
+    "name": "Unimax",
+    "id": "4382"
+  },
+  "eagle signal": {
+    "name": "Eagle Signal",
+    "id": "4383"
+  },
+  "replacement components division": {
+    "name": "Replacement Components Division",
+    "id": "4384"
+  },
+  "hydro-line": {
+    "name": "Hydro-Line",
+    "id": "4385"
+  },
+  "yamaha": {
+    "name": "Yamaha",
+    "id": "4386"
+  },
+  "und lab inc": {
+    "name": "UND LAB INC",
+    "id": "4387"
+  },
+  "therm-o-disk": {
+    "name": "Therm-O-Disk",
+    "id": "4388"
+  },
+  "canfield": {
+    "name": "Canfield",
+    "id": "4389"
+  },
+  "denso": {
+    "name": "Denso",
+    "id": "4390"
+  },
+  "hengstler": {
+    "name": "Hengstler",
+    "id": "4391"
+  },
+  "carter": {
+    "name": "Carter",
+    "id": "4392"
+  },
+  "metal work": {
+    "name": "Metal Work",
+    "id": "4393"
+  },
+  "ngk": {
+    "name": "NGK",
+    "id": "4394"
+  },
+  "accu-coder": {
+    "name": "Accu-Coder",
+    "id": "4395"
+  },
+  "jacobs": {
+    "name": "Jacobs",
+    "id": "4396"
+  },
+  "plextor": {
+    "name": "Plextor",
+    "id": "4397"
+  },
+  "chicago pneumatic": {
+    "name": "Chicago Pneumatic",
+    "id": "4398"
+  },
+  "power solutions": {
+    "name": "Power Solutions",
+    "id": "4399"
+  },
+  "start": {
+    "name": "Start",
+    "id": "4400"
+  },
+  "weld-aid": {
+    "name": "Weld-Aid",
+    "id": "4401"
+  },
+  "anvil international": {
+    "name": "Anvil International",
+    "id": "4402"
+  },
+  "fk bearings": {
+    "name": "FK Bearings",
+    "id": "4403"
+  },
+  "motion industries": {
+    "name": "Motion Industries",
+    "id": "4404"
+  },
+  "h&h": {
+    "name": "H&H",
+    "id": "4405"
+  },
+  "filtrec": {
+    "name": "Filtrec",
+    "id": "4406"
+  },
+  "vsi": {
+    "name": "VSI",
+    "id": "4407"
+  },
+  "entrelec schiele": {
+    "name": "Entrelec Schiele",
+    "id": "4408"
+  },
+  "adaptec": {
+    "name": "Adaptec",
+    "id": "4409"
+  },
+  "bak": {
+    "name": "BAK",
+    "id": "4410"
+  },
+  "ibico": {
+    "name": "Ibico",
+    "id": "4411"
+  },
+  "new york blower": {
+    "name": "New York Blower",
+    "id": "4412"
+  },
+  "boeckeler": {
+    "name": "Boeckeler",
+    "id": "4413"
+  },
+  "concept design": {
+    "name": "Concept Design",
+    "id": "4414"
+  },
+  "xingchen": {
+    "name": "Xingchen",
+    "id": "4415"
+  },
+  "trd manufacturing": {
+    "name": "TRD Manufacturing",
+    "id": "4416"
+  },
+  "motion controls": {
+    "name": "Motion Controls",
+    "id": "4417"
+  },
+  "tpc pneumatics": {
+    "name": "TPC Pneumatics",
+    "id": "4418"
+  },
+  "tri clamp": {
+    "name": "Tri Clamp",
+    "id": "4419"
+  },
+  "industrial molding supplies": {
+    "name": "Industrial Molding Supplies",
+    "id": "4420"
+  },
+  "leviton": {
+    "name": "Leviton",
+    "id": "4421"
+  },
+  "eriez": {
+    "name": "Eriez",
+    "id": "4422"
+  },
+  "fabco-air": {
+    "name": "Fabco-Air",
+    "id": "4423"
+  },
+  "airpro": {
+    "name": "Airpro",
+    "id": "4424"
+  },
+  "continental industries": {
+    "name": "Continental Industries",
+    "id": "4425"
+  },
+  "vessel": {
+    "name": "Vessel",
+    "id": "4426"
+  },
+  "aro": {
+    "name": "ARO",
+    "id": "4427"
+  },
+  "ls systems": {
+    "name": "LS Systems",
+    "id": "4428"
+  },
+  "df": {
+    "name": "DF",
+    "id": "4429"
+  },
+  "mcgill": {
+    "name": "McGill",
+    "id": "4430"
+  },
+  "e-t-a": {
+    "name": "E-T-A",
+    "id": "4431"
+  },
+  "temposonics": {
+    "name": "Temposonics",
+    "id": "4432"
+  },
+  "technoelectric": {
+    "name": "Technoelectric",
+    "id": "4433"
+  },
+  "tokyo pikosha": {
+    "name": "Tokyo Pikosha",
+    "id": "4434"
+  },
+  "federal signal": {
+    "name": "Federal Signal",
+    "id": "4435"
+  },
+  "tri lite": {
+    "name": "Tri Lite",
+    "id": "4436"
+  },
+  "magnetek": {
+    "name": "Magnetek",
+    "id": "4437"
+  },
+  "global finishing solutions": {
+    "name": "Global Finishing Solutions",
+    "id": "4438"
+  },
+  "itw mima": {
+    "name": "ITW MIMA",
+    "id": "4439"
+  },
+  "wohner": {
+    "name": "Wohner",
+    "id": "4440"
+  },
+  "feeding concepts": {
+    "name": "Feeding Concepts",
+    "id": "4441"
+  },
+  "pma": {
+    "name": "PMA",
+    "id": "4442"
+  },
+  "datasensor": {
+    "name": "Datasensor",
+    "id": "4443"
+  },
+  "gamma high voltage research": {
+    "name": "Gamma High Voltage Research",
+    "id": "4444"
+  },
+  "rite hite": {
+    "name": "Rite Hite",
+    "id": "4445"
+  },
+  "yazaki": {
+    "name": "Yazaki",
+    "id": "4446"
+  },
+  "shizuki": {
+    "name": "Shizuki",
+    "id": "4447"
+  },
+  "citizen": {
+    "name": "Citizen",
+    "id": "4448"
+  },
+  "u.s. robotics": {
+    "name": "U.S. Robotics",
+    "id": "4449"
+  },
+  "tecnoingranaggi riduttori": {
+    "name": "Tecnoingranaggi Riduttori",
+    "id": "4450"
+  },
+  "western reserve controls": {
+    "name": "Western Reserve Controls",
+    "id": "4451"
+  },
+  "sansho": {
+    "name": "Sansho",
+    "id": "4452"
+  },
+  "pneumadyne": {
+    "name": "Pneumadyne",
+    "id": "4453"
+  },
+  "magnecraft": {
+    "name": "Magnecraft",
+    "id": "4454"
+  },
+  "jason industrial": {
+    "name": "Jason Industrial",
+    "id": "4455"
+  },
+  "gates": {
+    "name": "Gates",
+    "id": "4456"
+  },
+  "control air inc.": {
+    "name": "Control Air Inc.",
+    "id": "4457"
+  },
+  "niscon": {
+    "name": "Niscon",
+    "id": "4458"
+  },
+  "voltek": {
+    "name": "Voltek",
+    "id": "4459"
+  },
+  "misumi": {
+    "name": "Misumi",
+    "id": "4460"
+  },
+  "kyk": {
+    "name": "KYK",
+    "id": "4461"
+  },
+  "fag inc.": {
+    "name": "FAG Inc.",
+    "id": "4462"
+  },
+  "sony bonson": {
+    "name": "Sony Bonson",
+    "id": "4463"
+  },
+  "grayhill": {
+    "name": "Grayhill",
+    "id": "4464"
+  },
+  "gems sensors": {
+    "name": "Gems Sensors",
+    "id": "4465"
+  },
+  "veris industries": {
+    "name": "Veris Industries",
+    "id": "4466"
+  },
+  "donaldson filtration solutions": {
+    "name": "Donaldson Filtration Solutions",
+    "id": "4467"
+  },
+  "danfoss electronics": {
+    "name": "Danfoss Electronics",
+    "id": "4468"
+  },
+  "towa seiden industrial": {
+    "name": "Towa Seiden Industrial",
+    "id": "4469"
+  },
+  "faulhaber schonaich": {
+    "name": "Faulhaber Schonaich",
+    "id": "4470"
+  },
+  "stauff": {
+    "name": "Stauff",
+    "id": "4471"
+  },
+  "mercury displacement industries": {
+    "name": "Mercury Displacement Industries",
+    "id": "4472"
+  },
+  "honda tsushin kogyo": {
+    "name": "Honda Tsushin Kogyo",
+    "id": "4473"
+  },
+  "mallory": {
+    "name": "Mallory",
+    "id": "4474"
+  },
+  "adlink": {
+    "name": "Adlink",
+    "id": "4475"
+  },
+  "pulsotronic": {
+    "name": "Pulsotronic",
+    "id": "4476"
+  },
+  "a.o. smith": {
+    "name": "A.O. Smith",
+    "id": "4478"
+  },
+  "crompton instruments": {
+    "name": "Crompton Instruments",
+    "id": "4479"
+  },
+  "prosense": {
+    "name": "ProSense",
+    "id": "4480"
+  },
+  "genuine stearns": {
+    "name": "Genuine Stearns",
+    "id": "4481"
+  },
+  "matsui": {
+    "name": "Matsui",
+    "id": "4482"
+  },
+  "ass automation": {
+    "name": "ASS Automation",
+    "id": "4483"
+  },
+  "garvens": {
+    "name": "Garvens",
+    "id": "4484"
+  },
+  "singulus technologies": {
+    "name": "Singulus Technologies",
+    "id": "4485"
+  },
+  "bindicator": {
+    "name": "Bindicator",
+    "id": "4486"
+  },
+  "haas": {
+    "name": "HAAS",
+    "id": "4487"
+  },
+  "acme transformer": {
+    "name": "Acme Transformer",
+    "id": "4488"
+  },
+  "lust": {
+    "name": "Lust",
+    "id": "4489"
+  },
+  "enercon": {
+    "name": "Enercon",
+    "id": "4490"
+  },
+  "fukuda electrics works co.": {
+    "name": "Fukuda Electrics Works Co.",
+    "id": "4491"
+  },
+  "kyowa electric co.": {
+    "name": "Kyowa Electric Co.",
+    "id": "4492"
+  },
+  "zheng": {
+    "name": "Zheng",
+    "id": "4493"
+  },
+  "new jersey machine inc.": {
+    "name": "New Jersey Machine Inc.",
+    "id": "4494"
+  },
+  "peer chain": {
+    "name": "Peer Chain",
+    "id": "4495"
+  },
+  "simco ion": {
+    "name": "Simco Ion",
+    "id": "4496"
+  },
+  "j.w. speaker corp.": {
+    "name": "J.W. Speaker Corp.",
+    "id": "4497"
+  },
+  "thomas & betts": {
+    "name": "Thomas & Betts",
+    "id": "4498"
+  },
+  "borg warner": {
+    "name": "Borg Warner",
+    "id": "4499"
+  },
+  "southco": {
+    "name": "Southco",
+    "id": "4500"
+  },
+  "control techniques": {
+    "name": "Control Techniques",
+    "id": "4501"
+  },
+  "gorbel": {
+    "name": "Gorbel",
+    "id": "4502"
+  },
+  "loren cook": {
+    "name": "Loren Cook",
+    "id": "4503"
+  },
+  "encon": {
+    "name": "Encon",
+    "id": "4504"
+  },
+  "se-kure controls": {
+    "name": "Se-Kure Controls",
+    "id": "4505"
+  },
+  "senvex": {
+    "name": "Senvex",
+    "id": "4506"
+  },
+  "lubrication scientifics": {
+    "name": "Lubrication Scientifics",
+    "id": "4507"
+  },
+  "peter paul electronics": {
+    "name": "Peter Paul Electronics",
+    "id": "4508"
+  },
+  "hub city": {
+    "name": "Hub City",
+    "id": "4509"
+  },
+  "bwd": {
+    "name": "BWD",
+    "id": "4510"
+  },
+  "pacific bearing": {
+    "name": "Pacific Bearing",
+    "id": "4511"
+  },
+  "nsk bearings": {
+    "name": "NSK Bearings",
+    "id": "4512"
+  },
+  "trident": {
+    "name": "Trident",
+    "id": "4513"
+  },
+  "national wheel end components": {
+    "name": "National Wheel End Components",
+    "id": "4514"
+  },
+  "national bearings": {
+    "name": "National Bearings",
+    "id": "4515"
+  },
+  "torrington": {
+    "name": "Torrington",
+    "id": "4516"
+  },
+  "nas toa": {
+    "name": "Nas Toa",
+    "id": "4517"
+  },
+  "mb manufacturing": {
+    "name": "MB Manufacturing",
+    "id": "4518"
+  },
+  "general bearing corp.": {
+    "name": "General Bearing Corp.",
+    "id": "4519"
+  },
+  "midcool": {
+    "name": "Midcool",
+    "id": "4520"
+  },
+  "connect tech inc.": {
+    "name": "Connect Tech Inc.",
+    "id": "4521"
+  },
+  "horyu": {
+    "name": "Horyu",
+    "id": "4522"
+  },
+  "ina bearings": {
+    "name": "INA Bearings",
+    "id": "4523"
+  },
+  "bishop-wisecarver": {
+    "name": "Bishop-Wisecarver",
+    "id": "4524"
+  },
+  "browning bearings": {
+    "name": "Browning Bearings",
+    "id": "4525"
+  },
+  "national oil seals": {
+    "name": "National Oil Seals",
+    "id": "4526"
+  },
+  "brewer machine & gear": {
+    "name": "Brewer Machine & Gear",
+    "id": "4527"
+  },
+  "consolidated bearings": {
+    "name": "Consolidated Bearings",
+    "id": "4528"
+  },
+  "snr": {
+    "name": "SNR",
+    "id": "4529"
+  },
+  "bishamon": {
+    "name": "Bishamon",
+    "id": "4530"
+  },
+  "victor": {
+    "name": "Victor",
+    "id": "4531"
+  },
+  "securitron": {
+    "name": "Securitron",
+    "id": "4532"
+  },
+  "worcester controls": {
+    "name": "Worcester Controls",
+    "id": "4533"
+  },
+  "dorma": {
+    "name": "Dorma",
+    "id": "4534"
+  },
+  "sorcus": {
+    "name": "Sorcus",
+    "id": "4535"
+  },
+  "otc daihen": {
+    "name": "OTC Daihen",
+    "id": "4536"
+  },
+  "ac tech": {
+    "name": "AC Tech",
+    "id": "4537"
+  },
+  "gtd": {
+    "name": "GTD",
+    "id": "4538"
+  },
+  "lpm": {
+    "name": "LPM",
+    "id": "4539"
+  },
+  "boschert": {
+    "name": "Boschert",
+    "id": "4540"
+  },
+  "hurco": {
+    "name": "Hurco",
+    "id": "4541"
+  },
+  "exair": {
+    "name": "Exair",
+    "id": "4542"
+  },
+  "b.e.s.t.": {
+    "name": "B.E.S.T.",
+    "id": "4543"
+  },
+  "topaz": {
+    "name": "Topaz",
+    "id": "4544"
+  },
+  "tensabarrier": {
+    "name": "Tensabarrier",
+    "id": "4545"
+  },
+  "finder": {
+    "name": "Finder",
+    "id": "4546"
+  },
+  "sheffer": {
+    "name": "Sheffer",
+    "id": "4547"
+  },
+  "eagle sensors and controls": {
+    "name": "Eagle Sensors and Controls",
+    "id": "4548"
+  },
+  "kuramo": {
+    "name": "Kuramo",
+    "id": "4549"
+  },
+  "conduit": {
+    "name": "Conduit",
+    "id": "4550"
+  },
+  "harnischfeger p&h": {
+    "name": "Harnischfeger P&H",
+    "id": "4551"
+  },
+  "bca": {
+    "name": "BCA",
+    "id": "4552"
+  },
+  "tcic": {
+    "name": "TCIC",
+    "id": "4553"
+  },
+  "total source": {
+    "name": "Total Source",
+    "id": "4554"
+  },
+  "red lion controls": {
+    "name": "Red Lion Controls",
+    "id": "4555"
+  },
+  "samsung": {
+    "name": "Samsung",
+    "id": "4556"
+  },
+  "daewoo": {
+    "name": "Daewoo",
+    "id": "4557"
+  },
+  "sst": {
+    "name": "SST",
+    "id": "4558"
+  },
+  "allis chalmers": {
+    "name": "Allis Chalmers",
+    "id": "4559"
+  },
+  "ohmite": {
+    "name": "Ohmite",
+    "id": "4560"
+  },
+  "sj": {
+    "name": "SJ",
+    "id": "4561"
+  },
+  "motorola": {
+    "name": "Motorola",
+    "id": "4562"
+  },
+  "general electric fanuc": {
+    "name": "General Electric Fanuc",
+    "id": "4563"
+  },
+  "us motors": {
+    "name": "US Motors",
+    "id": "4564"
+  },
+  "milling": {
+    "name": "Milling",
+    "id": "4565"
+  },
+  "lovejoy": {
+    "name": "Lovejoy",
+    "id": "4566"
+  },
+  "domnick hunter": {
+    "name": "Domnick Hunter",
+    "id": "4567"
+  },
+  "source 1": {
+    "name": "Source 1",
+    "id": "4568"
+  },
+  "scancon": {
+    "name": "Scancon",
+    "id": "4569"
+  },
+  "leibert": {
+    "name": "Leibert",
+    "id": "4570"
+  },
+  "nuovo": {
+    "name": "Nuovo",
+    "id": "4571"
+  },
+  "reo-usa": {
+    "name": "REO-USA",
+    "id": "4572"
+  },
+  "pneumatech": {
+    "name": "Pneumatech",
+    "id": "4573"
+  },
+  "kamata": {
+    "name": "Kamata",
+    "id": "4574"
+  },
+  "nais": {
+    "name": "Nais",
+    "id": "4575"
+  },
+  "lintech/baldor": {
+    "name": "LinTech/Baldor",
+    "id": "4576"
+  },
+  "reliance fuse": {
+    "name": "Reliance Fuse",
+    "id": "4577"
+  },
+  "polychem": {
+    "name": "Polychem",
+    "id": "4578"
+  },
+  "nb linear systems": {
+    "name": "NB Linear Systems",
+    "id": "4579"
+  },
+  "rk rose + krieger": {
+    "name": "RK Rose + Krieger",
+    "id": "4580"
+  },
+  "pbc linear": {
+    "name": "PBC Linear",
+    "id": "4581"
+  },
+  "solartron": {
+    "name": "Solartron",
+    "id": "4582"
+  },
+  "wilkerson": {
+    "name": "Wilkerson",
+    "id": "4583"
+  },
+  "barber colman": {
+    "name": "Barber Colman",
+    "id": "4584"
+  },
+  "buschjost/norgren": {
+    "name": "Buschjost/Norgren",
+    "id": "4585"
+  },
+  "arrow pneumatic": {
+    "name": "Arrow Pneumatic",
+    "id": "4586"
+  },
+  "dixon": {
+    "name": "Dixon",
+    "id": "4587"
+  },
+  "watts fluidair inc.": {
+    "name": "Watts FluidAir Inc.",
+    "id": "4588"
+  },
+  "aec magnetics": {
+    "name": "AEC Magnetics",
+    "id": "4589"
+  },
+  "span": {
+    "name": "Span",
+    "id": "4590"
+  },
+  "msi": {
+    "name": "msi",
+    "id": "4591"
+  },
+  "mitteltrage": {
+    "name": "Mitteltrage",
+    "id": "4592"
+  },
+  "nad": {
+    "name": "NAD",
+    "id": "4593"
+  },
+  "vero electronics": {
+    "name": "Vero Electronics",
+    "id": "4594"
+  },
+  "murray electrical": {
+    "name": "Murray Electrical",
+    "id": "4595"
+  },
+  "aec whitlock": {
+    "name": "AEC Whitlock",
+    "id": "4596"
+  },
+  "sennheiser": {
+    "name": "SENNHEISER",
+    "id": "4597"
+  },
+  "maschinenbau kitz": {
+    "name": "Maschinenbau Kitz",
+    "id": "4598"
+  },
+  "brecknell": {
+    "name": "Brecknell",
+    "id": "4599"
+  },
+  "watts regulator co.": {
+    "name": "Watts Regulator Co.",
+    "id": "4600"
+  },
+  "livestream": {
+    "name": "Livestream",
+    "id": "4601"
+  },
+  "ring": {
+    "name": "ring",
+    "id": "4602"
+  },
+  "plume": {
+    "name": "Plume",
+    "id": "4603"
+  },
+  "polk": {
+    "name": "Polk",
+    "id": "4604"
+  },
+  "alpha getriebebau": {
+    "name": "Alpha Getriebebau",
+    "id": "4605"
+  },
+  "jbl": {
+    "name": "JBL",
+    "id": "4606"
+  },
+  "gopro": {
+    "name": "gopro",
+    "id": "4607"
+  },
+  "elite flexon": {
+    "name": "Elite Flexon",
+    "id": "4608"
+  },
+  "wd": {
+    "name": "WD",
+    "id": "4609"
+  },
+  "lsp industries": {
+    "name": "LSP Industries",
+    "id": "4610"
+  },
+  "lube devices inc.": {
+    "name": "Lube Devices Inc.",
+    "id": "4611"
+  },
+  "cubeair": {
+    "name": "CubeAir",
+    "id": "4612"
+  },
+  "air-vac": {
+    "name": "Air-Vac",
+    "id": "4613"
+  },
+  "maxpro": {
+    "name": "MaxPro",
+    "id": "4614"
+  },
+  "corsair": {
+    "name": "CORSAIR",
+    "id": "4615"
+  },
+  "utsunomiya electric": {
+    "name": "Utsunomiya Electric",
+    "id": "4616"
+  },
+  "microsoft": {
+    "name": "Microsoft",
+    "id": "4617"
+  },
+  "beats": {
+    "name": "beats",
+    "id": "4618"
+  },
+  "alienware": {
+    "name": "Alienware",
+    "id": "4619"
+  },
+  "real time automation": {
+    "name": "Real Time Automation",
+    "id": "4620"
+  },
+  "fasco industries": {
+    "name": "Fasco Industries",
+    "id": "4621"
+  },
+  "stm motors": {
+    "name": "STM Motors",
+    "id": "4622"
+  },
+  "general electric motors": {
+    "name": "General Electric Motors",
+    "id": "4623"
+  },
+  "bose": {
+    "name": "BOSE",
+    "id": "4624"
+  },
+  "bak usa": {
+    "name": "BAK USA",
+    "id": "4625"
+  },
+  "baldor reliance": {
+    "name": "Baldor Reliance",
+    "id": "4626"
+  },
+  "canon": {
+    "name": "canon",
+    "id": "4627"
+  },
+  "b&o": {
+    "name": "B&O",
+    "id": "4628"
+  },
+  "thinkware": {
+    "name": "Thinkware",
+    "id": "4629"
+  },
+  "parrot": {
+    "name": "Parrot",
+    "id": "4630"
+  },
+  "elmo": {
+    "name": "ELMO",
+    "id": "4631"
+  },
+  "acme electric": {
+    "name": "Acme Electric",
+    "id": "4632"
+  },
+  "emerson industrial automation": {
+    "name": "Emerson Industrial Automation",
+    "id": "4633"
+  },
+  "eero": {
+    "name": "eero",
+    "id": "4634"
+  },
+  "osmo": {
+    "name": "OSMO",
+    "id": "4635"
+  },
+  "google": {
+    "name": "google",
+    "id": "4636"
+  },
+  "marathon electric": {
+    "name": "Marathon Electric",
+    "id": "4637"
+  },
+  "gruppo / stober": {
+    "name": "Gruppo / Stober",
+    "id": "4638"
+  },
+  "bonora": {
+    "name": "Bonora",
+    "id": "4639"
+  },
+  "nissei world energy": {
+    "name": "Nissei World Energy",
+    "id": "4640"
+  },
+  "dayton motor": {
+    "name": "Dayton Motor",
+    "id": "4641"
+  },
+  "kuka": {
+    "name": "Kuka",
+    "id": "4642"
+  },
+  "nissei corp. gtr": {
+    "name": "Nissei Corp. GTR",
+    "id": "4643"
+  },
+  "fujita co.": {
+    "name": "Fujita Co.",
+    "id": "4644"
+  },
+  "ace controls": {
+    "name": "Ace Controls",
+    "id": "4645"
+  },
+  "cashco": {
+    "name": "Cashco",
+    "id": "4646"
+  },
+  "decco": {
+    "name": "Decco",
+    "id": "4647"
+  },
+  "decco ross": {
+    "name": "Decco Ross",
+    "id": "4648"
+  },
+  "cefco": {
+    "name": "Cefco",
+    "id": "4649"
+  },
+  "chase-shawmut": {
+    "name": "Chase-Shawmut",
+    "id": "4650"
+  },
+  "micron control transformers": {
+    "name": "Micron Control Transformers",
+    "id": "4651"
+  },
+  "curtis instruments": {
+    "name": "Curtis Instruments",
+    "id": "4652"
+  },
+  "c&c manufacturing": {
+    "name": "C&C Manufacturing",
+    "id": "4653"
+  },
+  "universal lighting technologies": {
+    "name": "Universal Lighting Technologies",
+    "id": "4654"
+  },
+  "motorola/ge lighting": {
+    "name": "Motorola/GE Lighting",
+    "id": "4655"
+  },
+  "intervox": {
+    "name": "Intervox",
+    "id": "4656"
+  },
+  "vaccon": {
+    "name": "Vaccon",
+    "id": "4657"
+  },
+  "detas": {
+    "name": "Detas",
+    "id": "4658"
+  },
+  "toyozumi dengenkiki": {
+    "name": "Toyozumi Dengenkiki",
+    "id": "4659"
+  },
+  "axiomatic": {
+    "name": "Axiomatic",
+    "id": "4660"
+  },
+  "arrow-hart": {
+    "name": "Arrow-Hart",
+    "id": "4661"
+  },
+  "leadshine": {
+    "name": "Leadshine",
+    "id": "4662"
+  },
+  "lincoln electric": {
+    "name": "Lincoln Electric",
+    "id": "4663"
+  },
+  "denison hydraulics": {
+    "name": "Denison Hydraulics",
+    "id": "4664"
+  },
+  "control concepts": {
+    "name": "Control Concepts",
+    "id": "4665"
+  },
+  "mp filtri": {
+    "name": "MP Filtri",
+    "id": "4666"
+  },
+  "regent controls": {
+    "name": "Regent Controls",
+    "id": "4667"
+  },
+  "willett": {
+    "name": "Willett",
+    "id": "4668"
+  },
+  "fmc technologies": {
+    "name": "FMC Technologies",
+    "id": "4669"
+  },
+  "foxboro": {
+    "name": "Foxboro",
+    "id": "4670"
+  },
+  "panasonic matsushita": {
+    "name": "Panasonic Matsushita",
+    "id": "4671"
+  },
+  "astrosystems inc.": {
+    "name": "Astrosystems Inc.",
+    "id": "4672"
+  },
+  "ebm papst": {
+    "name": "EBM PAPST",
+    "id": "4673"
+  },
+  "ao smith century": {
+    "name": "AO Smith Century",
+    "id": "4674"
+  },
+  "reliance electric / dodge tigear": {
+    "name": "Reliance Electric / Dodge Tigear",
+    "id": "4675"
+  },
+  "texas instruments": {
+    "name": "Texas Instruments",
+    "id": "4676"
+  },
+  "scott motors": {
+    "name": "Scott Motors",
+    "id": "4677"
+  },
+  "spg co.": {
+    "name": "SPG Co.",
+    "id": "4678"
+  },
+  "miki pulley co.": {
+    "name": "Miki Pulley Co.",
+    "id": "4679"
+  },
+  "century electric": {
+    "name": "Century Electric",
+    "id": "4680"
+  },
+  "hid": {
+    "name": "HID",
+    "id": "4681"
+  },
+  "balluff sensorik": {
+    "name": "Balluff Sensorik",
+    "id": "4682"
+  },
+  "schmalz": {
+    "name": "Schmalz",
+    "id": "4683"
+  },
+  "convum": {
+    "name": "Convum",
+    "id": "4684"
+  },
+  "elau": {
+    "name": "ELAU",
+    "id": "4685"
+  },
+  "lumberg": {
+    "name": "Lumberg",
+    "id": "4686"
+  },
+  "british encoder": {
+    "name": "British Encoder",
+    "id": "4687"
+  },
+  "siko": {
+    "name": "Siko",
+    "id": "4688"
+  },
+  "stegmann": {
+    "name": "Stegmann",
+    "id": "4689"
+  },
+  "meggitt": {
+    "name": "Meggitt",
+    "id": "4690"
+  },
+  "ipf": {
+    "name": "IPF",
+    "id": "4691"
+  },
+  "zebra motorola": {
+    "name": "Zebra Motorola",
+    "id": "4692"
+  },
+  "pfannenberg": {
+    "name": "Pfannenberg",
+    "id": "4693"
+  },
+  "advance transformer": {
+    "name": "Advance Transformer",
+    "id": "4694"
+  },
+  "siba": {
+    "name": "Siba",
+    "id": "4695"
+  },
+  "fct munchen": {
+    "name": "FCT Munchen",
+    "id": "4696"
+  },
+  "vogel": {
+    "name": "Vogel",
+    "id": "4697"
+  },
+  "haug gmbh & co.": {
+    "name": "Haug GMBH & Co.",
+    "id": "4698"
+  },
+  "flender himmel": {
+    "name": "Flender Himmel",
+    "id": "4699"
+  },
+  "shinko electric co. ltd": {
+    "name": "Shinko Electric Co. LTD",
+    "id": "4700"
+  },
+  "dodge tigear": {
+    "name": "Dodge Tigear",
+    "id": "4701"
+  },
+  "doerr electric": {
+    "name": "Doerr Electric",
+    "id": "4702"
+  },
+  "ohio gear": {
+    "name": "Ohio Gear",
+    "id": "4703"
+  },
+  "osram": {
+    "name": "Osram",
+    "id": "4704"
+  },
+  "valmont electric": {
+    "name": "Valmont Electric",
+    "id": "4705"
+  },
+  "electronic development laboratories": {
+    "name": "Electronic Development Laboratories",
+    "id": "4706"
+  },
+  "bendix": {
+    "name": "Bendix",
+    "id": "4707"
+  },
+  "roper whitney": {
+    "name": "Roper Whitney",
+    "id": "4708"
+  },
+  "dayton electric": {
+    "name": "Dayton Electric",
+    "id": "4709"
+  },
+  "melcher": {
+    "name": "Melcher",
+    "id": "4710"
+  },
+  "industrial devices corp.": {
+    "name": "Industrial Devices Corp.",
+    "id": "4711"
+  },
+  "nanotec": {
+    "name": "Nanotec",
+    "id": "4712"
+  },
+  "rotex": {
+    "name": "Rotex",
+    "id": "4713"
+  },
+  "advance ballast": {
+    "name": "Advance Ballast",
+    "id": "4714"
+  },
+  "minebea-matsushita": {
+    "name": "Minebea-Matsushita",
+    "id": "4715"
+  },
+  "minebea": {
+    "name": "Minebea",
+    "id": "4716"
+  },
+  "delta electronics": {
+    "name": "Delta Electronics",
+    "id": "4717"
+  },
+  "adda": {
+    "name": "ADDA",
+    "id": "4718"
+  },
+  "comair rotron": {
+    "name": "Comair Rotron",
+    "id": "4719"
+  },
+  "servo centaur iii": {
+    "name": "Servo Centaur III",
+    "id": "4720"
+  },
+  "sunon": {
+    "name": "Sunon",
+    "id": "4721"
+  },
+  "etri": {
+    "name": "ETRI",
+    "id": "4722"
+  },
+  "papst": {
+    "name": "Papst",
+    "id": "4723"
+  },
+  "faraday": {
+    "name": "Faraday",
+    "id": "4724"
+  },
+  "innovative industrial co.": {
+    "name": "Innovative Industrial Co.",
+    "id": "4725"
+  },
+  "hammond manufacturing": {
+    "name": "Hammond Manufacturing",
+    "id": "4726"
+  },
+  "lithonia lighting": {
+    "name": "Lithonia Lighting",
+    "id": "4727"
+  },
+  "makino": {
+    "name": "Makino",
+    "id": "4728"
+  },
+  "moog components": {
+    "name": "Moog Components",
+    "id": "4729"
+  },
+  "nabtesco corp.": {
+    "name": "Nabtesco Corp.",
+    "id": "4730"
+  },
+  "hevi-duty": {
+    "name": "Hevi-Duty",
+    "id": "4731"
+  },
+  "bruel & kjaer": {
+    "name": "Bruel & Kjaer",
+    "id": "4732"
+  },
+  "danaher": {
+    "name": "Danaher",
+    "id": "4733"
+  },
+  "primax": {
+    "name": "Primax",
+    "id": "4734"
+  },
+  "estic": {
+    "name": "ESTIC",
+    "id": "4735"
+  },
+  "elite": {
+    "name": "Elite",
+    "id": "4736"
+  },
+  "rdp group": {
+    "name": "RDP Group",
+    "id": "4737"
+  },
+  "general signal": {
+    "name": "General Signal",
+    "id": "4738"
+  },
+  "htm electronics": {
+    "name": "HTM Electronics",
+    "id": "4739"
+  },
+  "tyco electronics": {
+    "name": "Tyco Electronics",
+    "id": "4740"
+  },
+  "powertran": {
+    "name": "Powertran",
+    "id": "4741"
+  },
+  "textron": {
+    "name": "Textron",
+    "id": "4742"
+  },
+  "pentagon": {
+    "name": "Pentagon",
+    "id": "4743"
+  },
+  "staco energy products": {
+    "name": "Staco Energy Products",
+    "id": "4744"
+  },
+  "gould ite": {
+    "name": "Gould ITE",
+    "id": "4745"
+  },
+  "chinfa electronics": {
+    "name": "Chinfa Electronics",
+    "id": "4746"
+  },
+  "acdc electronics": {
+    "name": "ACDC Electronics",
+    "id": "4747"
+  },
+  "zz-antriebe gmbh": {
+    "name": "ZZ-Antriebe GMBH",
+    "id": "4748"
+  },
+  "belimo": {
+    "name": "Belimo",
+    "id": "4749"
+  },
+  "akamatsu electric": {
+    "name": "Akamatsu Electric",
+    "id": "4750"
+  },
+  "aidi seiki inc": {
+    "name": "Aidi Seiki Inc",
+    "id": "4751"
+  },
+  "densei-lambda": {
+    "name": "Densei-Lambda",
+    "id": "4752"
+  },
+  "chroma": {
+    "name": "Chroma",
+    "id": "4753"
+  },
+  "pets": {
+    "name": "PETS",
+    "id": "4754"
+  },
+  "m-systems": {
+    "name": "M-Systems",
+    "id": "4755"
+  },
+  "econoline": {
+    "name": "Econoline",
+    "id": "4756"
+  },
+  "lake monitors": {
+    "name": "Lake Monitors",
+    "id": "4757"
+  },
+  "condor": {
+    "name": "Condor",
+    "id": "4758"
+  },
+  "mk automation": {
+    "name": "MK Automation",
+    "id": "4759"
+  },
+  "zebra technologies corporation": {
+    "name": "Zebra Technologies Corporation",
+    "id": "4760"
+  },
+  "digital electronics": {
+    "name": "Digital Electronics",
+    "id": "4761"
+  },
+  "first weigh": {
+    "name": "First Weigh",
+    "id": "4762"
+  },
+  "control technologies": {
+    "name": "Control Technologies",
+    "id": "4763"
+  },
+  "flender": {
+    "name": "Flender",
+    "id": "4764"
+  },
+  "nason": {
+    "name": "Nason",
+    "id": "4765"
+  },
+  "mahr": {
+    "name": "Mahr",
+    "id": "4766"
+  },
+  "agastat": {
+    "name": "Agastat",
+    "id": "4767"
+  },
+  "burndy": {
+    "name": "Burndy",
+    "id": "4768"
+  },
+  "edwards systems technology": {
+    "name": "Edwards Systems Technology",
+    "id": "4769"
+  },
+  "delta power": {
+    "name": "Delta Power",
+    "id": "4771"
+  },
+  "sylvania": {
+    "name": "Sylvania",
+    "id": "4772"
+  },
+  "harger": {
+    "name": "Harger",
+    "id": "4773"
+  },
+  "payne engineering": {
+    "name": "Payne Engineering",
+    "id": "4774"
+  },
+  "power components inc": {
+    "name": "Power Components Inc",
+    "id": "4775"
+  },
+  "bellofram": {
+    "name": "Bellofram",
+    "id": "4776"
+  },
+  "henseler": {
+    "name": "Henseler",
+    "id": "4777"
+  },
+  "nippon tokushu": {
+    "name": "Nippon Tokushu",
+    "id": "4778"
+  },
+  "myron zucker": {
+    "name": "Myron Zucker",
+    "id": "4779"
+  },
+  "asynchronous": {
+    "name": "Asynchronous",
+    "id": "4780"
+  },
+  "knight": {
+    "name": "Knight",
+    "id": "4781"
+  },
+  "air-mite": {
+    "name": "Air-Mite",
+    "id": "4782"
+  },
+  "lincoln laser": {
+    "name": "Lincoln Laser",
+    "id": "4783"
+  },
+  "sporlan": {
+    "name": "Sporlan",
+    "id": "4784"
+  },
+  "schcrader": {
+    "name": "Schcrader",
+    "id": "4785"
+  },
+  "schrader": {
+    "name": "Schrader",
+    "id": "4786"
+  },
+  "heinrich": {
+    "name": "Heinrich",
+    "id": "4787"
+  },
+  "ranco": {
+    "name": "Ranco",
+    "id": "4788"
+  },
+  "galland henning nopak": {
+    "name": "Galland Henning Nopak",
+    "id": "4789"
+  },
+  "pressure devices inc.": {
+    "name": "Pressure Devices Inc.",
+    "id": "4790"
+  },
+  "euroblock": {
+    "name": "Euroblock",
+    "id": "4791"
+  },
+  "unipulse": {
+    "name": "UniPulse",
+    "id": "4792"
+  },
+  "rotarex": {
+    "name": "Rotarex",
+    "id": "4793"
+  },
+  "sanyo": {
+    "name": "Sanyo",
+    "id": "4794"
+  },
+  "vonweise": {
+    "name": "VonWeise",
+    "id": "4795"
+  },
+  "astron": {
+    "name": "Astron",
+    "id": "4796"
+  },
+  "mclean": {
+    "name": "McLean",
+    "id": "4797"
+  },
+  "contrex": {
+    "name": "Contrex",
+    "id": "4798"
+  },
+  "alien technology": {
+    "name": "Alien Technology",
+    "id": "4799"
+  },
+  "avocent": {
+    "name": "Avocent",
+    "id": "4800"
+  },
+  "irritrol systems": {
+    "name": "Irritrol Systems",
+    "id": "4801"
+  },
+  "cybex": {
+    "name": "Cybex",
+    "id": "4802"
+  },
+  "brydge": {
+    "name": "Brydge",
+    "id": "4803"
+  },
+  "valcom": {
+    "name": "Valcom",
+    "id": "4804"
+  },
+  "premier hydraulic services": {
+    "name": "Premier Hydraulic Services",
+    "id": "4805"
+  },
+  "sterner automation": {
+    "name": "Sterner Automation",
+    "id": "4806"
+  },
+  "eclipse controls": {
+    "name": "Eclipse Controls",
+    "id": "4807"
+  },
+  "holophane": {
+    "name": "Holophane",
+    "id": "4808"
+  },
+  "oil wheel company": {
+    "name": "Oil Wheel Company",
+    "id": "4809"
+  },
+  "parker hannifin": {
+    "name": "Parker Hannifin",
+    "id": "4810"
+  },
+  "epb graflex": {
+    "name": "EPB Graflex",
+    "id": "4811"
+  },
+  "ecco": {
+    "name": "Ecco",
+    "id": "4812"
+  },
+  "enidine": {
+    "name": "Enidine",
+    "id": "4813"
+  },
+  "apt": {
+    "name": "APT",
+    "id": "4814"
+  },
+  "trw globe motors": {
+    "name": "TRW Globe Motors",
+    "id": "4815"
+  },
+  "paragon electric company": {
+    "name": "Paragon Electric Company",
+    "id": "4816"
+  },
+  "intermatic inc.": {
+    "name": "Intermatic Inc.",
+    "id": "4817"
+  },
+  "electrostatics inc.": {
+    "name": "Electrostatics Inc.",
+    "id": "4818"
+  },
+  "todd products": {
+    "name": "Todd Products",
+    "id": "4819"
+  },
+  "diversified air systems": {
+    "name": "Diversified Air Systems",
+    "id": "4820"
+  },
+  "gem major": {
+    "name": "Gem Major",
+    "id": "4821"
+  },
+  "burkle + schock": {
+    "name": "Burkle + Schock",
+    "id": "4822"
+  },
+  "speed selector inc": {
+    "name": "Speed Selector Inc",
+    "id": "4823"
+  },
+  "t.j. snow": {
+    "name": "T.J. Snow",
+    "id": "4824"
+  },
+  "cylinder division": {
+    "name": "Cylinder Division",
+    "id": "4825"
+  },
+  "icm controls": {
+    "name": "ICM Controls",
+    "id": "4826"
+  },
+  "signal transformer": {
+    "name": "Signal Transformer",
+    "id": "4827"
+  },
+  "iwashita engineering ltd": {
+    "name": "Iwashita Engineering Ltd",
+    "id": "4828"
+  },
+  "noshok": {
+    "name": "Noshok",
+    "id": "4829"
+  },
+  "alazanti limited": {
+    "name": "Alazanti Limited",
+    "id": "4830"
+  },
+  "alzanti limited": {
+    "name": "Alzanti Limited",
+    "id": "4831"
+  },
+  "clarostat": {
+    "name": "Clarostat",
+    "id": "4832"
+  },
+  "thomas capri": {
+    "name": "Thomas Capri",
+    "id": "4833"
+  },
+  "hongfa": {
+    "name": "Hongfa",
+    "id": "4834"
+  },
+  "skynet": {
+    "name": "Skynet",
+    "id": "4835"
+  },
+  "netgear": {
+    "name": "Netgear",
+    "id": "4836"
+  },
+  "alpha telecom": {
+    "name": "Alpha Telecom",
+    "id": "4837"
+  },
+  "maruyasu electric ltd.": {
+    "name": "Maruyasu Electric Ltd.",
+    "id": "4838"
+  },
+  "philips advance": {
+    "name": "Philips Advance",
+    "id": "4839"
+  },
+  "penmount": {
+    "name": "PenMount",
+    "id": "4840"
+  },
+  "fine instruments": {
+    "name": "Fine Instruments",
+    "id": "4841"
+  },
+  "mmi automated systems": {
+    "name": "MMI Automated Systems",
+    "id": "4842"
+  },
+  "fsp group inc.": {
+    "name": "FSP Group Inc.",
+    "id": "4843"
+  },
+  "universal flow monitors inc.": {
+    "name": "Universal Flow Monitors Inc.",
+    "id": "4844"
+  },
+  "simpletech": {
+    "name": "SimpleTech",
+    "id": "4845"
+  },
+  "schreiber": {
+    "name": "Schreiber",
+    "id": "4846"
+  },
+  "toyota": {
+    "name": "Toyota",
+    "id": "4847"
+  },
+  "thomson industries inc": {
+    "name": "Thomson Industries Inc",
+    "id": "4848"
+  },
+  "durant eaton": {
+    "name": "Durant Eaton",
+    "id": "4849"
+  },
+  "alkon": {
+    "name": "Alkon",
+    "id": "4850"
+  },
+  "linx": {
+    "name": "Linx",
+    "id": "4851"
+  },
+  "max machinery inc.": {
+    "name": "Max Machinery Inc.",
+    "id": "4852"
+  },
+  "leuze electronic": {
+    "name": "Leuze Electronic",
+    "id": "4853"
+  },
+  "saginomiya": {
+    "name": "Saginomiya",
+    "id": "4854"
+  },
+  "dixie tool & die": {
+    "name": "Dixie Tool & Die",
+    "id": "4855"
+  },
+  "msc": {
+    "name": "MSC",
+    "id": "4856"
+  },
+  "dodge baldor": {
+    "name": "Dodge Baldor",
+    "id": "4857"
+  },
+  "digidesign": {
+    "name": "Digidesign",
+    "id": "4858"
+  },
+  "chateau technical corp.": {
+    "name": "Chateau Technical Corp.",
+    "id": "4859"
+  },
+  "tedea huntleigh": {
+    "name": "Tedea Huntleigh",
+    "id": "4860"
+  },
+  "basler": {
+    "name": "Basler",
+    "id": "4861"
+  },
+  "lift-master": {
+    "name": "Lift-Master",
+    "id": "4862"
+  },
+  "eta electric industry": {
+    "name": "ETA Electric Industry",
+    "id": "4863"
+  },
+  "design rite": {
+    "name": "Design Rite",
+    "id": "4864"
+  },
+  "rexroth indramat": {
+    "name": "Rexroth Indramat",
+    "id": "4865"
+  },
+  "cliftronics": {
+    "name": "Cliftronics",
+    "id": "4866"
+  },
+  "kyb": {
+    "name": "KYB",
+    "id": "4867"
+  },
+  "labjack": {
+    "name": "LabJack",
+    "id": "4868"
+  },
+  "compact air products": {
+    "name": "Compact Air Products",
+    "id": "4869"
+  },
+  "mencom corp.": {
+    "name": "Mencom Corp.",
+    "id": "4870"
+  },
+  "excelon": {
+    "name": "Excelon",
+    "id": "4871"
+  },
+  "monarch paxar": {
+    "name": "Monarch Paxar",
+    "id": "4872"
+  },
+  "start international": {
+    "name": "Start International",
+    "id": "4873"
+  },
+  "precision plumbing products": {
+    "name": "Precision Plumbing Products",
+    "id": "4874"
+  },
+  "kml": {
+    "name": "KML",
+    "id": "4875"
+  },
+  "radionics inc.": {
+    "name": "Radionics Inc.",
+    "id": "4876"
+  },
+  "mercury switches inc.": {
+    "name": "Mercury Switches Inc.",
+    "id": "4877"
+  },
+  "e&e special products": {
+    "name": "E&E Special Products",
+    "id": "4878"
+  },
+  "martonair": {
+    "name": "Martonair",
+    "id": "4879"
+  },
+  "lepel": {
+    "name": "Lepel",
+    "id": "4880"
+  },
+  "spectrum": {
+    "name": "Spectrum",
+    "id": "4881"
+  },
+  "timken fafnir": {
+    "name": "Timken Fafnir",
+    "id": "4882"
+  },
+  "pascal": {
+    "name": "Pascal",
+    "id": "4883"
+  },
+  "rbc bearings": {
+    "name": "RBC Bearings",
+    "id": "4884"
+  },
+  "finish thompson inc": {
+    "name": "Finish Thompson Inc",
+    "id": "4885"
+  },
+  "bilz": {
+    "name": "Bilz",
+    "id": "4886"
+  },
+  "osborn": {
+    "name": "Osborn",
+    "id": "4887"
+  },
+  "arctic cove": {
+    "name": "Arctic Cove",
+    "id": "4888"
+  },
+  "national electronics": {
+    "name": "National Electronics",
+    "id": "4889"
+  },
+  "monster": {
+    "name": "Monster",
+    "id": "4890"
+  },
+  "logitech": {
+    "name": "Logitech",
+    "id": "4891"
+  },
+  "pulsar thermion": {
+    "name": "Pulsar Thermion",
+    "id": "4892"
+  },
+  "fujitsu": {
+    "name": "Fujitsu",
+    "id": "4893"
+  },
+  "triton": {
+    "name": "Triton",
+    "id": "4894"
+  },
+  "rsi": {
+    "name": "RSI",
+    "id": "4895"
+  },
+  "chief": {
+    "name": "Chief",
+    "id": "4896"
+  },
+  "misco": {
+    "name": "Misco",
+    "id": "4897"
+  },
+  "sipha": {
+    "name": "Sipha",
+    "id": "4898"
+  },
+  "best welds": {
+    "name": "Best Welds",
+    "id": "4899"
+  },
+  "uniden": {
+    "name": "Uniden",
+    "id": "4900"
+  },
+  "msd inc.": {
+    "name": "MSD Inc.",
+    "id": "4901"
+  },
+  "mpw": {
+    "name": "MPW",
+    "id": "4902"
+  },
+  "jensen": {
+    "name": "Jensen",
+    "id": "4903"
+  },
+  "shenzen fujia appliance co.": {
+    "name": "Shenzen Fujia Appliance Co.",
+    "id": "4904"
+  },
+  "alltech electronics inc.": {
+    "name": "Alltech Electronics Inc.",
+    "id": "4905"
+  },
+  "air control installations": {
+    "name": "Air Control Installations",
+    "id": "4906"
+  },
+  "cash-acme": {
+    "name": "Cash-Acme",
+    "id": "4907"
+  },
+  "enercell": {
+    "name": "Enercell",
+    "id": "4908"
+  },
+  "comatrol": {
+    "name": "Comatrol",
+    "id": "4909"
+  },
+  "zebra eltron": {
+    "name": "Zebra Eltron",
+    "id": "4910"
+  },
+  "ascolectric": {
+    "name": "Ascolectric",
+    "id": "4911"
+  },
+  "brueninghaus hydraulik": {
+    "name": "Brueninghaus Hydraulik",
+    "id": "4912"
+  },
+  "harris": {
+    "name": "Harris",
+    "id": "4913"
+  },
+  "american standard": {
+    "name": "American Standard",
+    "id": "4914"
+  },
+  "enermax": {
+    "name": "Enermax",
+    "id": "4915"
+  },
+  "tripp lite": {
+    "name": "Tripp Lite",
+    "id": "4916"
+  },
+  "akcp": {
+    "name": "AKCP",
+    "id": "4917"
+  },
+  "fairbanks scales": {
+    "name": "Fairbanks Scales",
+    "id": "4918"
+  },
+  "rex power magnetics": {
+    "name": "Rex Power Magnetics",
+    "id": "4919"
+  },
+  "interacter inc.": {
+    "name": "Interacter Inc.",
+    "id": "4920"
+  },
+  "potter electric signal co.": {
+    "name": "Potter Electric Signal Co.",
+    "id": "4921"
+  },
+  "endo": {
+    "name": "Endo",
+    "id": "4922"
+  },
+  "electromatic equip't": {
+    "name": "Electromatic Equip'T",
+    "id": "4923"
+  },
+  "pentax": {
+    "name": "Pentax",
+    "id": "4924"
+  },
+  "dukane corp.": {
+    "name": "Dukane Corp.",
+    "id": "4925"
+  },
+  "vorne industries": {
+    "name": "Vorne Industries",
+    "id": "4926"
+  },
+  "tuthill transfer systems": {
+    "name": "Tuthill Transfer Systems",
+    "id": "4927"
+  },
+  "teac corp.": {
+    "name": "Teac Corp.",
+    "id": "4928"
+  },
+  "ohm electric": {
+    "name": "OHM Electric",
+    "id": "4929"
+  },
+  "campbell hausfeld": {
+    "name": "Campbell Hausfeld",
+    "id": "4930"
+  },
+  "other": {
+    "name": "other",
+    "id": "4931"
+  },
+  "vansco products": {
+    "name": "Vansco Products",
+    "id": "4932"
+  },
+  "galil": {
+    "name": "Galil",
+    "id": "4933"
+  },
+  "wassco glo-melt": {
+    "name": "Wassco Glo-Melt",
+    "id": "4934"
+  },
+  "malcom co.": {
+    "name": "Malcom Co.",
+    "id": "4935"
+  },
+  "western enterprises": {
+    "name": "Western Enterprises",
+    "id": "4936"
+  },
+  "nibco chemtrol": {
+    "name": "Nibco Chemtrol",
+    "id": "4937"
+  },
+  "warner electric": {
+    "name": "Warner Electric",
+    "id": "4938"
+  },
+  "whitey": {
+    "name": "Whitey",
+    "id": "4939"
+  },
+  "sirai": {
+    "name": "Sirai",
+    "id": "4940"
+  },
+  "magnetic": {
+    "name": "Magnetic",
+    "id": "4941"
+  },
+  "dash": {
+    "name": "Dash",
+    "id": "4942"
+  },
+  "generic": {
+    "name": "Generic",
+    "id": "4943"
+  },
+  "fastest": {
+    "name": "Fastest",
+    "id": "4944"
+  },
+  "nexen": {
+    "name": "Nexen",
+    "id": "4945"
+  },
+  "hss": {
+    "name": "HSS",
+    "id": "4946"
+  },
+  "wykov": {
+    "name": "WYKOV",
+    "id": "4947"
+  },
+  "snap-loc systems": {
+    "name": "Snap-Loc Systems",
+    "id": "4948"
+  },
+  "dumont": {
+    "name": "Dumont",
+    "id": "4949"
+  },
+  "wemoco": {
+    "name": "Wemoco",
+    "id": "4950"
+  },
+  "tektronix": {
+    "name": "Tektronix",
+    "id": "4951"
+  },
+  "tolomatic": {
+    "name": "Tolomatic",
+    "id": "4952"
+  },
+  "pall": {
+    "name": "Pall",
+    "id": "4953"
+  },
+  "omv": {
+    "name": "OMV",
+    "id": "4954"
+  },
+  "transcell technology": {
+    "name": "Transcell Technology",
+    "id": "4955"
+  },
+  "dynamatic": {
+    "name": "Dynamatic",
+    "id": "4956"
+  },
+  "tochigiya": {
+    "name": "Tochigiya",
+    "id": "4957"
+  },
+  "extech": {
+    "name": "Extech",
+    "id": "4958"
+  },
+  "cramer": {
+    "name": "Cramer",
+    "id": "4959"
+  },
+  "mcbain instruments": {
+    "name": "McBain Instruments",
+    "id": "4960"
+  },
+  "sensor switch": {
+    "name": "Sensor Switch",
+    "id": "4961"
+  },
+  "teel": {
+    "name": "Teel",
+    "id": "4962"
+  },
+  "white rodgers": {
+    "name": "White Rodgers",
+    "id": "4963"
+  },
+  "stork tronic": {
+    "name": "Stork Tronic",
+    "id": "4964"
+  },
+  "nsi": {
+    "name": "NSI",
+    "id": "4965"
+  },
+  "neugart": {
+    "name": "Neugart",
+    "id": "4966"
+  },
+  "maxtor": {
+    "name": "Maxtor",
+    "id": "4967"
+  },
+  "cimatrix": {
+    "name": "CiMatrix",
+    "id": "4968"
+  },
+  "pulnix": {
+    "name": "Pulnix",
+    "id": "4969"
+  },
+  "hp": {
+    "name": "HP",
+    "id": "4970"
+  },
+  "hytec": {
+    "name": "Hytec",
+    "id": "4971"
+  },
+  "eao": {
+    "name": "EAO",
+    "id": "4972"
+  },
+  "sansei": {
+    "name": "Sansei",
+    "id": "4973"
+  },
+  "edwards signaling products": {
+    "name": "Edwards Signaling Products",
+    "id": "4974"
+  },
+  "mckissick": {
+    "name": "McKissick",
+    "id": "4975"
+  },
+  "shipco": {
+    "name": "Shipco",
+    "id": "4976"
+  },
+  "kbz bearing": {
+    "name": "KBZ Bearing",
+    "id": "4977"
+  },
+  "american int'nl electric": {
+    "name": "American Int'nl Electric",
+    "id": "4978"
+  },
+  "mcd elektronik gmbh": {
+    "name": "MCD Elektronik GmbH",
+    "id": "4979"
+  },
+  "mead": {
+    "name": "Mead",
+    "id": "4980"
+  },
+  "norton": {
+    "name": "Norton",
+    "id": "4981"
+  },
+  "kraus & naimer": {
+    "name": "Kraus & Naimer",
+    "id": "4982"
+  },
+  "black box": {
+    "name": "Black Box",
+    "id": "4983"
+  },
+  "american autogard corp.": {
+    "name": "American Autogard Corp.",
+    "id": "4984"
+  },
+  "arlington ind.": {
+    "name": "Arlington Ind.",
+    "id": "4985"
+  },
+  "westphal wavetec": {
+    "name": "Westphal Wavetec",
+    "id": "4986"
+  },
+  "dve": {
+    "name": "DVE",
+    "id": "4987"
+  },
+  "dura-grip": {
+    "name": "Dura-Grip",
+    "id": "4988"
+  },
+  "norgren/syron": {
+    "name": "Norgren/Syron",
+    "id": "4989"
+  },
+  "belkin": {
+    "name": "Belkin",
+    "id": "4990"
+  },
+  "coilhose pneumatics": {
+    "name": "Coilhose Pneumatics",
+    "id": "4991"
+  },
+  "block division": {
+    "name": "Block Division",
+    "id": "4992"
+  },
+  "sonics & materials": {
+    "name": "Sonics & Materials",
+    "id": "4993"
+  },
+  "us filter": {
+    "name": "US Filter",
+    "id": "4994"
+  },
+  "nzp": {
+    "name": "NZP",
+    "id": "4995"
+  },
+  "unico": {
+    "name": "Unico",
+    "id": "4996"
+  },
+  "stone hydraulics": {
+    "name": "Stone Hydraulics",
+    "id": "4997"
+  },
+  "whirlpool": {
+    "name": "Whirlpool",
+    "id": "4998"
+  },
+  "dee van enterprise co.": {
+    "name": "Dee Van Enterprise Co.",
+    "id": "4999"
+  },
+  "placid industries inc": {
+    "name": "Placid Industries Inc",
+    "id": "5000"
+  },
+  "visioneer": {
+    "name": "Visioneer",
+    "id": "5001"
+  },
+  "equimeter": {
+    "name": "Equimeter",
+    "id": "5002"
+  },
+  "emico": {
+    "name": "Emico",
+    "id": "5003"
+  },
+  "toyo keiki co": {
+    "name": "Toyo Keiki Co",
+    "id": "5004"
+  },
+  "yokohama": {
+    "name": "Yokohama",
+    "id": "5005"
+  },
+  "hansen coupling": {
+    "name": "Hansen Coupling",
+    "id": "5006"
+  },
+  "cincinnati milacron": {
+    "name": "Cincinnati Milacron",
+    "id": "5007"
+  },
+  "digitran": {
+    "name": "Digitran",
+    "id": "5008"
+  },
+  "shawmut": {
+    "name": "Shawmut",
+    "id": "5009"
+  },
+  "abl": {
+    "name": "ABL",
+    "id": "5010"
+  },
+  "rechner": {
+    "name": "Rechner",
+    "id": "5011"
+  },
+  "functional devices": {
+    "name": "Functional Devices",
+    "id": "5012"
+  },
+  "masterflex": {
+    "name": "Masterflex",
+    "id": "5013"
+  },
+  "nile": {
+    "name": "Nile",
+    "id": "5014"
+  },
+  "sonalert": {
+    "name": "Sonalert",
+    "id": "5015"
+  },
+  "parlec": {
+    "name": "Parlec",
+    "id": "5016"
+  },
+  "sterlco": {
+    "name": "Sterlco",
+    "id": "5017"
+  },
+  "rpt": {
+    "name": "RPT",
+    "id": "5018"
+  },
+  "pulsatron": {
+    "name": "Pulsatron",
+    "id": "5019"
+  },
+  "signet": {
+    "name": "Signet",
+    "id": "5020"
+  },
+  "littlefuse": {
+    "name": "Littlefuse",
+    "id": "5021"
+  },
+  "sterling": {
+    "name": "Sterling",
+    "id": "5022"
+  },
+  "aaa": {
+    "name": "AAA",
+    "id": "5023"
+  },
+  "hach": {
+    "name": "Hach",
+    "id": "5024"
+  },
+  "glofa": {
+    "name": "Glofa",
+    "id": "5025"
+  },
+  "fisher": {
+    "name": "Fisher",
+    "id": "5026"
+  },
+  "bauer": {
+    "name": "Bauer",
+    "id": "5027"
+  },
+  "raytron": {
+    "name": "Raytron",
+    "id": "5028"
+  },
+  "hohner": {
+    "name": "Hohner",
+    "id": "5029"
+  },
+  "endress": {
+    "name": "Endress",
+    "id": "5030"
+  },
+  "sig": {
+    "name": "Sig",
+    "id": "5031"
+  },
+  "sika": {
+    "name": "Sika",
+    "id": "5032"
+  },
+  "dinamica": {
+    "name": "Dinamica",
+    "id": "5033"
+  },
+  "trio": {
+    "name": "Trio",
+    "id": "5034"
+  },
+  "ott": {
+    "name": "OTT",
+    "id": "5035"
+  },
+  "e2": {
+    "name": "E2",
+    "id": "5036"
+  },
+  "quicher": {
+    "name": "Quicher",
+    "id": "5037"
+  },
+  "neji": {
+    "name": "Neji",
+    "id": "5038"
+  },
+  "ufm": {
+    "name": "UFM",
+    "id": "5039"
+  },
+  "mcc": {
+    "name": "MCC",
+    "id": "5040"
+  },
+  "kennametal": {
+    "name": "Kennametal",
+    "id": "5041"
+  },
+  "airtac": {
+    "name": "AirTac",
+    "id": "5042"
+  },
+  "heinemann": {
+    "name": "Heinemann",
+    "id": "5043"
+  },
+  "adam": {
+    "name": "Adam",
+    "id": "5044"
+  },
+  "hioki": {
+    "name": "HIOKI",
+    "id": "5045"
+  },
+  "matex seiko": {
+    "name": "Matex Seiko",
+    "id": "5046"
+  },
+  "assembly automation": {
+    "name": "Assembly Automation",
+    "id": "5047"
+  },
+  "orientec corporation": {
+    "name": "Orientec Corporation",
+    "id": "5048"
+  },
+  "hyster": {
+    "name": "Hyster",
+    "id": "5049"
+  },
+  "qel": {
+    "name": "QEL",
+    "id": "5050"
+  },
+  "rosemount": {
+    "name": "Rosemount",
+    "id": "5051"
+  },
+  "national controls": {
+    "name": "National Controls",
+    "id": "5052"
+  },
+  "haldex": {
+    "name": "Haldex",
+    "id": "5053"
+  },
+  "ctc parker": {
+    "name": "CTC Parker",
+    "id": "5054"
+  },
+  "intek": {
+    "name": "Intek",
+    "id": "5055"
+  },
+  "npa": {
+    "name": "NPA",
+    "id": "5056"
+  },
+  "vicor": {
+    "name": "Vicor",
+    "id": "5057"
+  },
+  "giles": {
+    "name": "Giles",
+    "id": "5058"
+  },
+  "coats": {
+    "name": "Coats",
+    "id": "5059"
+  },
+  "magnetic instrumentation": {
+    "name": "Magnetic Instrumentation",
+    "id": "5060"
+  },
+  "go switch": {
+    "name": "Go Switch",
+    "id": "5061"
+  },
+  "steenbergen hollanddrain": {
+    "name": "Steenbergen Hollanddrain",
+    "id": "5062"
+  },
+  "tokyo seiden co.": {
+    "name": "Tokyo Seiden Co.",
+    "id": "5063"
+  },
+  "tsuruga electric works": {
+    "name": "Tsuruga Electric Works",
+    "id": "5064"
+  },
+  "magtrol inc": {
+    "name": "Magtrol Inc",
+    "id": "5065"
+  },
+  "ram meter inc": {
+    "name": "Ram Meter Inc",
+    "id": "5066"
+  },
+  "jergens nke": {
+    "name": "Jergens NKE",
+    "id": "5067"
+  },
+  "orc": {
+    "name": "ORC",
+    "id": "5068"
+  },
+  "upright": {
+    "name": "Upright",
+    "id": "5069"
+  },
+  "toyogiken": {
+    "name": "Toyogiken",
+    "id": "5070"
+  },
+  "wittmann": {
+    "name": "Wittmann",
+    "id": "5071"
+  },
+  "lion": {
+    "name": "Lion",
+    "id": "5072"
+  },
+  "schott": {
+    "name": "Schott",
+    "id": "5073"
+  },
+  "dolan-jenner": {
+    "name": "Dolan-Jenner",
+    "id": "5074"
+  },
+  "yamamoto": {
+    "name": "Yamamoto",
+    "id": "5075"
+  },
+  "l3 communications": {
+    "name": "L3 Communications",
+    "id": "5076"
+  },
+  "thermal care": {
+    "name": "Thermal Care",
+    "id": "5077"
+  },
+  "pa industries": {
+    "name": "PA Industries",
+    "id": "5078"
+  },
+  "vamco": {
+    "name": "Vamco",
+    "id": "5079"
+  },
+  "heat exchange & transfer": {
+    "name": "Heat Exchange & Transfer",
+    "id": "5080"
+  },
+  "dresser": {
+    "name": "Dresser",
+    "id": "5081"
+  },
+  "aihara electric co.": {
+    "name": "Aihara Electric Co.",
+    "id": "5082"
+  },
+  "nachi-fujikoshi corp.": {
+    "name": "Nachi-Fujikoshi Corp.",
+    "id": "5083"
+  },
+  "maeda koki": {
+    "name": "Maeda Koki",
+    "id": "5084"
+  },
+  "browning torq gard": {
+    "name": "Browning Torq Gard",
+    "id": "5085"
+  },
+  "micro detectors": {
+    "name": "Micro Detectors",
+    "id": "5086"
+  },
+  "optimum": {
+    "name": "Optimum",
+    "id": "5087"
+  },
+  "k.k sanwa": {
+    "name": "K.K Sanwa",
+    "id": "5088"
+  },
+  "temptek": {
+    "name": "Temptek",
+    "id": "5089"
+  },
+  "maxwell": {
+    "name": "Maxwell",
+    "id": "5090"
+  },
+  "fusion uv systems": {
+    "name": "Fusion UV Systems",
+    "id": "5091"
+  },
+  "krom": {
+    "name": "Krom",
+    "id": "5092"
+  },
+  "novatec": {
+    "name": "Novatec",
+    "id": "5093"
+  },
+  "procon": {
+    "name": "Procon",
+    "id": "5094"
+  },
+  "mannheim": {
+    "name": "Mannheim",
+    "id": "5095"
+  },
+  "kodensha co": {
+    "name": "Kodensha Co",
+    "id": "5096"
+  },
+  "hiwin": {
+    "name": "Hiwin",
+    "id": "5097"
+  },
+  "filter solutions": {
+    "name": "Filter Solutions",
+    "id": "5098"
+  },
+  "melec": {
+    "name": "Melec",
+    "id": "5099"
+  },
+  "kraftaufnehmer": {
+    "name": "Kraftaufnehmer",
+    "id": "5100"
+  },
+  "pisco": {
+    "name": "Pisco",
+    "id": "5101"
+  },
+  "kakusai": {
+    "name": "Kakusai",
+    "id": "5102"
+  },
+  "cosmo": {
+    "name": "Cosmo",
+    "id": "5103"
+  },
+  "yamaichi": {
+    "name": "Yamaichi",
+    "id": "5104"
+  },
+  "kokusai": {
+    "name": "Kokusai",
+    "id": "5105"
+  },
+  "efd": {
+    "name": "EFD",
+    "id": "5106"
+  },
+  "woerner": {
+    "name": "Woerner",
+    "id": "5107"
+  },
+  "hayssen": {
+    "name": "Hayssen",
+    "id": "5108"
+  },
+  "juki": {
+    "name": "Juki",
+    "id": "5109"
+  },
+  "air feeds inc": {
+    "name": "Air Feeds Inc",
+    "id": "5110"
+  },
+  "electromatic": {
+    "name": "Electromatic",
+    "id": "5111"
+  },
+  "custom connector": {
+    "name": "Custom Connector",
+    "id": "5112"
+  },
+  "taga manufacturing": {
+    "name": "Taga Manufacturing",
+    "id": "5113"
+  },
+  "wgtc": {
+    "name": "WGTC",
+    "id": "5114"
+  },
+  "vdo": {
+    "name": "VDO",
+    "id": "5115"
+  },
+  "lyth": {
+    "name": "Lyth",
+    "id": "5116"
+  },
+  "japan automatic machine co.": {
+    "name": "Japan Automatic Machine Co.",
+    "id": "5117"
+  },
+  "tsuruga electric corp.": {
+    "name": "Tsuruga Electric Corp.",
+    "id": "5118"
+  },
+  "togi": {
+    "name": "Togi",
+    "id": "5119"
+  },
+  "yoshikawa iron works": {
+    "name": "Yoshikawa Iron Works",
+    "id": "5120"
+  },
+  "sankei machinery co. ltd": {
+    "name": "Sankei Machinery Co. LTD",
+    "id": "5121"
+  },
+  "matex": {
+    "name": "Matex",
+    "id": "5122"
+  },
+  "nigata": {
+    "name": "Nigata",
+    "id": "5123"
+  },
+  "align machine tool co": {
+    "name": "Align Machine Tool Co",
+    "id": "5124"
+  },
+  "hanson": {
+    "name": "Hanson",
+    "id": "5125"
+  },
+  "neslab": {
+    "name": "NesLab",
+    "id": "5126"
+  },
+  "pcs": {
+    "name": "PCS",
+    "id": "5127"
+  },
+  "hi-tec seiko": {
+    "name": "Hi-Tec Seiko",
+    "id": "5128"
+  },
+  "cosmos": {
+    "name": "Cosmos",
+    "id": "5129"
+  },
+  "arrow electronics": {
+    "name": "Arrow Electronics",
+    "id": "5130"
+  },
+  "precision dynamics, inc": {
+    "name": "Precision Dynamics, Inc",
+    "id": "5131"
+  },
+  "lynair": {
+    "name": "Lynair",
+    "id": "5132"
+  },
+  "pyle": {
+    "name": "Pyle",
+    "id": "5133"
+  },
+  "harmo": {
+    "name": "Harmo",
+    "id": "5134"
+  },
+  "southwestern industries": {
+    "name": "Southwestern Industries",
+    "id": "5135"
+  },
+  "tru-maxx": {
+    "name": "Tru-Maxx",
+    "id": "5136"
+  },
+  "colormatrix": {
+    "name": "Colormatrix",
+    "id": "5137"
+  },
+  "conntrol": {
+    "name": "Conntrol",
+    "id": "5138"
+  },
+  "graham transmissions": {
+    "name": "Graham Transmissions",
+    "id": "5139"
+  },
+  "roman manufacturing": {
+    "name": "Roman Manufacturing",
+    "id": "5140"
+  },
+  "style electronics": {
+    "name": "Style Electronics",
+    "id": "5141"
+  },
+  "fuji controls co.": {
+    "name": "Fuji Controls Co.",
+    "id": "5142"
+  },
+  "spx gse": {
+    "name": "SPX GSE",
+    "id": "5143"
+  },
+  "kasuga electric": {
+    "name": "Kasuga Electric",
+    "id": "5144"
+  },
+  "protection controls": {
+    "name": "Protection Controls",
+    "id": "5145"
+  },
+  "kansai automation co.": {
+    "name": "Kansai Automation Co.",
+    "id": "5146"
+  },
+  "midwest": {
+    "name": "Midwest",
+    "id": "5147"
+  },
+  "cei": {
+    "name": "CEI",
+    "id": "5148"
+  },
+  "vibi": {
+    "name": "VIBI",
+    "id": "5149"
+  },
+  "vibcon corp.": {
+    "name": "Vibcon Corp.",
+    "id": "5150"
+  },
+  "centerline": {
+    "name": "Centerline",
+    "id": "5151"
+  },
+  "daykin electric": {
+    "name": "Daykin Electric",
+    "id": "5152"
+  },
+  "digital proface": {
+    "name": "Digital Proface",
+    "id": "5153"
+  },
+  "wieland": {
+    "name": "Wieland",
+    "id": "5154"
+  },
+  "brush": {
+    "name": "Brush",
+    "id": "5155"
+  },
+  "meteor transformer mfg.": {
+    "name": "Meteor Transformer Mfg.",
+    "id": "5156"
+  },
+  "lite stix": {
+    "name": "Lite Stix",
+    "id": "5157"
+  },
+  "nova": {
+    "name": "Nova",
+    "id": "5158"
+  },
+  "intelligent actuator": {
+    "name": "Intelligent Actuator",
+    "id": "5159"
+  },
+  "steel fab": {
+    "name": "Steel Fab",
+    "id": "5160"
+  },
+  "wolke": {
+    "name": "Wolke",
+    "id": "5161"
+  },
+  "welker": {
+    "name": "Welker",
+    "id": "5162"
+  },
+  "fdk": {
+    "name": "FDK",
+    "id": "5163"
+  },
+  "kyoshin keisoku": {
+    "name": "Kyoshin Keisoku",
+    "id": "5164"
+  },
+  "electro-matic products, llc": {
+    "name": "Electro-Matic Products, LLC",
+    "id": "5165"
+  },
+  "columbia marking tools": {
+    "name": "Columbia Marking Tools",
+    "id": "5166"
+  },
+  "rol-lift": {
+    "name": "Rol-Lift",
+    "id": "5167"
+  },
+  "ergodeck": {
+    "name": "ErgoDeck",
+    "id": "5168"
+  },
+  "sankyo seisakusho co.": {
+    "name": "Sankyo Seisakusho Co.",
+    "id": "5169"
+  },
+  "lincoln pentair": {
+    "name": "Lincoln Pentair",
+    "id": "5170"
+  },
+  "weldmation": {
+    "name": "Weldmation",
+    "id": "5171"
+  },
+  "ebara corp.": {
+    "name": "Ebara Corp.",
+    "id": "5172"
+  },
+  "integrated power designs": {
+    "name": "Integrated Power Designs",
+    "id": "5173"
+  },
+  "ap tech": {
+    "name": "AP Tech",
+    "id": "5174"
+  },
+  "minster": {
+    "name": "Minster",
+    "id": "5175"
+  },
+  "amc automation": {
+    "name": "AMC Automation",
+    "id": "5176"
+  },
+  "atom": {
+    "name": "Atom",
+    "id": "5177"
+  },
+  "new london engineering": {
+    "name": "New London Engineering",
+    "id": "5178"
+  },
+  "applied robotics": {
+    "name": "Applied Robotics",
+    "id": "5179"
+  },
+  "brentek international": {
+    "name": "Brentek International",
+    "id": "5180"
+  },
+  "inficon": {
+    "name": "Inficon",
+    "id": "5181"
+  },
+  "mts automation": {
+    "name": "MTS Automation",
+    "id": "5182"
+  },
+  "ter": {
+    "name": "TER",
+    "id": "5183"
+  },
+  "nord drivesystems": {
+    "name": "Nord DriveSystems",
+    "id": "5184"
+  },
+  "flender tubingen": {
+    "name": "Flender Tubingen",
+    "id": "5185"
+  },
+  "master appliance corp.": {
+    "name": "Master Appliance Corp.",
+    "id": "5186"
+  },
+  "hydralign": {
+    "name": "Hydralign",
+    "id": "5187"
+  },
+  "e dold and sohne": {
+    "name": "E Dold and Sohne",
+    "id": "5188"
+  },
+  "striko": {
+    "name": "Striko",
+    "id": "5189"
+  },
+  "b-line": {
+    "name": "B-Line",
+    "id": "5190"
+  },
+  "hydromotion inc.": {
+    "name": "Hydromotion Inc.",
+    "id": "5191"
+  },
+  "nestaflex": {
+    "name": "NestaFlex",
+    "id": "5192"
+  },
+  "automation inc.": {
+    "name": "Automation Inc.",
+    "id": "5193"
+  },
+  "jergens inc.": {
+    "name": "Jergens Inc.",
+    "id": "5194"
+  },
+  "cedes": {
+    "name": "Cedes",
+    "id": "5195"
+  },
+  "pneuforce": {
+    "name": "Pneuforce",
+    "id": "5196"
+  },
+  "friwo": {
+    "name": "FRIWO",
+    "id": "5197"
+  },
+  "antrax": {
+    "name": "Antrax",
+    "id": "5198"
+  },
+  "radwin": {
+    "name": "Radwin",
+    "id": "5199"
+  },
+  "totate tsushin": {
+    "name": "Totate Tsushin",
+    "id": "5200"
+  },
+  "scrounger": {
+    "name": "Scrounger",
+    "id": "5201"
+  },
+  "fuji latex co.": {
+    "name": "Fuji Latex Co.",
+    "id": "5202"
+  },
+  "tpv electronics": {
+    "name": "TPV Electronics",
+    "id": "5203"
+  },
+  "arch environmental equipment": {
+    "name": "Arch Environmental Equipment",
+    "id": "5204"
+  },
+  "anpat electric mfg": {
+    "name": "Anpat Electric Mfg",
+    "id": "5205"
+  },
+  "deltavolt": {
+    "name": "DeltaVolt",
+    "id": "5206"
+  },
+  "muto denki corp": {
+    "name": "Muto Denki Corp",
+    "id": "5207"
+  },
+  "hoffman pentair": {
+    "name": "Hoffman Pentair",
+    "id": "5208"
+  },
+  "standard regeneration": {
+    "name": "Standard Regeneration",
+    "id": "5209"
+  },
+  "pacific": {
+    "name": "Pacific",
+    "id": "5210"
+  },
+  "franklin electric": {
+    "name": "Franklin Electric",
+    "id": "5211"
+  },
+  "prosoft": {
+    "name": "ProSoft",
+    "id": "5212"
+  },
+  "jen-ken kiln": {
+    "name": "Jen-Ken Kiln",
+    "id": "5213"
+  },
+  "lamsteel corp.": {
+    "name": "Lamsteel Corp.",
+    "id": "5214"
+  },
+  "pfeiffer balzers": {
+    "name": "Pfeiffer Balzers",
+    "id": "5215"
+  },
+  "aimco": {
+    "name": "Aimco",
+    "id": "5216"
+  },
+  "presto": {
+    "name": "Presto",
+    "id": "5217"
+  },
+  "afco systems": {
+    "name": "Afco Systems",
+    "id": "5218"
+  },
+  "melles griot omnichrome": {
+    "name": "Melles Griot Omnichrome",
+    "id": "5219"
+  },
+  "martin yale": {
+    "name": "Martin Yale",
+    "id": "5220"
+  },
+  "abal": {
+    "name": "Abal",
+    "id": "5221"
+  },
+  "bei motion systems company": {
+    "name": "BEI Motion Systems Company",
+    "id": "5222"
+  },
+  "controls corporation of america": {
+    "name": "Controls Corporation of America",
+    "id": "5223"
+  },
+  "justrite": {
+    "name": "Justrite",
+    "id": "5224"
+  },
+  "cableform inc": {
+    "name": "Cableform Inc",
+    "id": "5225"
+  },
+  "ross operating valve co.": {
+    "name": "Ross Operating Valve Co.",
+    "id": "5226"
+  },
+  "elc enterprises": {
+    "name": "ELC Enterprises",
+    "id": "5227"
+  },
+  "nasarc": {
+    "name": "Nasarc",
+    "id": "5228"
+  },
+  "pennsylvania": {
+    "name": "Pennsylvania",
+    "id": "5229"
+  },
+  "mclean engineering": {
+    "name": "McLean Engineering",
+    "id": "5230"
+  },
+  "plantstar": {
+    "name": "Plantstar",
+    "id": "5231"
+  },
+  "demand products": {
+    "name": "Demand Products",
+    "id": "5232"
+  },
+  "a&g": {
+    "name": "A&G",
+    "id": "5233"
+  },
+  "yodogawa denki seisakusho": {
+    "name": "Yodogawa Denki Seisakusho",
+    "id": "5234"
+  },
+  "fryer": {
+    "name": "Fryer",
+    "id": "5235"
+  },
+  "controlled pyrolysis": {
+    "name": "Controlled Pyrolysis",
+    "id": "5236"
+  },
+  "watts industries": {
+    "name": "Watts Industries",
+    "id": "5237"
+  },
+  "sherwood corp.": {
+    "name": "Sherwood Corp.",
+    "id": "5238"
+  },
+  "airflow systems": {
+    "name": "Airflow Systems",
+    "id": "5239"
+  },
+  "sursum": {
+    "name": "Sursum",
+    "id": "5240"
+  },
+  "farmer electric products": {
+    "name": "Farmer Electric Products",
+    "id": "5241"
+  },
+  "electro-sensors inc.": {
+    "name": "Electro-Sensors Inc.",
+    "id": "5242"
+  },
+  "american vacuum co.": {
+    "name": "American Vacuum Co.",
+    "id": "5243"
+  },
+  "tokyo rikakikai co": {
+    "name": "Tokyo Rikakikai Co",
+    "id": "5244"
+  },
+  "van der graaf": {
+    "name": "Van Der Graaf",
+    "id": "5245"
+  },
+  "airpax": {
+    "name": "Airpax",
+    "id": "5246"
+  },
+  "fnw valve group": {
+    "name": "FNW Valve Group",
+    "id": "5247"
+  },
+  "legacy": {
+    "name": "Legacy",
+    "id": "5248"
+  },
+  "u.s. seal mfg.": {
+    "name": "U.S. Seal Mfg.",
+    "id": "5249"
+  },
+  "marsh instrument company": {
+    "name": "Marsh Instrument Company",
+    "id": "5250"
+  },
+  "la-man": {
+    "name": "LA-MAN",
+    "id": "5251"
+  },
+  "alco controls": {
+    "name": "Alco Controls",
+    "id": "5252"
+  },
+  "winters": {
+    "name": "Winters",
+    "id": "5253"
+  },
+  "asco red-hat valves": {
+    "name": "Asco Red-Hat Valves",
+    "id": "5254"
+  },
+  "zivan": {
+    "name": "Zivan",
+    "id": "5255"
+  },
+  "fs curtis": {
+    "name": "FS Curtis",
+    "id": "5256"
+  },
+  "altech abl sursum": {
+    "name": "Altech ABL SURSUM",
+    "id": "5257"
+  },
+  "baldwin filters": {
+    "name": "Baldwin Filters",
+    "id": "5258"
+  },
+  "donaldson duramax": {
+    "name": "Donaldson Duramax",
+    "id": "5259"
+  },
+  "fleetguard": {
+    "name": "Fleetguard",
+    "id": "5260"
+  },
+  "napa": {
+    "name": "NAPA",
+    "id": "5261"
+  },
+  "carrier": {
+    "name": "Carrier",
+    "id": "5262"
+  },
+  "tpi corporation": {
+    "name": "TPI Corporation",
+    "id": "5263"
+  },
+  "maxess stc": {
+    "name": "Maxess STC",
+    "id": "5264"
+  },
+  "zhongshan": {
+    "name": "Zhongshan",
+    "id": "5265"
+  },
+  "hammond power solutions": {
+    "name": "Hammond Power Solutions",
+    "id": "5266"
+  },
+  "reelcraft": {
+    "name": "REELCRAFT",
+    "id": "5267"
+  },
+  "altech corp": {
+    "name": "Altech Corp",
+    "id": "5268"
+  },
+  "clipsal": {
+    "name": "Clipsal",
+    "id": "5269"
+  },
+  "versa valves": {
+    "name": "Versa Valves",
+    "id": "5270"
+  },
+  "arrow hart": {
+    "name": "Arrow Hart",
+    "id": "5271"
+  },
+  "wilkins regulator division": {
+    "name": "Wilkins Regulator Division",
+    "id": "5272"
+  },
+  "svi inc.": {
+    "name": "SVI Inc.",
+    "id": "5273"
+  },
+  "benshaw": {
+    "name": "Benshaw",
+    "id": "5274"
+  },
+  "ite imperial corporation": {
+    "name": "ITE Imperial Corporation",
+    "id": "5275"
+  },
+  "entrelec": {
+    "name": "Entrelec",
+    "id": "5276"
+  },
+  "napa echlin": {
+    "name": "NAPA ECHLIN",
+    "id": "5277"
+  },
+  "epcos": {
+    "name": "Epcos",
+    "id": "5278"
+  },
+  "revere transducer inc.": {
+    "name": "Revere Transducer Inc.",
+    "id": "5279"
+  },
+  "revere transducers inc.": {
+    "name": "Revere Transducers Inc.",
+    "id": "5280"
+  },
+  "motors & armatures inc.": {
+    "name": "Motors & Armatures Inc.",
+    "id": "5281"
+  },
+  "fujinon": {
+    "name": "Fujinon",
+    "id": "5282"
+  },
+  "durant": {
+    "name": "Durant",
+    "id": "5283"
+  },
+  "horai co. ltd": {
+    "name": "Horai Co. LTD",
+    "id": "5284"
+  },
+  "brook hansen": {
+    "name": "Brook Hansen",
+    "id": "5285"
+  },
+  "hastings": {
+    "name": "hastings",
+    "id": "5286"
+  },
+  "tsubakimoto chain co.": {
+    "name": "Tsubakimoto Chain Co.",
+    "id": "5287"
+  },
+  "spectrum controls": {
+    "name": "Spectrum Controls",
+    "id": "5288"
+  },
+  "lucifer": {
+    "name": "Lucifer",
+    "id": "5289"
+  },
+  "northman co.": {
+    "name": "Northman Co.",
+    "id": "5290"
+  },
+  "nitto kohki co.": {
+    "name": "Nitto Kohki Co.",
+    "id": "5291"
+  },
+  "hios": {
+    "name": "HIOS",
+    "id": "5292"
+  },
+  "yamaha motor co.": {
+    "name": "Yamaha Motor Co.",
+    "id": "5293"
+  },
+  "circuit breaker industries": {
+    "name": "Circuit Breaker Industries",
+    "id": "5294"
+  },
+  "uniweld products": {
+    "name": "Uniweld Products",
+    "id": "5295"
+  },
+  "videolarm": {
+    "name": "Videolarm",
+    "id": "5296"
+  },
+  "legend valve": {
+    "name": "Legend Valve",
+    "id": "5297"
+  },
+  "burling instruments inc.": {
+    "name": "Burling Instruments Inc.",
+    "id": "5298"
+  },
+  "amtrol": {
+    "name": "Amtrol",
+    "id": "5299"
+  },
+  "fusetek": {
+    "name": "Fusetek",
+    "id": "5300"
+  },
+  "crane dorray corp.": {
+    "name": "Crane Dorray Corp.",
+    "id": "5301"
+  },
+  "rees inc.": {
+    "name": "Rees Inc.",
+    "id": "5302"
+  },
+  "kba-metronic": {
+    "name": "KBA-Metronic",
+    "id": "5303"
+  },
+  "fischbein": {
+    "name": "Fischbein",
+    "id": "5304"
+  },
+  "crydom controls": {
+    "name": "Crydom Controls",
+    "id": "5305"
+  },
+  "gould": {
+    "name": "Gould",
+    "id": "5306"
+  },
+  "sola/hevi-duty": {
+    "name": "Sola/Hevi-Duty",
+    "id": "5307"
+  },
+  "euchner": {
+    "name": "Euchner",
+    "id": "5308"
+  },
+  "mis": {
+    "name": "MIS",
+    "id": "5309"
+  },
+  "farris engineering": {
+    "name": "Farris Engineering",
+    "id": "5310"
+  },
+  "phd": {
+    "name": "Phd",
+    "id": "5311"
+  },
+  "egs hevi-duty": {
+    "name": "EGS Hevi-Duty",
+    "id": "5312"
+  },
+  "trionic ferraz shawmut": {
+    "name": "Trionic Ferraz Shawmut",
+    "id": "5313"
+  },
+  "yoshida electric": {
+    "name": "Yoshida Electric",
+    "id": "5314"
+  },
+  "ati industrial automation": {
+    "name": "ATI Industrial Automation",
+    "id": "5315"
+  },
+  "united states": {
+    "name": "United States",
+    "id": "5316"
+  },
+  "astrosyn stepper": {
+    "name": "Astrosyn Stepper",
+    "id": "5317"
+  },
+  "fluid fluid controls inc.": {
+    "name": "Fluid Fluid Controls Inc.",
+    "id": "5318"
+  },
+  "pepperl fuchs": {
+    "name": "PEPPERL FUCHS",
+    "id": "5319"
+  },
+  "yaskawa servopack": {
+    "name": "Yaskawa ServoPack",
+    "id": "5320"
+  },
+  "obara": {
+    "name": "Obara",
+    "id": "5321"
+  },
+  "rupp air systems": {
+    "name": "Rupp Air Systems",
+    "id": "5322"
+  },
+  "schneider elau": {
+    "name": "Schneider ELAU",
+    "id": "5323"
+  },
+  "engineered air": {
+    "name": "Engineered Air",
+    "id": "5324"
+  },
+  "nec corporation": {
+    "name": "NEC Corporation",
+    "id": "5325"
+  },
+  "vac": {
+    "name": "VAC",
+    "id": "5326"
+  },
+  "linksys": {
+    "name": "Linksys",
+    "id": "5327"
+  },
+  "stober": {
+    "name": "Stober",
+    "id": "5328"
+  },
+  "victaulic": {
+    "name": "Victaulic",
+    "id": "5329"
+  },
+  "cr magnetics": {
+    "name": "CR Magnetics",
+    "id": "5330"
+  },
+  "imo": {
+    "name": "IMO",
+    "id": "5331"
+  },
+  "swallow electric": {
+    "name": "Swallow Electric",
+    "id": "5332"
+  },
+  "engineered automation of maine inc.": {
+    "name": "Engineered Automation of Maine Inc.",
+    "id": "5333"
+  },
+  "saginaw control & engineering": {
+    "name": "Saginaw Control & Engineering",
+    "id": "5334"
+  },
+  "nissei plastic industrial co.": {
+    "name": "Nissei Plastic Industrial Co.",
+    "id": "5335"
+  },
+  "us breaker": {
+    "name": "US Breaker",
+    "id": "5336"
+  },
+  "pfankuch": {
+    "name": "Pfankuch",
+    "id": "5337"
+  },
+  "kohler": {
+    "name": "Kohler",
+    "id": "5338"
+  },
+  "waco giken co.": {
+    "name": "Waco Giken Co.",
+    "id": "5339"
+  },
+  "tecumseh": {
+    "name": "Tecumseh",
+    "id": "5340"
+  },
+  "walther flender": {
+    "name": "Walther Flender",
+    "id": "5341"
+  },
+  "bockwoldt": {
+    "name": "Bockwoldt",
+    "id": "5342"
+  },
+  "staubli": {
+    "name": "Staubli",
+    "id": "5343"
+  },
+  "stober antriebstechink": {
+    "name": "Stober Antriebstechink",
+    "id": "5344"
+  },
+  "ohio electric motors": {
+    "name": "Ohio Electric Motors",
+    "id": "5345"
+  },
+  "triac controls": {
+    "name": "Triac Controls",
+    "id": "5346"
+  },
+  "master power transmission": {
+    "name": "master power transmission",
+    "id": "5347"
+  },
+  "atlanta": {
+    "name": "Atlanta",
+    "id": "5348"
+  },
+  "dynics / l.h. controls": {
+    "name": "Dynics / L.H. Controls",
+    "id": "5349"
+  },
+  "harrison": {
+    "name": "Harrison",
+    "id": "5350"
+  },
+  "itoh denki": {
+    "name": "Itoh Denki",
+    "id": "5351"
+  },
+  "lachenmeier": {
+    "name": "Lachenmeier",
+    "id": "5352"
+  },
+  "comi": {
+    "name": "Comi",
+    "id": "5353"
+  },
+  "trumpf": {
+    "name": "Trumpf",
+    "id": "5354"
+  },
+  "joinpack": {
+    "name": "Joinpack",
+    "id": "5355"
+  },
+  "advanced d.c. motors": {
+    "name": "Advanced D.C. Motors",
+    "id": "5356"
+  },
+  "eugen hensle": {
+    "name": "Eugen Hensle",
+    "id": "5357"
+  },
+  "twin city fan company": {
+    "name": "Twin City Fan Company",
+    "id": "5358"
+  },
+  "regenair": {
+    "name": "Regenair",
+    "id": "5359"
+  },
+  "imf": {
+    "name": "IMF",
+    "id": "5360"
+  },
+  "lean technik": {
+    "name": "Lean Technik",
+    "id": "5361"
+  },
+  "di-soric": {
+    "name": "Di-Soric",
+    "id": "5362"
+  },
+  "little david loveshaw": {
+    "name": "Little David Loveshaw",
+    "id": "5363"
+  },
+  "peak": {
+    "name": "Peak",
+    "id": "5364"
+  },
+  "caleffi": {
+    "name": "Caleffi",
+    "id": "5365"
+  },
+  "monnier": {
+    "name": "Monnier",
+    "id": "5366"
+  },
+  "yaskawa motoman": {
+    "name": "Yaskawa Motoman",
+    "id": "5367"
+  },
+  "premier": {
+    "name": "Premier",
+    "id": "5368"
+  },
+  "ok": {
+    "name": "OK",
+    "id": "5369"
+  },
+  "go": {
+    "name": "GO",
+    "id": "5370"
+  },
+  "fenner drives": {
+    "name": "Fenner Drives",
+    "id": "5371"
+  },
+  "parts feeder": {
+    "name": "Parts Feeder",
+    "id": "5372"
+  },
+  "katko": {
+    "name": "katko",
+    "id": "5373"
+  },
+  "elfin": {
+    "name": "Elfin",
+    "id": "5374"
+  },
+  "filtrete 3m": {
+    "name": "Filtrete 3M",
+    "id": "5375"
+  },
+  "riedel": {
+    "name": "Riedel",
+    "id": "5376"
+  },
+  "emc": {
+    "name": "EMC",
+    "id": "5377"
+  },
+  "penway inc.": {
+    "name": "Penway Inc.",
+    "id": "5378"
+  },
+  "aci": {
+    "name": "ACI",
+    "id": "5379"
+  },
+  "wacom bamboo": {
+    "name": "Wacom Bamboo",
+    "id": "5380"
+  },
+  "arrow pneumatics": {
+    "name": "Arrow Pneumatics",
+    "id": "5381"
+  },
+  "rexroth star": {
+    "name": "Rexroth Star",
+    "id": "5382"
+  },
+  "advanced": {
+    "name": "Advanced",
+    "id": "5383"
+  },
+  "athena controls": {
+    "name": "Athena Controls",
+    "id": "5384"
+  },
+  "rhino automation direct": {
+    "name": "Rhino Automation Direct",
+    "id": "5385"
+  },
+  "nadesco nadex": {
+    "name": "Nadesco Nadex",
+    "id": "5386"
+  },
+  "minarik": {
+    "name": "Minarik",
+    "id": "5387"
+  },
+  "graham motors and controls": {
+    "name": "graham motors and controls",
+    "id": "5388"
+  },
+  "shibuya hoppmann": {
+    "name": "Shibuya Hoppmann",
+    "id": "5389"
+  },
+  "conservair": {
+    "name": "Conservair",
+    "id": "5390"
+  },
+  "ta ultrasonics": {
+    "name": "TA Ultrasonics",
+    "id": "5391"
+  },
+  "nippon": {
+    "name": "Nippon",
+    "id": "5392"
+  },
+  "fukuda": {
+    "name": "Fukuda",
+    "id": "5393"
+  },
+  "itw": {
+    "name": "ITW",
+    "id": "5394"
+  },
+  "adept technology": {
+    "name": "Adept Technology",
+    "id": "5395"
+  },
+  "cisco": {
+    "name": "Cisco",
+    "id": "5396"
+  },
+  "rotero belgium": {
+    "name": "Rotero Belgium",
+    "id": "5397"
+  },
+  "ebmpapst": {
+    "name": "Ebmpapst",
+    "id": "5398"
+  },
+  "ifm efector": {
+    "name": "IFM Efector",
+    "id": "5399"
+  },
+  "control technology": {
+    "name": "Control Technology",
+    "id": "5400"
+  },
+  "mcd elektronik": {
+    "name": "MCD Elektronik",
+    "id": "5401"
+  },
+  "sprecher + schuh": {
+    "name": "Sprecher + Schuh",
+    "id": "5402"
+  },
+  "sprecher & schuh": {
+    "name": "Sprecher & Schuh",
+    "id": "5403"
+  },
+  "omegaette": {
+    "name": "Omegaette",
+    "id": "5404"
+  },
+  "bunting": {
+    "name": "Bunting",
+    "id": "5405"
+  },
+  "rapid granulator": {
+    "name": "Rapid Granulator",
+    "id": "5406"
+  },
+  "ic electronic": {
+    "name": "IC Electronic",
+    "id": "5407"
+  },
+  "bodine": {
+    "name": "Bodine",
+    "id": "5408"
+  },
+  "bodine electric": {
+    "name": "Bodine Electric",
+    "id": "5409"
+  },
+  "minarik drive": {
+    "name": "Minarik Drive",
+    "id": "5410"
+  },
+  "accu sort systems": {
+    "name": "Accu Sort Systems",
+    "id": "5411"
+  },
+  "beijer": {
+    "name": "Beijer",
+    "id": "5412"
+  },
+  "ross controls": {
+    "name": "Ross Controls",
+    "id": "5413"
+  },
+  "horner": {
+    "name": "Horner",
+    "id": "5414"
+  },
+  "allen-bradley": {
+    "name": "Allen-Bradley",
+    "id": "5415"
+  },
+  "sas": {
+    "name": "SAS",
+    "id": "5416"
+  },
+  "baumer": {
+    "name": "Baumer",
+    "id": "5417"
+  },
+  "und lab": {
+    "name": "UND LAB",
+    "id": "5418"
+  },
+  "phoenix": {
+    "name": "Phoenix",
+    "id": "5419"
+  },
+  "deltrol": {
+    "name": "Deltrol",
+    "id": "5420"
+  },
+  "egs hevi duty": {
+    "name": "EGS Hevi Duty",
+    "id": "5421"
+  },
+  "applied motion": {
+    "name": "Applied Motion",
+    "id": "5422"
+  },
+  "bak-ag": {
+    "name": "BAK-ag",
+    "id": "5423"
+  },
+  "republic blower systems": {
+    "name": "Republic Blower Systems",
+    "id": "5424"
+  },
+  "nord gear": {
+    "name": "Nord Gear",
+    "id": "5425"
+  },
+  "westinghouse electric": {
+    "name": "Westinghouse Electric",
+    "id": "5426"
+  },
+  "veris": {
+    "name": "Veris",
+    "id": "5427"
+  },
+  "mac valves inc.": {
+    "name": "Mac Valves Inc.",
+    "id": "5428"
+  },
+  "tb wood's": {
+    "name": "TB Wood's",
+    "id": "5429"
+  },
+  "ntn bearings": {
+    "name": "NTN Bearings",
+    "id": "5430"
+  },
+  "avery weigh-tronix": {
+    "name": "Avery Weigh-Tronix",
+    "id": "5431"
+  },
+  "bulk equipment systems": {
+    "name": "Bulk Equipment Systems",
+    "id": "5432"
+  },
+  "electronics corporation": {
+    "name": "Electronics Corporation",
+    "id": "5433"
+  },
+  "ingersoll-rand": {
+    "name": "Ingersoll-Rand",
+    "id": "5434"
+  },
+  "flexpipe": {
+    "name": "FlexPipe",
+    "id": "5435"
+  },
+  "wilkerson filters": {
+    "name": "Wilkerson Filters",
+    "id": "5436"
+  },
+  "alienwarre": {
+    "name": "alienwarre",
+    "id": "5437"
+  },
+  "morse industrial": {
+    "name": "Morse Industrial",
+    "id": "5438"
+  },
+  "seco-larm": {
+    "name": "Seco-Larm",
+    "id": "5439"
+  },
+  "droner": {
+    "name": "Droner",
+    "id": "5440"
+  },
+  "parts feeders": {
+    "name": "Parts Feeders",
+    "id": "5441"
+  },
+  "e.m.c": {
+    "name": "E.M.C",
+    "id": "5442"
+  },
+  "hyd-o-thrift": {
+    "name": "Hyd-O-Thrift",
+    "id": "5443"
+  },
+  "hyrol": {
+    "name": "Hyrol",
+    "id": "5444"
+  },
+  "absolute process": {
+    "name": "Absolute Process",
+    "id": "5445"
+  },
+  "sew-eurodrive": {
+    "name": "Sew-Eurodrive",
+    "id": "5446"
+  },
+  "ebm-papst": {
+    "name": "EBM-Papst",
+    "id": "5447"
+  },
+  "movotec suspa lift systems": {
+    "name": "Movotec Suspa Lift Systems",
+    "id": "5448"
+  },
+  "trio-technik": {
+    "name": "Trio-Technik",
+    "id": "5449"
+  },
+  "scott": {
+    "name": "Scott",
+    "id": "5450"
+  },
+  "specher+schuh": {
+    "name": "Specher+Schuh",
+    "id": "5451"
+  },
+  "michael riedel": {
+    "name": "Michael Riedel",
+    "id": "5452"
+  },
+  "hetronik": {
+    "name": "Hetronik",
+    "id": "5453"
+  },
+  "csz industries": {
+    "name": "CSZ Industries",
+    "id": "5454"
+  },
+  "puls": {
+    "name": "Puls",
+    "id": "5455"
+  },
+  "amc inc.": {
+    "name": "AMC Inc.",
+    "id": "5456"
+  },
+  "miller fluid power": {
+    "name": "Miller Fluid Power",
+    "id": "5457"
+  },
+  "mecos": {
+    "name": "Mecos",
+    "id": "5458"
+  },
+  "travaini pumps": {
+    "name": "Travaini Pumps",
+    "id": "5459"
+  },
+  "bofab": {
+    "name": "Bofab",
+    "id": "5460"
+  },
+  "rosedale products": {
+    "name": "Rosedale Products",
+    "id": "5461"
+  },
+  "freetech": {
+    "name": "FreeTech",
+    "id": "5462"
+  },
+  "moving": {
+    "name": "Moving",
+    "id": "5463"
+  },
+  "marellimotori": {
+    "name": "MarelliMotori",
+    "id": "5464"
+  },
+  "osai": {
+    "name": "OSAI",
+    "id": "5465"
+  },
+  "runelandhs": {
+    "name": "Runelandhs",
+    "id": "5466"
+  },
+  "ltg": {
+    "name": "LTG",
+    "id": "5467"
+  },
+  "sch\u00f6nbuch electronic": {
+    "name": "Sch\u00f6nbuch Electronic",
+    "id": "5468"
+  },
+  "greenheck": {
+    "name": "Greenheck",
+    "id": "5469"
+  },
+  "cincinnati fan": {
+    "name": "Cincinnati Fan",
+    "id": "5470"
+  },
+  "millutensil": {
+    "name": "Millutensil",
+    "id": "5471"
+  },
+  "nema": {
+    "name": "NEMA",
+    "id": "5472"
+  },
+  "bonitron": {
+    "name": "Bonitron",
+    "id": "5473"
+  },
+  "duelco": {
+    "name": "Duelco",
+    "id": "5474"
+  },
+  "uchida rexroth": {
+    "name": "Uchida Rexroth",
+    "id": "5475"
+  },
+  "nastro trasportatore-modulare": {
+    "name": "Nastro Trasportatore-Modulare",
+    "id": "5476"
+  },
+  "trim-lock": {
+    "name": "Trim-Lock",
+    "id": "5477"
+  },
+  "erc": {
+    "name": "ERC",
+    "id": "5478"
+  },
+  "berkeley": {
+    "name": "Berkeley",
+    "id": "5479"
+  },
+  "calpeda": {
+    "name": "Calpeda",
+    "id": "5480"
+  },
+  "sew-usocome": {
+    "name": "Sew-Usocome",
+    "id": "5481"
+  },
+  "irem": {
+    "name": "IREM",
+    "id": "5482"
+  },
+  "hirose valves": {
+    "name": "Hirose Valves",
+    "id": "5483"
+  },
+  "rodenstock": {
+    "name": "Rodenstock",
+    "id": "5484"
+  },
+  "linos": {
+    "name": "Linos",
+    "id": "5485"
+  },
+  "ge motors": {
+    "name": "GE Motors",
+    "id": "5486"
+  },
+  "mersen": {
+    "name": "Mersen",
+    "id": "5487"
+  },
+  "rapid air": {
+    "name": "Rapid Air",
+    "id": "5488"
+  },
+  "emerson sola": {
+    "name": "Emerson Sola",
+    "id": "5489"
+  },
+  "wesco": {
+    "name": "Wesco",
+    "id": "5490"
+  },
+  "worldwide electric": {
+    "name": "WorldWide Electric",
+    "id": "5491"
+  },
+  "el.mec": {
+    "name": "El.Mec",
+    "id": "5492"
+  },
+  "lufterhitzer": {
+    "name": "Lufterhitzer",
+    "id": "5493"
+  },
+  "wilton": {
+    "name": "Wilton",
+    "id": "5494"
+  },
+  "mc": {
+    "name": "MC",
+    "id": "5495"
+  },
+  "ttl": {
+    "name": "TTL",
+    "id": "5496"
+  },
+  "hitek power corp": {
+    "name": "Hitek Power Corp",
+    "id": "5497"
+  },
+  "genyuan": {
+    "name": "GenYuan",
+    "id": "5498"
+  },
+  "cui": {
+    "name": "CUI",
+    "id": "5499"
+  },
+  "honglin": {
+    "name": "Honglin",
+    "id": "5500"
+  },
+  "sjt": {
+    "name": "SJT",
+    "id": "5501"
+  },
+  "plaga trafo": {
+    "name": "Plaga Trafo",
+    "id": "5502"
+  },
+  "fluke": {
+    "name": "Fluke",
+    "id": "5503"
+  },
+  "cincon electronics": {
+    "name": "Cincon Electronics",
+    "id": "5504"
+  },
+  "stontronics": {
+    "name": "Stontronics",
+    "id": "5505"
+  },
+  "mersen ferraz shawmut": {
+    "name": "Mersen Ferraz Shawmut",
+    "id": "5506"
+  },
+  "parasonic": {
+    "name": "Parasonic",
+    "id": "5507"
+  },
+  "medar": {
+    "name": "Medar",
+    "id": "5508"
+  },
+  "eil": {
+    "name": "Eil",
+    "id": "5509"
+  },
+  "wenglor": {
+    "name": "Wenglor",
+    "id": "5510"
+  },
+  "eliwell": {
+    "name": "Eliwell",
+    "id": "5511"
+  },
+  "cerus": {
+    "name": "Cerus",
+    "id": "5512"
+  },
+  "american valve": {
+    "name": "American Valve",
+    "id": "5513"
+  },
+  "shanghai medar welding equipment co.": {
+    "name": "Shanghai Medar Welding Equipment Co.",
+    "id": "5514"
+  },
+  "bestflex": {
+    "name": "BestFlex",
+    "id": "5515"
+  },
+  "robotron": {
+    "name": "Robotron",
+    "id": "5516"
+  },
+  "wtc": {
+    "name": "WTC",
+    "id": "5517"
+  },
+  "sky electronics": {
+    "name": "Sky Electronics",
+    "id": "5518"
+  },
+  "comat releco": {
+    "name": "Comat Releco",
+    "id": "5519"
+  },
+  "herion": {
+    "name": "Herion",
+    "id": "5520"
+  },
+  "fluidyne": {
+    "name": "FluiDyne",
+    "id": "5521"
+  },
+  "columbus electric": {
+    "name": "Columbus Electric",
+    "id": "5522"
+  },
+  "notifier": {
+    "name": "Notifier",
+    "id": "5523"
+  },
+  "poe": {
+    "name": "POE",
+    "id": "5524"
+  },
+  "oki": {
+    "name": "OKI",
+    "id": "5525"
+  },
+  "georges renault": {
+    "name": "Georges Renault",
+    "id": "5526"
+  },
+  "msa": {
+    "name": "MSA",
+    "id": "5527"
+  },
+  "fisnar": {
+    "name": "Fisnar",
+    "id": "5528"
+  },
+  "motovario": {
+    "name": "Motovario",
+    "id": "5529"
+  },
+  "glue dots international": {
+    "name": "Glue Dots International",
+    "id": "5530"
+  },
+  "monnier algonac": {
+    "name": "Monnier Algonac",
+    "id": "5531"
+  },
+  "mini motor": {
+    "name": "Mini Motor",
+    "id": "5532"
+  },
+  "bonfiglioli": {
+    "name": "Bonfiglioli",
+    "id": "5533"
+  },
+  "mitsuya fan": {
+    "name": "Mitsuya Fan",
+    "id": "5534"
+  },
+  "e. dold & s\u00f6hne kg": {
+    "name": "E. Dold & S\u00f6hne KG",
+    "id": "5535"
+  },
+  "teklogix": {
+    "name": "Teklogix",
+    "id": "5536"
+  },
+  "abb tamagawa seiki": {
+    "name": "ABB Tamagawa Seiki",
+    "id": "5537"
+  },
+  "pcu": {
+    "name": "PCU",
+    "id": "5538"
+  },
+  "ruland": {
+    "name": "Ruland",
+    "id": "5539"
+  },
+  "elettra renon": {
+    "name": "Elettra Renon",
+    "id": "5540"
+  },
+  "melco milano": {
+    "name": "Melco Milano",
+    "id": "5541"
+  },
+  "zimmer group": {
+    "name": "Zimmer Group",
+    "id": "5542"
+  },
+  "mainetti brescia": {
+    "name": "Mainetti Brescia",
+    "id": "5543"
+  },
+  "generac": {
+    "name": "Generac",
+    "id": "5544"
+  },
+  "slautterback": {
+    "name": "Slautterback",
+    "id": "5545"
+  },
+  "brad connectivity": {
+    "name": "Brad Connectivity",
+    "id": "5546"
+  },
+  "devilbiss": {
+    "name": "DeVilbiss",
+    "id": "5547"
+  },
+  "fronius": {
+    "name": "Fronius",
+    "id": "5548"
+  },
+  "pizzato": {
+    "name": "Pizzato",
+    "id": "5549"
+  },
+  "hammer lock": {
+    "name": "Hammer Lock",
+    "id": "5550"
+  },
+  "sanso": {
+    "name": "Sanso",
+    "id": "5551"
+  },
+  "nissan": {
+    "name": "Nissan",
+    "id": "5552"
+  },
+  "metrol": {
+    "name": "Metrol",
+    "id": "5553"
+  },
+  "wire wizard": {
+    "name": "Wire Wizard",
+    "id": "5554"
+  },
+  "senseable": {
+    "name": "Senseable",
+    "id": "5555"
+  },
+  "jupiter pneumatics": {
+    "name": "Jupiter Pneumatics",
+    "id": "5556"
+  },
+  "tajimi": {
+    "name": "Tajimi",
+    "id": "5557"
+  },
+  "scotchman": {
+    "name": "Scotchman",
+    "id": "5558"
+  },
+  "national": {
+    "name": "National",
+    "id": "5559"
+  },
+  "sharp": {
+    "name": "Sharp",
+    "id": "5560"
+  },
+  "eaton moeller": {
+    "name": "Eaton Moeller",
+    "id": "5561"
+  },
+  "linx ginga": {
+    "name": "Linx Ginga",
+    "id": "5562"
+  },
+  "zund": {
+    "name": "Zund",
+    "id": "5563"
+  },
+  "emperor tech": {
+    "name": "Emperor Tech",
+    "id": "5564"
+  },
+  "giant": {
+    "name": "Giant",
+    "id": "5565"
+  },
+  "ap dataweigh": {
+    "name": "AP Dataweigh",
+    "id": "5566"
+  },
+  "zebra skimmers": {
+    "name": "Zebra Skimmers",
+    "id": "5567"
+  },
+  "kondoh": {
+    "name": "Kondoh",
+    "id": "5568"
+  },
+  "apple inc.": {
+    "name": "Apple Inc.",
+    "id": "5569"
+  },
+  "ilsco": {
+    "name": "Ilsco",
+    "id": "5570"
+  },
+  "tutco-farnam": {
+    "name": "Tutco-Farnam",
+    "id": "5571"
+  },
+  "amano corporation": {
+    "name": "Amano Corporation",
+    "id": "5572"
+  },
+  "u.s coolers": {
+    "name": "U.S Coolers",
+    "id": "5573"
+  },
+  "olsun": {
+    "name": "Olsun",
+    "id": "5574"
+  },
+  "nadex": {
+    "name": "Nadex",
+    "id": "5575"
+  },
+  "japan servo co.": {
+    "name": "Japan Servo Co.",
+    "id": "5576"
+  },
+  "niec": {
+    "name": "NIEC",
+    "id": "5577"
+  },
+  "digiplan": {
+    "name": "Digiplan",
+    "id": "5578"
+  },
+  "durang": {
+    "name": "Durang",
+    "id": "5579"
+  },
+  "durag": {
+    "name": "Durag",
+    "id": "5580"
+  },
+  "ldi-industries": {
+    "name": "LDI-Industries",
+    "id": "5581"
+  },
+  "pulsafeeder": {
+    "name": "Pulsafeeder",
+    "id": "5582"
+  },
+  "gemini valve": {
+    "name": "Gemini Valve",
+    "id": "5583"
+  },
+  "kyokutoh": {
+    "name": "Kyokutoh",
+    "id": "5584"
+  },
+  "simco": {
+    "name": "Simco",
+    "id": "5585"
+  },
+  "ise electronics": {
+    "name": "ISE Electronics",
+    "id": "5586"
+  },
+  "thermo sentron": {
+    "name": "Thermo Sentron",
+    "id": "5587"
+  },
+  "fast heat": {
+    "name": "Fast Heat",
+    "id": "5588"
+  },
+  "esta": {
+    "name": "Esta",
+    "id": "5589"
+  },
+  "emmegi": {
+    "name": "Emmegi",
+    "id": "5590"
+  },
+  "taisei kogyo": {
+    "name": "Taisei Kogyo",
+    "id": "5591"
+  },
+  "hyco": {
+    "name": "Hyco",
+    "id": "5592"
+  },
+  "nissei industries": {
+    "name": "Nissei Industries",
+    "id": "5593"
+  },
+  "rae corporation": {
+    "name": "RAE Corporation",
+    "id": "5594"
+  },
+  "lafert": {
+    "name": "Lafert",
+    "id": "5595"
+  },
+  "hipower hydraulics": {
+    "name": "Hipower Hydraulics",
+    "id": "5596"
+  },
+  "avc": {
+    "name": "AVC",
+    "id": "5597"
+  },
+  "enhance": {
+    "name": "Enhance",
+    "id": "5598"
+  },
+  "artesyn technologies": {
+    "name": "Artesyn Technologies",
+    "id": "5599"
+  },
+  "qsi corporation": {
+    "name": "QSI Corporation",
+    "id": "5600"
+  },
+  "dio": {
+    "name": "Dio",
+    "id": "5601"
+  },
+  "strapack corp": {
+    "name": "Strapack Corp",
+    "id": "5602"
+  },
+  "automatic products": {
+    "name": "Automatic Products",
+    "id": "5603"
+  },
+  "altas": {
+    "name": "Altas",
+    "id": "5604"
+  },
+  "newcastle systems": {
+    "name": "Newcastle Systems",
+    "id": "5605"
+  },
+  "toyo": {
+    "name": "Toyo",
+    "id": "5606"
+  },
+  "subaki": {
+    "name": "Subaki",
+    "id": "5607"
+  },
+  "gems": {
+    "name": "Gems",
+    "id": "5608"
+  },
+  "chicago cylinder corp": {
+    "name": "Chicago Cylinder Corp",
+    "id": "5609"
+  },
+  "hyachi": {
+    "name": "Hyachi",
+    "id": "5610"
+  },
+  "international configuration": {
+    "name": "International Configuration",
+    "id": "5611"
+  },
+  "mercury": {
+    "name": "Mercury",
+    "id": "5612"
+  },
+  "star tech": {
+    "name": "Star Tech",
+    "id": "5613"
+  },
+  "cinpres gas injection": {
+    "name": "Cinpres Gas Injection",
+    "id": "5614"
+  },
+  "ye data": {
+    "name": "YE Data",
+    "id": "5615"
+  },
+  "dymo": {
+    "name": "Dymo",
+    "id": "5616"
+  },
+  "entlade-vorrichtung": {
+    "name": "Entlade-Vorrichtung",
+    "id": "5617"
+  },
+  "hand held products": {
+    "name": "Hand Held Products",
+    "id": "5618"
+  },
+  "hytrol style": {
+    "name": "Hytrol Style",
+    "id": "5619"
+  },
+  "tp-link": {
+    "name": "TP-Link",
+    "id": "5620"
+  },
+  "philips ecg": {
+    "name": "Philips ECG",
+    "id": "5621"
+  },
+  "molicel": {
+    "name": "Molicel",
+    "id": "5622"
+  },
+  "ventronics": {
+    "name": "Ventronics",
+    "id": "5623"
+  },
+  "traco power": {
+    "name": "Traco Power",
+    "id": "5624"
+  },
+  "cal control": {
+    "name": "Cal Control",
+    "id": "5625"
+  },
+  "cal controls": {
+    "name": "Cal Controls",
+    "id": "5626"
+  },
+  "tsc": {
+    "name": "TSC",
+    "id": "5627"
+  },
+  "socomec": {
+    "name": "Socomec",
+    "id": "5628"
+  },
+  "watertown": {
+    "name": "Watertown",
+    "id": "5629"
+  },
+  "roach style": {
+    "name": "Roach Style",
+    "id": "5630"
+  },
+  "weltem": {
+    "name": "Weltem",
+    "id": "5631"
+  },
+  "do-all": {
+    "name": "Do-All",
+    "id": "5632"
+  },
+  "leoni": {
+    "name": "Leoni",
+    "id": "5633"
+  },
+  "roman": {
+    "name": "RoMan",
+    "id": "5634"
+  },
+  "solo heavi-duty": {
+    "name": "Solo Heavi-Duty",
+    "id": "5635"
+  },
+  "data translation": {
+    "name": "Data Translation",
+    "id": "5636"
+  },
+  "staples": {
+    "name": "Staples",
+    "id": "5637"
+  },
+  "auo": {
+    "name": "Auo",
+    "id": "5638"
+  },
+  "totaline": {
+    "name": "Totaline",
+    "id": "5639"
+  },
+  "kosmek": {
+    "name": "Kosmek",
+    "id": "5640"
+  },
+  "tri-pleat": {
+    "name": "Tri-Pleat",
+    "id": "5641"
+  },
+  "nolatron": {
+    "name": "Nolatron",
+    "id": "5642"
+  },
+  "silvan industries": {
+    "name": "Silvan Industries",
+    "id": "5643"
+  },
+  "advantage titan": {
+    "name": "Advantage Titan",
+    "id": "5644"
+  },
+  "mepco": {
+    "name": "MEPCO",
+    "id": "5645"
+  },
+  "scot": {
+    "name": "Scot",
+    "id": "5646"
+  },
+  "walchem": {
+    "name": "Walchem",
+    "id": "5647"
+  },
+  "seametrics": {
+    "name": "SeaMetrics",
+    "id": "5648"
+  },
+  "eng": {
+    "name": "ENG",
+    "id": "5649"
+  },
+  "titan flow control": {
+    "name": "Titan Flow Control",
+    "id": "5650"
+  },
+  "c&c industries": {
+    "name": "C&C Industries",
+    "id": "5651"
+  },
+  "flynn": {
+    "name": "Flynn",
+    "id": "5652"
+  },
+  "yellow jacket": {
+    "name": "Yellow Jacket",
+    "id": "5653"
+  },
+  "lmi": {
+    "name": "LMI",
+    "id": "5654"
+  },
+  "flow-max": {
+    "name": "Flow-Max",
+    "id": "5655"
+  },
+  "advantage": {
+    "name": "Advantage",
+    "id": "5656"
+  },
+  "sever it with everett": {
+    "name": "Sever It With Everett",
+    "id": "5657"
+  },
+  "badger": {
+    "name": "Badger",
+    "id": "5658"
+  },
+  "advantage electronics": {
+    "name": "Advantage Electronics",
+    "id": "5659"
+  },
+  "rieter": {
+    "name": "Rieter",
+    "id": "5660"
+  },
+  "witte": {
+    "name": "WITTE",
+    "id": "5661"
+  },
+  "ims company": {
+    "name": "IMS Company",
+    "id": "5662"
+  },
+  "leistritz": {
+    "name": "Leistritz",
+    "id": "5663"
+  },
+  "horai": {
+    "name": "Horai",
+    "id": "5664"
+  },
+  "dr.johannes heidenhain": {
+    "name": "Dr.Johannes Heidenhain",
+    "id": "5665"
+  },
+  "fill-rite": {
+    "name": "Fill-Rite",
+    "id": "5666"
+  },
+  "mixaco": {
+    "name": "Mixaco",
+    "id": "5667"
+  },
+  "teraoka": {
+    "name": "Teraoka",
+    "id": "5668"
+  },
+  "viper": {
+    "name": "Viper",
+    "id": "5669"
+  },
+  "digi": {
+    "name": "Digi",
+    "id": "5670"
+  },
+  "durabridge": {
+    "name": "Durabridge",
+    "id": "5671"
+  },
+  "super sack": {
+    "name": "Super Sack",
+    "id": "5672"
+  },
+  "epson": {
+    "name": "Epson",
+    "id": "5673"
+  },
+  "piovan": {
+    "name": "Piovan",
+    "id": "5674"
+  },
+  "seal-a-tron": {
+    "name": "Seal-A-Tron",
+    "id": "5675"
+  },
+  "torch wizard": {
+    "name": "Torch Wizard",
+    "id": "5676"
+  },
+  "tuthill": {
+    "name": "Tuthill",
+    "id": "5677"
+  },
+  "jwi": {
+    "name": "JWI",
+    "id": "5678"
+  },
+  "kashiyama": {
+    "name": "Kashiyama",
+    "id": "5679"
+  },
+  "perceptron": {
+    "name": "Perceptron",
+    "id": "5680"
+  },
+  "kkt": {
+    "name": "KKT",
+    "id": "5681"
+  },
+  "evv": {
+    "name": "EVV",
+    "id": "5682"
+  },
+  "eev": {
+    "name": "EEV",
+    "id": "5683"
+  },
+  "merkle-korff": {
+    "name": "Merkle-Korff",
+    "id": "5684"
+  },
+  "tohen": {
+    "name": "Tohen",
+    "id": "5685"
+  },
+  "apiste": {
+    "name": "Apiste",
+    "id": "5686"
+  },
+  "service mate": {
+    "name": "Service Mate",
+    "id": "5687"
+  },
+  "eko": {
+    "name": "EKo",
+    "id": "5688"
+  },
+  "sintokogio": {
+    "name": "Sintokogio",
+    "id": "5689"
+  },
+  "baileigh": {
+    "name": "Baileigh",
+    "id": "5690"
+  },
+  "robo-gear": {
+    "name": "ROBO-GEAR",
+    "id": "5691"
+  },
+  "k k sanwa": {
+    "name": "k k Sanwa",
+    "id": "5692"
+  },
+  "triad controls": {
+    "name": "Triad Controls",
+    "id": "5693"
+  },
+  "foremost machine builders": {
+    "name": "Foremost Machine Builders",
+    "id": "5694"
+  },
+  "kyocera": {
+    "name": "Kyocera",
+    "id": "5695"
+  },
+  "yoshara electric": {
+    "name": "Yoshara Electric",
+    "id": "5696"
+  },
+  "lti corporation": {
+    "name": "LTI Corporation",
+    "id": "5711"
+  },
+  "b&r": {
+    "name": "B&R",
+    "id": "5715"
+  },
+  "solid steel": {
+    "name": "Solid Steel",
+    "id": "5716"
+  },
+  "vp electric motors": {
+    "name": "VP Electric Motors",
+    "id": "5719"
+  },
+  "capsacorp": {
+    "name": "Capsacorp",
+    "id": "5720"
+  },
+  "lewco": {
+    "name": "Lewco",
+    "id": "5721"
+  },
+  "lift-o-flex": {
+    "name": "Lift-O-Flex",
+    "id": "5722"
+  },
+  "delta tau systems inc.": {
+    "name": "Delta TAU Systems Inc.",
+    "id": "5723"
+  },
+  "maxon": {
+    "name": "Maxon",
+    "id": "5725"
+  },
+  "blue giant": {
+    "name": "Blue Giant",
+    "id": "5727"
+  },
+  "arco wand": {
+    "name": "Arco Wand",
+    "id": "5729"
+  },
+  "macurco": {
+    "name": "Macurco",
+    "id": "5730"
+  },
+  "richmond": {
+    "name": "Richmond",
+    "id": "5731"
+  },
+  "gew": {
+    "name": "GEW",
+    "id": "5732"
+  },
+  "kamui co. ltd": {
+    "name": "Kamui Co. LTD",
+    "id": "5733"
+  },
+  "irax ingersoll-rand": {
+    "name": "Irax Ingersoll-Rand",
+    "id": "5751"
+  },
+  "tiger foam": {
+    "name": "Tiger Foam",
+    "id": "5752"
+  },
+  "lion precision": {
+    "name": "Lion Precision",
+    "id": "5755"
+  },
+  "fmh": {
+    "name": "FMH",
+    "id": "5756"
+  },
+  "kelley": {
+    "name": "Kelley",
+    "id": "5757"
+  },
+  "aps resource": {
+    "name": "APS Resource",
+    "id": "5758"
+  },
+  "shinohara electric": {
+    "name": "Shinohara Electric",
+    "id": "5760"
+  },
+  "jsw": {
+    "name": "JSW",
+    "id": "5761"
+  },
+  "taiho seiki co. ltd": {
+    "name": "Taiho Seiki Co. LTD",
+    "id": "5762"
+  },
+  "teral seiki co. ltd": {
+    "name": "Teral Seiki Co. LTD",
+    "id": "5763"
+  },
+  "sonzogni camme": {
+    "name": "Sonzogni Camme",
+    "id": "5766"
+  },
+  "varicam": {
+    "name": "Varicam",
+    "id": "5767"
+  },
+  "ge fanuc": {
+    "name": "GE Fanuc",
+    "id": "5771"
+  },
+  "mennekes": {
+    "name": "Mennekes",
+    "id": "5774"
+  },
+  "vega": {
+    "name": "Vega",
+    "id": "5775"
+  },
+  "bag corp.": {
+    "name": "Bag Corp.",
+    "id": "5776"
+  },
+  "gnb": {
+    "name": "GNB",
+    "id": "5777"
+  },
+  "ditek": {
+    "name": "Ditek",
+    "id": "5778"
+  },
+  "warren controls inc.": {
+    "name": "Warren Controls Inc.",
+    "id": "5779"
+  },
+  "americool": {
+    "name": "Americool",
+    "id": "5780"
+  },
+  "veljan": {
+    "name": "Veljan",
+    "id": "5781"
+  },
+  "rich sou technology co. ltd": {
+    "name": "Rich Sou Technology Co. LTD",
+    "id": "5782"
+  },
+  "syscom": {
+    "name": "SYSCOM",
+    "id": "5783"
+  },
+  "u.s. electrical": {
+    "name": "U.S. Electrical",
+    "id": "5784"
+  },
+  "acsi": {
+    "name": "ACSI",
+    "id": "5785"
+  },
+  "motori elettrici": {
+    "name": "Motori Elettrici",
+    "id": "5786"
+  },
+  "unitek miyachi": {
+    "name": "Unitek Miyachi",
+    "id": "5787"
+  },
+  "wiegmann": {
+    "name": "Wiegmann",
+    "id": "5788"
+  },
+  "marsh bellofram": {
+    "name": "Marsh Bellofram",
+    "id": "5789"
+  },
+  "loctite": {
+    "name": "Loctite",
+    "id": "5790"
+  },
+  "paxton": {
+    "name": "Paxton",
+    "id": "5791"
+  },
+  "robopac": {
+    "name": "Robopac",
+    "id": "5792"
+  },
+  "flow-matic inc.": {
+    "name": "Flow-Matic Inc.",
+    "id": "5793"
+  },
+  "nichicon": {
+    "name": "Nichicon",
+    "id": "5794"
+  },
+  "ucpack": {
+    "name": "UCPack",
+    "id": "5795"
+  },
+  "duravalve": {
+    "name": "DuraValve",
+    "id": "5796"
+  },
+  "fsi": {
+    "name": "FSI",
+    "id": "5797"
+  },
+  "gruenberg": {
+    "name": "Gruenberg",
+    "id": "5798"
+  },
+  "sevcon": {
+    "name": "Sevcon",
+    "id": "5799"
+  },
+  "tci": {
+    "name": "TCI",
+    "id": "5800"
+  },
+  "thermo scientific": {
+    "name": "Thermo Scientific",
+    "id": "5801"
+  },
+  "spz": {
+    "name": "SPZ",
+    "id": "5802"
+  },
+  "camozzi": {
+    "name": "Camozzi",
+    "id": "5803"
+  },
+  "icme": {
+    "name": "ICME",
+    "id": "5804"
+  },
+  "tbf": {
+    "name": "TBF",
+    "id": "5805"
+  },
+  "telestar": {
+    "name": "Telestar",
+    "id": "5806"
+  },
+  "mp pumps": {
+    "name": "MP Pumps",
+    "id": "5807"
+  },
+  "insinkerator": {
+    "name": "InSinkErator",
+    "id": "5808"
+  },
+  "enersys": {
+    "name": "EnerSys",
+    "id": "5809"
+  },
+  "thermal dynamics": {
+    "name": "Thermal Dynamics",
+    "id": "5810"
+  },
+  "kmt": {
+    "name": "KMT",
+    "id": "5811"
+  },
+  "rapiscan": {
+    "name": "Rapiscan",
+    "id": "5812"
+  },
+  "enertrols": {
+    "name": "Enertrols",
+    "id": "5813"
+  },
+  "rohs": {
+    "name": "RoHS",
+    "id": "5814"
+  },
+  "leuze electronics": {
+    "name": "Leuze Electronics",
+    "id": "5815"
+  },
+  "factory authorized parts": {
+    "name": "Factory Authorized Parts",
+    "id": "5816"
+  },
+  "riko": {
+    "name": "Riko",
+    "id": "5817"
+  },
+  "coherent": {
+    "name": "Coherent",
+    "id": "5818"
+  },
+  "altax": {
+    "name": "Altax",
+    "id": "5819"
+  },
+  "el-o-matic": {
+    "name": "El-o-matic",
+    "id": "5820"
+  },
+  "sandpiper": {
+    "name": "Sandpiper",
+    "id": "5821"
+  },
+  "domino": {
+    "name": "Domino",
+    "id": "5822"
+  },
+  "ewon": {
+    "name": "Ewon",
+    "id": "5823"
+  },
+  "shield security": {
+    "name": "Shield Security",
+    "id": "5824"
+  },
+  "apera instruments": {
+    "name": "Apera Instruments",
+    "id": "5825"
+  },
+  "leotek": {
+    "name": "Leotek",
+    "id": "5826"
+  },
+  "tokyo-rikosha": {
+    "name": "Tokyo-Rikosha",
+    "id": "5827"
+  },
+  "fijitsu": {
+    "name": "Fijitsu",
+    "id": "5828"
+  },
+  "ortek": {
+    "name": "Ortek",
+    "id": "5829"
+  },
+  "stratus": {
+    "name": "stratus",
+    "id": "5830"
+  },
+  "origa": {
+    "name": "Origa",
+    "id": "5831"
+  },
+  "yosihara electric": {
+    "name": "Yosihara Electric",
+    "id": "5832"
+  },
+  "kobishi electric": {
+    "name": "Kobishi Electric",
+    "id": "5833"
+  },
+  "martignoni elettrotecnica srl": {
+    "name": "Martignoni Elettrotecnica Srl",
+    "id": "5834"
+  },
+  "hasetec": {
+    "name": "Hasetec",
+    "id": "5835"
+  },
+  "techmotive tools": {
+    "name": "Techmotive Tools",
+    "id": "5836"
+  },
+  "record products of america": {
+    "name": "Record Products of America",
+    "id": "5837"
+  },
+  "bronway": {
+    "name": "Bronway",
+    "id": "5838"
+  },
+  "spinea": {
+    "name": "Spinea",
+    "id": "5839"
+  },
+  "asahi": {
+    "name": "Asahi",
+    "id": "5840"
+  },
+  "valtek": {
+    "name": "Valtek",
+    "id": "5841"
+  },
+  "trew solutions": {
+    "name": "Trew Solutions",
+    "id": "5842"
+  },
+  "innovative technology": {
+    "name": "Innovative Technology",
+    "id": "5843"
+  },
+  "sloan": {
+    "name": "Sloan",
+    "id": "5844"
+  },
+  "tapeswitch": {
+    "name": "Tapeswitch",
+    "id": "5845"
+  },
+  "rice lake": {
+    "name": "Rice Lake",
+    "id": "5846"
+  },
+  "line seiki": {
+    "name": "Line Seiki",
+    "id": "5847"
+  },
+  "antunes controls": {
+    "name": "Antunes Controls",
+    "id": "5848"
+  },
+  "igl": {
+    "name": "IGL",
+    "id": "5849"
+  },
+  "manostar": {
+    "name": "Manostar",
+    "id": "5850"
+  },
+  "azbil": {
+    "name": "Azbil",
+    "id": "5851"
+  },
+  "mcmaster-carr supply": {
+    "name": "McMaster-Carr Supply",
+    "id": "5852"
+  },
+  "hellermanntyton": {
+    "name": "HellermannTyton",
+    "id": "5853"
+  }
+}

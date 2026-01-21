@@ -1,0 +1,58 @@
+[
+  {
+    "value": "new_in_box",
+    "label": "New In Box (NIB)",
+    "ebayCondition": "New",
+    "titleSuffix": "NIB",
+    "notes": "New item in original manufacturer packaging. Unopened and unused. Includes all original components, manuals, and hardware. We warranty all items for 30 days."
+  },
+  {
+    "value": "new_open_box",
+    "label": "New - Open Box (NOBOX)",
+    "ebayCondition": "New Other",
+    "titleSuffix": "NOBOX",
+    "notes": "New item, factory seal broken or packaging removed. All original components included. Never used. We warranty all items for 30 days."
+  },
+  {
+    "value": "new_missing_hardware",
+    "label": "New - Missing Hardware (NMISS)",
+    "ebayCondition": "New Other",
+    "titleSuffix": "NMISS",
+    "notes": "New item, may be missing original packaging, manuals, or minor hardware. Fully functional and unused. We warranty all items for 30 days."
+  },
+  {
+    "value": "like_new_excellent",
+    "label": "Excellent - Barely Used (LN-EX)",
+    "ebayCondition": "Used",
+    "titleSuffix": "LN-EX",
+    "notes": "Previously owned, appears barely used with minimal signs of wear. Tested and fully functional. We warranty all items for 30 days."
+  },
+  {
+    "value": "used_very_good",
+    "label": "Used - Very Good (VG)",
+    "ebayCondition": "Used",
+    "titleSuffix": "VG",
+    "notes": "Previously used, shows light cosmetic wear from normal use. Tested and fully functional. We warranty all items for 30 days."
+  },
+  {
+    "value": "used_good",
+    "label": "Used - Good (GOOD)",
+    "ebayCondition": "Used",
+    "titleSuffix": "GOOD",
+    "notes": "Previously used, shows signs of wear or discoloration due to normal use. Tested and fully functional. We warranty all items for 30 days."
+  },
+  {
+    "value": "used_fair",
+    "label": "Used - Fair (FAIR)",
+    "ebayCondition": "Used",
+    "titleSuffix": "FAIR",
+    "notes": "Previously used, shows moderate to heavy wear. May have cosmetic damage. Tested and fully functional. We warranty all items for 30 days."
+  },
+  {
+    "value": "for_parts",
+    "label": "For Parts or Not Working (FPNW)",
+    "ebayCondition": "For Parts or Not Working",
+    "titleSuffix": "FPNW",
+    "notes": "Item sold as-is for parts or repair. Not tested or may not be fully functional. No warranty provided."
+  }
+]

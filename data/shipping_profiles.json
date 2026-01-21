@@ -1,0 +1,50 @@
+[
+  {
+    "id": "69077991015",
+    "name": "Small Package Shipping"
+  },
+  {
+    "id": "71204399015",
+    "name": "Small Package Free Shipping"
+  },
+  {
+    "id": "109762088015",
+    "name": "Medium Package Shipping"
+  },
+  {
+    "id": "110997109015",
+    "name": "Medium Package Free Shipping"
+  },
+  {
+    "id": "124173115015",
+    "name": "Domestic and International Freight Shipping"
+  },
+  {
+    "id": "161228820015",
+    "name": "Local Pickup Only"
+  },
+  {
+    "id": "253736784015",
+    "name": "Freight (253736784015)"
+  },
+  {
+    "id": "257255165015",
+    "name": "Calculated: UPSGround free, same business day"
+  },
+  {
+    "id": "257300245015",
+    "name": "Calculated: UPSGround , 1 business day (257300245015)"
+  },
+  {
+    "id": "260268833015",
+    "name": "UPS Ground"
+  },
+  {
+    "id": "274433302015",
+    "name": "Freight Shipping 2000 Lbs & Over"
+  },
+  {
+    "id": "274446469015",
+    "name": "Small Freight Items under 1000Lbs."
+  }
+]

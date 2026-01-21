@@ -1,0 +1,490 @@
+{
+  "automation control": {
+    "name": "Automation Control",
+    "id": "18"
+  },
+  "motion control": {
+    "name": "Motion Control",
+    "id": "19"
+  },
+  "electrical": {
+    "name": "Electrical",
+    "id": "20"
+  },
+  "used machinery": {
+    "name": "Used Machinery",
+    "id": "21"
+  },
+  "sensing devices": {
+    "name": "Sensing Devices",
+    "id": "22"
+  },
+  "shop all": {
+    "name": "Shop All",
+    "id": "23"
+  },
+  "automation control -> plc": {
+    "name": "Automation Control -> PLC",
+    "id": "24"
+  },
+  "material handling": {
+    "name": "Material Handling",
+    "id": "25"
+  },
+  "power transmission": {
+    "name": "Power Transmission",
+    "id": "26"
+  },
+  "automation control -> hmi": {
+    "name": "Automation Control -> HMI",
+    "id": "27"
+  },
+  "automation control -> power supply": {
+    "name": "Automation Control -> Power Supply",
+    "id": "28"
+  },
+  "material handling -> lifts & hoists": {
+    "name": "Material Handling -> Lifts & Hoists",
+    "id": "29"
+  },
+  "power transmission -> electric motors": {
+    "name": "Power Transmission -> Electric Motors",
+    "id": "30"
+  },
+  "motion control -> servo drives & amplifiers": {
+    "name": "Motion Control -> Servo Drives & Amplifiers",
+    "id": "32"
+  },
+  "speed controls": {
+    "name": "Speed Controls",
+    "id": "33"
+  },
+  "speed controls -> ac drive": {
+    "name": "Speed Controls -> AC Drive",
+    "id": "34"
+  },
+  "speed controls -> dc drive": {
+    "name": "Speed Controls -> DC Drive",
+    "id": "35"
+  },
+  "power transmission -> gear reducer": {
+    "name": "Power Transmission -> Gear Reducer",
+    "id": "36"
+  },
+  "electrical -> transformers": {
+    "name": "Electrical -> Transformers",
+    "id": "37"
+  },
+  "electrical -> fuses & fuse holders": {
+    "name": "Electrical -> Fuses & Fuse Holders",
+    "id": "38"
+  },
+  "industrial robots -> robotic systems & parts": {
+    "name": "Industrial Robots -> Robotic Systems & Parts",
+    "id": "39"
+  },
+  "material handling -> conveyors": {
+    "name": "Material Handling -> Conveyors",
+    "id": "40"
+  },
+  "sensing devices -> proximity sensors": {
+    "name": "Sensing Devices -> Proximity Sensors",
+    "id": "41"
+  },
+  "sensing devices -> photoelectric sensors": {
+    "name": "Sensing Devices -> Photoelectric Sensors",
+    "id": "42"
+  },
+  "power transmission -> bearings": {
+    "name": "Power Transmission -> Bearings",
+    "id": "43"
+  },
+  "electrical -> circuit breakers": {
+    "name": "Electrical -> Circuit Breakers",
+    "id": "44"
+  },
+  "electrical -> enclosures": {
+    "name": "Electrical -> Enclosures",
+    "id": "45"
+  },
+  "pneumatics": {
+    "name": "Pneumatics",
+    "id": "46"
+  },
+  "pneumatics -> cylinders": {
+    "name": "Pneumatics -> Cylinders",
+    "id": "47"
+  },
+  "pneumatics -> actuators": {
+    "name": "Pneumatics -> Actuators",
+    "id": "48"
+  },
+  "industrial controls": {
+    "name": "Industrial Controls",
+    "id": "49"
+  },
+  "industrial controls -> motor starters": {
+    "name": "Industrial Controls -> Motor Starters",
+    "id": "50"
+  },
+  "industrial controls -> control relays": {
+    "name": "Industrial Controls -> Control Relays",
+    "id": "51"
+  },
+  "electrical -> safety switches": {
+    "name": "Electrical -> Safety Switches",
+    "id": "52"
+  },
+  "industrial controls -> pressure controls": {
+    "name": "Industrial Controls -> Pressure Controls",
+    "id": "53"
+  },
+  "motion control -> servo motors": {
+    "name": "Motion Control -> Servo Motors",
+    "id": "54"
+  },
+  "pneumatics -> rodless cylinders": {
+    "name": "Pneumatics -> Rodless Cylinders",
+    "id": "55"
+  },
+  "pneumatics -> guided cylinders": {
+    "name": "Pneumatics -> Guided Cylinders",
+    "id": "56"
+  },
+  "industrial controls -> flow switches": {
+    "name": "Industrial Controls -> Flow Switches",
+    "id": "57"
+  },
+  "industrial controls -> limit switches": {
+    "name": "Industrial Controls -> Limit Switches",
+    "id": "58"
+  },
+  "sensing devices -> machine vision": {
+    "name": "Sensing Devices -> Machine Vision",
+    "id": "59"
+  },
+  "automation control -> i/o boards & replacement parts": {
+    "name": "Automation Control -> I/O Boards & Replacement Parts",
+    "id": "61"
+  },
+  "industrial controls -> timers & counters": {
+    "name": "Industrial Controls -> Timers & Counters",
+    "id": "62"
+  },
+  "industrial controls -> temperature controllers": {
+    "name": "Industrial Controls -> Temperature Controllers",
+    "id": "63"
+  },
+  "industrial controls -> push buttons & switches": {
+    "name": "Industrial Controls -> Push Buttons & Switches",
+    "id": "64"
+  },
+  "sensing devices -> temperature sensors": {
+    "name": "Sensing Devices -> Temperature Sensors",
+    "id": "65"
+  },
+  "industrial controls -> relays": {
+    "name": "Industrial Controls -> Relays",
+    "id": "66"
+  },
+  "power transmission -> bearings -> ball bearings": {
+    "name": "Power Transmission -> Bearings -> Ball Bearings",
+    "id": "67"
+  },
+  "pneumatics -> valves & manifolds": {
+    "name": "Pneumatics -> Valves & Manifolds",
+    "id": "68"
+  },
+  "sensing devices -> transducers": {
+    "name": "Sensing Devices -> Transducers",
+    "id": "69"
+  },
+  "power transmission -> bearings -> linear bearings": {
+    "name": "Power Transmission -> Bearings -> Linear Bearings",
+    "id": "70"
+  },
+  "sensing devices -> light curtains": {
+    "name": "Sensing Devices -> Light Curtains",
+    "id": "71"
+  },
+  "power transmission -> bearings -> tapered roller bearings": {
+    "name": "Power Transmission -> Bearings -> Tapered Roller Bearings",
+    "id": "72"
+  },
+  "power transmission -> brakes & clutches": {
+    "name": "Power Transmission -> Brakes & Clutches",
+    "id": "73"
+  },
+  "valves": {
+    "name": "Valves",
+    "id": "74"
+  },
+  "valves -> ball valves": {
+    "name": "Valves -> Ball Valves",
+    "id": "75"
+  },
+  "valves -> solenoid valves": {
+    "name": "Valves -> Solenoid Valves",
+    "id": "76"
+  },
+  "industrial controls -> cordsets": {
+    "name": "Industrial Controls -> Cordsets",
+    "id": "77"
+  },
+  "sensing devices -> fiber optic sensors": {
+    "name": "Sensing Devices -> Fiber Optic Sensors",
+    "id": "78"
+  },
+  "industrial controls -> safety interlock switches": {
+    "name": "Industrial Controls -> Safety Interlock Switches",
+    "id": "79"
+  },
+  "power transmission -> bearings -> flange bearings": {
+    "name": "Power Transmission -> Bearings -> Flange Bearings",
+    "id": "80"
+  },
+  "motion control -> encoders": {
+    "name": "Motion Control -> Encoders",
+    "id": "81"
+  },
+  "pumps": {
+    "name": "Pumps",
+    "id": "82"
+  },
+  "pumps -> vacuum": {
+    "name": "Pumps -> Vacuum",
+    "id": "83"
+  },
+  "hydraulics": {
+    "name": "Hydraulics",
+    "id": "84"
+  },
+  "hydraulics -> filters": {
+    "name": "Hydraulics -> Filters",
+    "id": "85"
+  },
+  "pneumatics -> regulators": {
+    "name": "Pneumatics -> Regulators",
+    "id": "86"
+  },
+  "material handling -> tool balancers": {
+    "name": "Material Handling -> Tool Balancers",
+    "id": "87"
+  },
+  "assembly tools": {
+    "name": "Assembly Tools",
+    "id": "89"
+  },
+  "industrial controls -> indicator lights": {
+    "name": "Industrial Controls -> Indicator Lights",
+    "id": "90"
+  },
+  "hydraulics -> control valves": {
+    "name": "Hydraulics -> Control Valves",
+    "id": "91"
+  },
+  "power transmission -> bearings -> pillow block bearings": {
+    "name": "Power Transmission -> Bearings -> Pillow Block Bearings",
+    "id": "92"
+  },
+  "pumps -> diaphragm pumps": {
+    "name": "Pumps -> Diaphragm Pumps",
+    "id": "93"
+  },
+  "hydraulics -> pumps": {
+    "name": "Hydraulics -> Pumps",
+    "id": "94"
+  },
+  "valves -> butterfly valves": {
+    "name": "Valves -> Butterfly Valves",
+    "id": "95"
+  },
+  "industrial controls -> safety relays": {
+    "name": "Industrial Controls -> Safety Relays",
+    "id": "96"
+  },
+  "used machinery -> welding equipment": {
+    "name": "Used Machinery -> Welding Equipment",
+    "id": "97"
+  },
+  "industrial controls -> panel meters": {
+    "name": "Industrial Controls -> Panel Meters",
+    "id": "98"
+  },
+  "industrial controls -> overload relays": {
+    "name": "Industrial Controls -> Overload Relays",
+    "id": "99"
+  },
+  "electrical -> surge suppressors & filters": {
+    "name": "Electrical -> Surge Suppressors & Filters",
+    "id": "100"
+  },
+  "power transmission -> linear actuators": {
+    "name": "Power Transmission -> Linear Actuators",
+    "id": "101"
+  },
+  "motion control -> linear rails": {
+    "name": "Motion Control -> Linear Rails",
+    "id": "102"
+  },
+  "industrial controls -> sounders": {
+    "name": "Industrial Controls -> Sounders",
+    "id": "103"
+  },
+  "pneumatics -> rod couplers": {
+    "name": "Pneumatics -> Rod Couplers",
+    "id": "104"
+  },
+  "hvac": {
+    "name": "HVAC",
+    "id": "105"
+  },
+  "hvac -> fans & blowers": {
+    "name": "HVAC -> Fans & Blowers",
+    "id": "106"
+  },
+  "hydraulics -> cylinders": {
+    "name": "Hydraulics -> Cylinders",
+    "id": "107"
+  },
+  "pneumatics -> position sensors": {
+    "name": "Pneumatics -> Position Sensors",
+    "id": "108"
+  },
+  "sensing devices -> reed sensors": {
+    "name": "Sensing Devices -> Reed Sensors",
+    "id": "109"
+  },
+  "pumps -> metering pumps": {
+    "name": "Pumps -> Metering Pumps",
+    "id": "110"
+  },
+  "pumps -> centrifugal pumps": {
+    "name": "Pumps -> Centrifugal Pumps",
+    "id": "111"
+  },
+  "valves -> pressure relief valves": {
+    "name": "Valves -> Pressure Relief Valves",
+    "id": "112"
+  },
+  "sensing devices -> linear gauge sensors": {
+    "name": "Sensing Devices -> Linear Gauge Sensors",
+    "id": "113"
+  },
+  "valves -> flow control valves": {
+    "name": "Valves -> Flow Control Valves",
+    "id": "114"
+  },
+  "sensing devices -> ultrasonic sensors": {
+    "name": "Sensing Devices -> Ultrasonic Sensors",
+    "id": "115"
+  },
+  "sensing devices -> pressure sensors": {
+    "name": "Sensing Devices -> Pressure Sensors",
+    "id": "116"
+  },
+  "pneumatics -> grippers": {
+    "name": "Pneumatics -> Grippers",
+    "id": "117"
+  },
+  "hvac -> temperature control units": {
+    "name": "HVAC -> Temperature Control Units",
+    "id": "118"
+  },
+  "valves -> gate valves": {
+    "name": "Valves -> Gate Valves",
+    "id": "119"
+  },
+  "power transmission -> rotary indexers": {
+    "name": "Power Transmission -> Rotary Indexers",
+    "id": "120"
+  },
+  "valves -> check valves": {
+    "name": "Valves -> Check Valves",
+    "id": "121"
+  },
+  "sensing devices -> flame sensors": {
+    "name": "Sensing Devices -> Flame Sensors",
+    "id": "122"
+  },
+  "sensing devices -> barcode scanners": {
+    "name": "Sensing Devices -> Barcode Scanners",
+    "id": "124"
+  },
+  "sensing devices -> optical touch sensors": {
+    "name": "Sensing Devices -> Optical Touch Sensors",
+    "id": "125"
+  },
+  "hydraulics -> pressure reducing valves": {
+    "name": "Hydraulics -> Pressure Reducing Valves",
+    "id": "126"
+  },
+  "used machinery -> packaging equipment": {
+    "name": "Used Machinery -> Packaging Equipment",
+    "id": "127"
+  },
+  "hvac -> immersion heaters": {
+    "name": "HVAC -> Immersion Heaters",
+    "id": "130"
+  },
+  "electrical -> enclosures -> cooling fans": {
+    "name": "Electrical -> Enclosures -> Cooling Fans",
+    "id": "131"
+  },
+  "sensing devices -> rfid": {
+    "name": "Sensing Devices -> RFID",
+    "id": "132"
+  },
+  "used machinery -> ultrasonic welding": {
+    "name": "Used Machinery -> Ultrasonic Welding",
+    "id": "134"
+  },
+  "used machinery -> rf welding equipment": {
+    "name": "Used Machinery -> RF Welding Equipment",
+    "id": "135"
+  },
+  "material handling -> digital scales": {
+    "name": "Material Handling -> Digital Scales",
+    "id": "136"
+  },
+  "used machinery -> checkweighers": {
+    "name": "Used Machinery -> Checkweighers",
+    "id": "137"
+  },
+  "used machinery -> air compressors": {
+    "name": "Used Machinery -> Air Compressors",
+    "id": "138"
+  },
+  "used machinery -> injection molding & process equipment": {
+    "name": "Used Machinery -> Injection Molding & Process Equipment",
+    "id": "141"
+  },
+  "used machinery -> injection molding & process equipment -> granulators": {
+    "name": "Used Machinery -> Injection Molding & Process Equipment -> Granulators",
+    "id": "142"
+  },
+  "used machinery -> injection molding & process equipment -> dryers": {
+    "name": "Used Machinery -> Injection Molding & Process Equipment -> Dryers",
+    "id": "143"
+  },
+  "used machinery -> injection molding & process equipment -> rotary air lock": {
+    "name": "Used Machinery -> Injection Molding & Process Equipment -> Rotary Air Lock",
+    "id": "144"
+  },
+  "industrial robots": {
+    "name": "Industrial Robots",
+    "id": "145"
+  },
+  "computer equipment": {
+    "name": "Computer Equipment",
+    "id": "146"
+  },
+  "lighting ballasts": {
+    "name": "Lighting Ballasts",
+    "id": "147"
+  },
+  "sensing devices -> level sensors": {
+    "name": "Sensing Devices -> Level Sensors",
+    "id": "148"
+  }
+}
