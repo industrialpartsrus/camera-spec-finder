@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, User, RefreshCw, Edit2 } from 'lucide-react';
+import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, User, RefreshCw, Edit2 } from 'lucide-react';
 
 // Condition options
 const CONDITION_OPTIONS = [
@@ -307,11 +307,21 @@ export default function ProListingBuilder() {
         <div className="w-80 bg-white border-r overflow-y-auto">
           <div className="p-4 border-b">
             <h2 className="font-semibold mb-3">Add Item</h2>
-            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageUpload} className="hidden" id="cam" />
-            <label htmlFor="cam" className="w-full px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer flex items-center justify-center gap-2 text-sm mb-2">
-              <Camera className="w-4 h-4" />
-              {isProcessingImage ? 'Processing...' : 'Scan'}
-            </label>
+            
+            {/* Camera and Upload Buttons */}
+            <div className="flex gap-2 mb-2">
+              <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageUpload} className="hidden" id="cam" />
+              <label htmlFor="cam" className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer flex items-center justify-center gap-2 text-sm">
+                <Camera className="w-4 h-4" />
+                {isProcessingImage ? 'Processing...' : 'Camera'}
+              </label>
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="upload" />
+              <label htmlFor="upload" className="flex-1 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 cursor-pointer flex items-center justify-center gap-2 text-sm">
+                <Upload className="w-4 h-4" />
+                Upload
+              </label>
+            </div>
+            
             <input type="text" placeholder="Brand" value={brandName} onChange={e => setBrandName(e.target.value)} className="w-full px-3 py-2 border rounded-lg mb-2 text-sm" />
             <input type="text" placeholder="Part" value={partNumber} onChange={e => setPartNumber(e.target.value)} onKeyPress={e => e.key === 'Enter' && addToQueue()} className="w-full px-3 py-2 border rounded-lg mb-2 text-sm" />
             <button onClick={addToQueue} className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
