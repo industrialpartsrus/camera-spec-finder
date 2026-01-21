@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, User, Edit2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, User, Edit2, RefreshCw } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
 const CONDITION_OPTIONS = [
   { value: 'new_in_box', label: 'New In Box (NIB)' },
@@ -33,6 +35,23 @@ export default function ProListingBuilder() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Real-time Firebase sync
+  useEffect(() => {
+    if (!isNameSet) return;
+
+    const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = [];
+      snapshot.forEach((doc) => {
+        items.push({ id: doc.id, ...doc.data() });
+      });
+      setQueue(items);
+    });
+
+    return () => unsubscribe();
+  }, [isNameSet]);
 
   const compressImage = (file, maxWidth = 1200, quality = 0.8) => {
     return new Promise((resolve, reject) => {
@@ -108,52 +127,55 @@ export default function ProListingBuilder() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const addToQueueWithValues = (brand, part) => {
+  const addToQueueWithValues = async (brand, part) => {
     if (!brand.trim() || !part.trim()) {
       alert('Enter brand and part number');
       return;
     }
 
-    const newItem = {
-      id: Date.now(),
-      brand: brand.trim(),
-      partNumber: part.trim(),
-      status: 'pending',
-      createdBy: userName || 'Unknown',
-      title: '',
-      description: '',
-      specifications: [],
-      condition: 'used_good',
-      conditionNotes: CONDITION_NOTES['used_good'],
-      price: '',
-      shelf: '',
-      boxLength: '',
-      boxWidth: '',
-      boxHeight: '',
-      weight: '',
-      error: null
-    };
+    try {
+      const docRef = await addDoc(collection(db, 'products'), {
+        brand: brand.trim(),
+        partNumber: part.trim(),
+        status: 'pending',
+        createdBy: userName || 'Unknown',
+        createdAt: serverTimestamp(),
+        title: '',
+        description: '',
+        specifications: [],
+        condition: 'used_good',
+        conditionNotes: CONDITION_NOTES['used_good'],
+        price: '',
+        shelf: '',
+        boxLength: '',
+        boxWidth: '',
+        boxHeight: '',
+        weight: ''
+      });
 
-    setQueue(prev => [newItem, ...prev]);
-    setBrandName('');
-    setPartNumber('');
-    setSelectedItem(newItem.id);
-    
-    // Pass the item directly to avoid state timing issues
-    processItem(newItem);
+      setBrandName('');
+      setPartNumber('');
+      setSelectedItem(docRef.id);
+      
+      // Start processing
+      setTimeout(() => processItem(docRef.id), 500);
+    } catch (error) {
+      console.error('Error adding to queue:', error);
+      alert('Error adding item: ' + error.message);
+    }
   };
 
   const addToQueue = () => addToQueueWithValues(brandName, partNumber);
 
-  const processItem = async (item) => {
+  const processItem = async (itemId) => {
+    const item = queue.find(q => q.id === itemId);
+    if (!item) return;
+
     console.log('Starting to process item:', item.brand, item.partNumber);
     
-    // Update status to searching
-    setQueue(prev => prev.map(q => 
-      q.id === item.id ? { ...q, status: 'searching' } : q
-    ));
-
     try {
+      await updateDoc(doc(db, 'products', itemId), { status: 'searching' });
+
       console.log('Calling /api/search-product...');
       
       const response = await fetch('/api/search-product', {
@@ -185,45 +207,52 @@ export default function ProListingBuilder() {
       const product = JSON.parse(jsonMatch[0]);
       console.log('Product parsed successfully:', product.title);
       
-      setQueue(prev => prev.map(q => 
-        q.id === item.id ? {
-          ...q,
-          status: 'complete',
-          title: product.title || `${item.brand} ${item.partNumber}`,
-          description: product.description || '',
-          specifications: Array.isArray(product.specifications) ? product.specifications : []
-        } : q
-      ));
+      await updateDoc(doc(db, 'products', itemId), {
+        status: 'complete',
+        title: product.title || `${item.brand} ${item.partNumber}`,
+        description: product.description || '',
+        specifications: Array.isArray(product.specifications) ? product.specifications : []
+      });
       
       console.log('Item processing complete!');
     } catch (error) {
       console.error('Processing error:', error);
-      console.error('Error details:', error.message);
-      setQueue(prev => prev.map(q => 
-        q.id === item.id ? { ...q, status: 'error', error: error.message } : q
-      ));
+      await updateDoc(doc(db, 'products', itemId), {
+        status: 'error',
+        error: error.message
+      });
     }
   };
 
-  const updateField = (itemId, field, value) => {
-    setQueue(prev => prev.map(q => 
-      q.id === itemId ? { ...q, [field]: value } : q
-    ));
+  const updateField = async (itemId, field, value) => {
+    try {
+      await updateDoc(doc(db, 'products', itemId), { [field]: value });
+    } catch (error) {
+      console.error('Error updating field:', error);
+    }
   };
 
-  const updateCondition = (itemId, conditionValue) => {
-    setQueue(prev => prev.map(q => 
-      q.id === itemId ? { ...q, condition: conditionValue, conditionNotes: CONDITION_NOTES[conditionValue] } : q
-    ));
+  const updateCondition = async (itemId, conditionValue) => {
+    try {
+      await updateDoc(doc(db, 'products', itemId), {
+        condition: conditionValue,
+        conditionNotes: CONDITION_NOTES[conditionValue]
+      });
+    } catch (error) {
+      console.error('Error updating condition:', error);
+    }
   };
 
-  const deleteItem = (itemId) => {
-    setQueue(prev => prev.filter(q => q.id !== itemId));
-    if (selectedItem === itemId) setSelectedItem(null);
+  const deleteItem = async (itemId) => {
+    try {
+      await deleteDoc(doc(db, 'products', itemId));
+      if (selectedItem === itemId) setSelectedItem(null);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
   };
 
   const sendToSureDone = async (itemId) => {
-    // Find the item from queue
     const item = queue.find(q => q.id === itemId);
     
     if (!item) {
@@ -270,7 +299,7 @@ export default function ProListingBuilder() {
       const data = await response.json();
       console.log('SureDone success:', data);
       
-      alert('✅ Successfully sent to SureDone!\n\nSKU: AI' + item.id);
+      alert('✅ Successfully sent to SureDone!\n\nSKU: ' + (data.sku || 'Generated'));
       
     } catch (error) {
       console.error('SureDone error:', error);
@@ -316,8 +345,8 @@ export default function ProListingBuilder() {
       <div className="bg-white border-b px-6 py-4">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-2xl font-bold">Pro Listing Builder</h1>
-            <p className="text-sm text-gray-600">Logged in: <span className="font-semibold">{userName}</span></p>
+            <h1 className="text-2xl font-bold">Pro Listing Builder 🔥</h1>
+            <p className="text-sm text-gray-600">Logged in: <span className="font-semibold">{userName}</span> • <span className="text-green-600">● Live Sync</span></p>
           </div>
         </div>
 
@@ -330,7 +359,6 @@ export default function ProListingBuilder() {
       </div>
 
       <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-180px)]">
-        {/* LEFT PANEL - Queue */}
         <div className="w-full lg:w-80 bg-white border-b lg:border-r lg:border-b-0 overflow-y-auto max-h-[40vh] lg:max-h-none">
           <div className="p-4 border-b">
             <h2 className="font-semibold mb-3">Add Item</h2>
@@ -379,14 +407,13 @@ export default function ProListingBuilder() {
           </div>
         </div>
 
-        {/* CENTER PANEL - Editor */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-6">
           {selected ? (
             <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm p-4 lg:p-6">
               <div className="flex justify-between items-start mb-4 lg:mb-6">
                 <div>
                   <h2 className="text-xl lg:text-2xl font-bold">{selected.brand} {selected.partNumber}</h2>
-                  <p className="text-sm text-gray-500">Status: {selected.status}</p>
+                  <p className="text-sm text-gray-500">Status: {selected.status} • By: {selected.createdBy}</p>
                 </div>
               </div>
 
@@ -452,7 +479,7 @@ export default function ProListingBuilder() {
                   <p className="text-red-600 font-semibold">Error</p>
                   <p className="text-sm text-red-500 mt-2">{selected.error}</p>
                   <button 
-                    onClick={() => processItem(selected)} 
+                    onClick={() => processItem(selected.id)} 
                     className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     Retry
@@ -467,7 +494,6 @@ export default function ProListingBuilder() {
           )}
         </div>
 
-        {/* RIGHT PANEL - Preview (Hidden on mobile) */}
         <div className="hidden lg:block w-80 bg-white border-l p-4">
           <h3 className="font-semibold mb-4">Preview</h3>
           {selected && selected.status === 'complete' ? (
