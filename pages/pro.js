@@ -245,18 +245,18 @@ export default function ProListingBuilder() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sku: `AI${String(item.id).padStart(8, '0')}`, // Format: AI00123456
-          title: item.title,
-          longdescription: item.description || '',
-          price: parseFloat(item.price) || 0,
-          stock: 1,
-          condition: item.condition,
-          brand: item.brand,
-          mpn: item.partNumber,
-          weight: parseFloat(item.weight) || 0,
-          boxlength: parseFloat(item.boxLength) || 0,
-          boxwidth: parseFloat(item.boxWidth) || 0,
-          boxheight: parseFloat(item.boxHeight) || 0
+          product: {
+            title: item.title,
+            description: item.description || '',
+            price: item.price || '0.00',
+            stock: 1,
+            brand: item.brand,
+            partNumber: item.partNumber,
+            metaDescription: item.shortDescription || '',
+            metaKeywords: Array.isArray(item.metaKeywords) ? item.metaKeywords.join(', ') : '',
+            ebayCategory: item.ebayCategory || '',
+            specifications: Array.isArray(item.specifications) ? item.specifications : []
+          }
         })
       });
 
