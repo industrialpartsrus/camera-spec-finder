@@ -31,6 +31,7 @@ export default function ProListingBuilder() {
   const [userName, setUserName] = useState('');
   const [isNameSet, setIsNameSet] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef(null);
 
   const compressImage = (file, maxWidth = 1200, quality = 0.8) => {
@@ -145,25 +146,44 @@ export default function ProListingBuilder() {
   const addToQueue = () => addToQueueWithValues(brandName, partNumber);
 
   const processItem = async (item) => {
+    console.log('Starting to process item:', item.brand, item.partNumber);
+    
     // Update status to searching
     setQueue(prev => prev.map(q => 
       q.id === item.id ? { ...q, status: 'searching' } : q
     ));
 
     try {
+      console.log('Calling /api/search-product...');
+      
       const response = await fetch('/api/search-product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brand: item.brand, partNumber: item.partNumber })
       });
 
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('Response data received, length:', JSON.stringify(data).length);
+      
       const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
+      console.log('Extracted text length:', text.length);
+      
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       
-      if (!jsonMatch) throw new Error('No data');
+      if (!jsonMatch) {
+        console.error('No JSON found in response. Text preview:', text.substring(0, 200));
+        throw new Error('No product data found in AI response');
+      }
 
+      console.log('JSON matched, parsing...');
       const product = JSON.parse(jsonMatch[0]);
+      console.log('Product parsed successfully:', product.title);
       
       setQueue(prev => prev.map(q => 
         q.id === item.id ? {
@@ -174,8 +194,11 @@ export default function ProListingBuilder() {
           specifications: Array.isArray(product.specifications) ? product.specifications : []
         } : q
       ));
+      
+      console.log('Item processing complete!');
     } catch (error) {
       console.error('Processing error:', error);
+      console.error('Error details:', error.message);
       setQueue(prev => prev.map(q => 
         q.id === item.id ? { ...q, status: 'error', error: error.message } : q
       ));
@@ -197,6 +220,59 @@ export default function ProListingBuilder() {
   const deleteItem = (itemId) => {
     setQueue(prev => prev.filter(q => q.id !== itemId));
     if (selectedItem === itemId) setSelectedItem(null);
+  };
+
+  const sendToSureDone = async (item) => {
+    if (!item.title || !item.price) {
+      alert('Please fill in Title and Price before sending to SureDone');
+      return;
+    }
+
+    setIsSending(true);
+    
+    try {
+      console.log('Sending to SureDone:', item);
+      
+      const response = await fetch('/api/suredone-create-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sku: `AI${item.id}`, // Use item ID as SKU
+          title: item.title,
+          longdescription: item.description,
+          price: item.price,
+          stock: 1,
+          condition: item.condition,
+          brand: item.brand,
+          mpn: item.partNumber,
+          weight: item.weight || '0',
+          boxlength: item.boxLength || '0',
+          boxwidth: item.boxWidth || '0',
+          boxheight: item.boxHeight || '0'
+        })
+      });
+
+      console.log('SureDone response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create listing');
+      }
+
+      const data = await response.json();
+      console.log('SureDone success:', data);
+      
+      alert('✅ Successfully sent to SureDone!');
+      
+      // Optionally remove from queue after successful send
+      // deleteItem(item.id);
+      
+    } catch (error) {
+      console.error('SureDone error:', error);
+      alert('❌ Error sending to SureDone: ' + error.message);
+    }
+    
+    setIsSending(false);
   };
 
   const stats = {
@@ -341,7 +417,20 @@ export default function ProListingBuilder() {
                     <div><label className="block text-sm font-semibold mb-2">Shelf</label><input type="text" placeholder="A1" value={selected.shelf} onChange={e => updateField(selected.id, 'shelf', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm lg:text-base" /></div>
                   </div>
 
-                  <button className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm lg:text-base">Send to SureDone</button>
+                  <button 
+                    onClick={() => sendToSureDone(selected)} 
+                    disabled={isSending || !selected.title || !selected.price}
+                    className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm lg:text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSending ? (
+                      <>
+                        <Loader className="w-5 h-5 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Send to SureDone'
+                    )}
+                  </button>
                 </div>
               )}
 
