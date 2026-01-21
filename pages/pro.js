@@ -222,9 +222,17 @@ export default function ProListingBuilder() {
     if (selectedItem === itemId) setSelectedItem(null);
   };
 
-  const sendToSureDone = async (item) => {
+  const sendToSureDone = async (itemId) => {
+    // Find the item from queue
+    const item = queue.find(q => q.id === itemId);
+    
+    if (!item) {
+      alert('❌ Item not found in queue');
+      return;
+    }
+    
     if (!item.title || !item.price) {
-      alert('Please fill in Title and Price before sending to SureDone');
+      alert('⚠️ Please fill in Title and Price before sending to SureDone');
       return;
     }
 
@@ -233,11 +241,11 @@ export default function ProListingBuilder() {
     try {
       console.log('Sending to SureDone:', item);
       
-      const response = await fetch('/api/suredone-create-listing', {
+      const response = await fetch('/api/add?action=add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sku: `AI${item.id}`, // Use item ID as SKU
+          sku: `AI${item.id}`,
           title: item.title,
           longdescription: item.description,
           price: item.price,
@@ -262,14 +270,11 @@ export default function ProListingBuilder() {
       const data = await response.json();
       console.log('SureDone success:', data);
       
-      alert('✅ Successfully sent to SureDone!');
-      
-      // Optionally remove from queue after successful send
-      // deleteItem(item.id);
+      alert('✅ Successfully sent to SureDone!\n\nSKU: AI' + item.id);
       
     } catch (error) {
       console.error('SureDone error:', error);
-      alert('❌ Error sending to SureDone: ' + error.message);
+      alert('❌ Error sending to SureDone:\n\n' + error.message);
     }
     
     setIsSending(false);
@@ -418,7 +423,7 @@ export default function ProListingBuilder() {
                   </div>
 
                   <button 
-                    onClick={() => sendToSureDone(selected)} 
+                    onClick={() => sendToSureDone(selected.id)} 
                     disabled={isSending || !selected.title || !selected.price}
                     className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm lg:text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
