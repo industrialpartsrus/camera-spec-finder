@@ -208,7 +208,7 @@ export default async function handler(req, res) {
     console.log('All fields:', Object.fromEntries(formData.entries()));
     
     // === SEND TO SUREDONE ===
-    const response = await fetch(`${SUREDONE_URL}/editor/items`, {
+    const response = await fetch(`${SUREDONE_URL}/editor/items/add`, {
       method: 'POST',
       headers: {
         'X-Auth-User': SUREDONE_USER,
