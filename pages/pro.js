@@ -287,6 +287,10 @@ export default function ProListingBuilder() {
     try {
       console.log('Sending to SureDone:', item);
       
+      // Get the condition label for the condition field
+      const conditionOption = CONDITION_OPTIONS.find(c => c.value === item.condition);
+      const conditionLabel = conditionOption?.label || 'Used - Good (GOOD)';
+      
       const response = await fetch('/api/suredone-create-listing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -298,9 +302,28 @@ export default function ProListingBuilder() {
             stock: 1,
             brand: item.brand,
             partNumber: item.partNumber,
-            metaDescription: item.shortDescription || '',
+            
+            // Condition information
+            condition: conditionLabel,
+            conditionNotes: item.conditionNotes || CONDITION_NOTES[item.condition] || '',
+            
+            // Dimensions and weight
+            boxLength: item.boxLength || '',
+            boxWidth: item.boxWidth || '',
+            boxHeight: item.boxHeight || '',
+            weight: item.weight || '',
+            
+            // Shelf location as custom field
+            shelfLocation: item.shelf || '',
+            
+            // Meta information
+            metaDescription: item.shortDescription || item.description?.substring(0, 160) || '',
             metaKeywords: Array.isArray(item.metaKeywords) ? item.metaKeywords.join(', ') : '',
+            
+            // eBay category (will be auto-filled later)
             ebayCategory: item.ebayCategory || '',
+            
+            // Specifications
             specifications: Array.isArray(item.specifications) ? item.specifications : []
           }
         })
@@ -316,7 +339,7 @@ export default function ProListingBuilder() {
       const data = await response.json();
       console.log('SureDone success:', data);
       
-      alert('✅ Successfully sent to SureDone!\n\nSKU: ' + (data.sku || 'Generated'));
+      alert('✅ Successfully sent to SureDone!\n\nSKU: ' + (data.sku || 'Generated') + '\n\n' + item.title);
       
     } catch (error) {
       console.error('SureDone error:', error);
