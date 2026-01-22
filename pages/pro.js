@@ -474,9 +474,28 @@ export default function ProListingBuilder() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Description</label>
-                    <textarea value={selected.description} onChange={e => updateField(selected.id, 'description', e.target.value)} className="w-full px-3 py-2 border rounded-lg h-32 text-sm lg:text-base" />
+                    <label className="block text-sm font-semibold mb-2">Description (with HTML table)</label>
+                    <textarea value={selected.description} onChange={e => updateField(selected.id, 'description', e.target.value)} className="w-full px-3 py-2 border rounded-lg h-48 text-sm lg:text-base font-mono" />
+                    
+                    {selected.description && selected.description.includes('<table') && (
+                      <div className="mt-2 p-3 bg-gray-50 border rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 mb-2">Preview:</p>
+                        <div className="text-sm" dangerouslySetInnerHTML={{ __html: selected.description }} />
+                      </div>
+                    )}
                   </div>
+
+                  {selected.specifications && selected.specifications.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-2">📋 Metadata Specifications (for search/filters)</h4>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1">
+                        {selected.specifications.map((spec, idx) => (
+                          <p key={idx} className="text-xs text-blue-800">• {spec}</p>
+                        ))}
+                      </div>
+                      <p className="text-xs text-blue-600 mt-2">These are sent as custom fields to SureDone</p>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-semibold mb-2">Condition</label>
@@ -492,17 +511,6 @@ export default function ProListingBuilder() {
                     <div><label className="block text-xs font-semibold mb-1">Height (in)</label><input type="text" placeholder="0" value={selected.boxHeight || ''} onChange={e => updateField(selected.id, 'boxHeight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
                     <div><label className="block text-xs font-semibold mb-1">Weight (lbs)</label><input type="text" placeholder="0" value={selected.weight || ''} onChange={e => updateField(selected.id, 'weight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
                   </div>
-
-                  {selected.specifications && selected.specifications.length > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-blue-900 mb-2">📋 AI-Generated Specifications</h4>
-                      <div className="space-y-1">
-                        {selected.specifications.map((spec, idx) => (
-                          <p key={idx} className="text-sm text-blue-800">• {spec}</p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div><label className="block text-sm font-semibold mb-2">Price ($)</label><input type="text" placeholder="0.00" value={selected.price} onChange={e => updateField(selected.id, 'price', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm lg:text-base" /></div>
