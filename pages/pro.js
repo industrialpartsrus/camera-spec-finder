@@ -517,20 +517,64 @@ export default function ProListingBuilder() {
                     <div><label className="block text-sm font-semibold mb-2">Shelf</label><input type="text" placeholder="A1" value={selected.shelf} onChange={e => updateField(selected.id, 'shelf', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm lg:text-base" /></div>
                   </div>
 
-                  <button 
-                    onClick={() => sendToSureDone(selected.id)} 
-                    disabled={isSending || !selected.title || !selected.price}
-                    className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm lg:text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isSending ? (
-                      <>
-                        <Loader className="w-5 h-5 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      'Send to SureDone'
-                    )}
-                  </button>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => sendToSureDone(selected.id)} 
+                      disabled={isSending || !selected.title || !selected.price}
+                      className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm lg:text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isSending ? (
+                        <>
+                          <Loader className="w-5 h-5 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        'Send to SureDone'
+                      )}
+                    </button>
+                    
+                    <button 
+                      onClick={async () => {
+                        const item = queue.find(q => q.id === selected.id);
+                        const conditionOption = CONDITION_OPTIONS.find(c => c.value === item.condition);
+                        const response = await fetch('/api/debug-suredone', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            product: {
+                              title: item.title,
+                              description: item.description,
+                              price: item.price,
+                              stock: 1,
+                              brand: item.brand,
+                              partNumber: item.partNumber,
+                              condition: conditionOption?.label || 'Used - Good (GOOD)',
+                              conditionNotes: item.conditionNotes || CONDITION_NOTES[item.condition] || '',
+                              ...(item.boxLength && { boxLength: item.boxLength }),
+                              ...(item.boxWidth && { boxWidth: item.boxWidth }),
+                              ...(item.boxHeight && { boxHeight: item.boxHeight }),
+                              ...(item.weight && { weight: item.weight }),
+                              ...(item.shelf && { shelfLocation: item.shelf }),
+                              metaDescription: item.shortDescription || item.description?.substring(0, 160) || '',
+                              metaKeywords: Array.isArray(item.metaKeywords) ? item.metaKeywords.join(', ') : '',
+                              ebayCategory: item.ebayCategory || '',
+                              specifications: Array.isArray(item.specifications) ? item.specifications : []
+                            }
+                          })
+                        });
+                        const data = await response.json();
+                        console.log('=== DEBUG: What would be sent to SureDone ===');
+                        console.log('Fields:', data.formDataObject);
+                        console.log('Total fields:', data.fieldCount);
+                        console.log('URL encoded:', data.formDataString);
+                        alert('Debug info logged to console! Press F12 to see.');
+                      }}
+                      className="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-sm"
+                      title="Debug - see what would be sent"
+                    >
+                      🔍 Debug
+                    </button>
+                  </div>
                 </div>
               )}
 
