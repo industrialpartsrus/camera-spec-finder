@@ -285,55 +285,64 @@ export default function ProListingBuilder() {
     setIsSending(true);
     
     try {
-      console.log('Sending to SureDone:', item);
-      
       // Get the condition label for the condition field
       const conditionOption = CONDITION_OPTIONS.find(c => c.value === item.condition);
       const conditionLabel = conditionOption?.label || 'Used - Good (GOOD)';
       
+      const productData = {
+        title: item.title,
+        description: item.description || '',
+        price: item.price || '0.00',
+        stock: 1,
+        brand: item.brand,
+        partNumber: item.partNumber,
+        
+        // Condition information
+        condition: conditionLabel,
+        conditionNotes: item.conditionNotes || CONDITION_NOTES[item.condition] || '',
+        
+        // Dimensions and weight (only if filled)
+        ...(item.boxLength && { boxLength: item.boxLength }),
+        ...(item.boxWidth && { boxWidth: item.boxWidth }),
+        ...(item.boxHeight && { boxHeight: item.boxHeight }),
+        ...(item.weight && { weight: item.weight }),
+        
+        // Shelf location as custom field (only if filled)
+        ...(item.shelf && { shelfLocation: item.shelf }),
+        
+        // Meta information
+        metaDescription: item.shortDescription || item.description?.substring(0, 160) || '',
+        metaKeywords: Array.isArray(item.metaKeywords) ? item.metaKeywords.join(', ') : '',
+        
+        // eBay category (will be auto-filled later)
+        ebayCategory: item.ebayCategory || '',
+        
+        // Specifications
+        specifications: Array.isArray(item.specifications) ? item.specifications : []
+      };
+      
+      console.log('Sending to SureDone:', productData);
+      
       const response = await fetch('/api/suredone-create-listing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          product: {
-            title: item.title,
-            description: item.description || '',
-            price: item.price || '0.00',
-            stock: 1,
-            brand: item.brand,
-            partNumber: item.partNumber,
-            
-            // Condition information
-            condition: conditionLabel,
-            conditionNotes: item.conditionNotes || CONDITION_NOTES[item.condition] || '',
-            
-            // Dimensions and weight
-            boxLength: item.boxLength || '',
-            boxWidth: item.boxWidth || '',
-            boxHeight: item.boxHeight || '',
-            weight: item.weight || '',
-            
-            // Shelf location as custom field
-            shelfLocation: item.shelf || '',
-            
-            // Meta information
-            metaDescription: item.shortDescription || item.description?.substring(0, 160) || '',
-            metaKeywords: Array.isArray(item.metaKeywords) ? item.metaKeywords.join(', ') : '',
-            
-            // eBay category (will be auto-filled later)
-            ebayCategory: item.ebayCategory || '',
-            
-            // Specifications
-            specifications: Array.isArray(item.specifications) ? item.specifications : []
-          }
-        })
+        body: JSON.stringify({ product: productData })
       });
 
       console.log('SureDone response status:', response.status);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create listing');
+        const errorText = await response.text();
+        console.error('SureDone error response:', errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          throw new Error(`Server error (${response.status}): ${errorText.substring(0, 200)}`);
+        }
+        
+        throw new Error(errorData.error || errorData.message || 'Failed to create listing');
       }
 
       const data = await response.json();
@@ -478,11 +487,22 @@ export default function ProListingBuilder() {
                   </div>
 
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
-                    <div><label className="block text-xs font-semibold mb-1">Length</label><input type="text" placeholder="in" value={selected.boxLength} onChange={e => updateField(selected.id, 'boxLength', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Width</label><input type="text" placeholder="in" value={selected.boxWidth} onChange={e => updateField(selected.id, 'boxWidth', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Height</label><input type="text" placeholder="in" value={selected.boxHeight} onChange={e => updateField(selected.id, 'boxHeight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Weight</label><input type="text" placeholder="lbs" value={selected.weight} onChange={e => updateField(selected.id, 'weight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-semibold mb-1">Length (in)</label><input type="text" placeholder="0" value={selected.boxLength || ''} onChange={e => updateField(selected.id, 'boxLength', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-semibold mb-1">Width (in)</label><input type="text" placeholder="0" value={selected.boxWidth || ''} onChange={e => updateField(selected.id, 'boxWidth', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-semibold mb-1">Height (in)</label><input type="text" placeholder="0" value={selected.boxHeight || ''} onChange={e => updateField(selected.id, 'boxHeight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+                    <div><label className="block text-xs font-semibold mb-1">Weight (lbs)</label><input type="text" placeholder="0" value={selected.weight || ''} onChange={e => updateField(selected.id, 'weight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
                   </div>
+
+                  {selected.specifications && selected.specifications.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-2">📋 AI-Generated Specifications</h4>
+                      <div className="space-y-1">
+                        {selected.specifications.map((spec, idx) => (
+                          <p key={idx} className="text-sm text-blue-800">• {spec}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div><label className="block text-sm font-semibold mb-2">Price ($)</label><input type="text" placeholder="0.00" value={selected.price} onChange={e => updateField(selected.id, 'price', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm lg:text-base" /></div>
