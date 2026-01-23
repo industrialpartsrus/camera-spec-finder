@@ -1,8 +1,57 @@
 // pages/api/suredone-create-listing.js
-// Complete SureDone integration - standalone with all features
+// Complete SureDone integration with UPC, BigCommerce fields, brand matching
 
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
+
+// Common brand ID mappings (subset - full list loaded from file)
+const BRAND_IDS = {
+  'baldor': '92',
+  'allen bradley': '40',
+  'allen-bradley': '40',
+  'siemens': '46',
+  'omron': '39',
+  'smc': '56',
+  'festo': '44',
+  'keyence': '47',
+  'sick': '49',
+  'turck': '75',
+  'banner': '73',
+  'banner engineering': '73',
+  'mitsubishi': '158',
+  'fanuc': '118',
+  'yaskawa': '82',
+  'abb': '86',
+  'schneider': '52',
+  'schneider electric': '52',
+  'telemecanique': '52',
+  'square d': '141',
+  'parker': '89',
+  'rexroth': '87',
+  'bosch rexroth': '87',
+  'beckhoff': '76',
+  'rockwell': '40',
+  'rockwell automation': '40',
+  'ge': '88',
+  'general electric': '88',
+  'fuji': '84',
+  'fuji electric': '84',
+  'danfoss': '94',
+  'ckd': '157',
+  'iai': '150',
+  'oriental motor': '104',
+  'vickers': '137',
+  'eaton': '72',
+  'cutler hammer': '72',
+  'cutler-hammer': '72',
+  'phoenix contact': '50',
+  'wago': '50',
+  'pilz': '155',
+  'bihl+wiedemann': '97',
+  'bihl wiedemann': '97',
+  'b&r': '97',
+  'b&r automation': '97'
+};
 
 // Capitalize first letter of each word
 function capitalizeWords(str) {
@@ -22,17 +71,22 @@ function toUpperCase(str) {
 function capitalizeBrand(brandName) {
   if (!brandName) return brandName;
   
-  // Special brand abbreviations (always all caps)
   const allCaps = ['ABB', 'SMC', 'CKD', 'IAI', 'PHD', 'STI', 'TDK', 'NSK', 'SKF', 'IKO', 
     'THK', 'NTN', 'FAG', 'GE', 'SEW', 'WEG', 'ATO', 'ARO', 'ITT', 'MKS', 'MTS', 'NSD',
-    'IFM', 'HTM', 'NKE', 'ACU', 'AEG', 'AMK', 'APC', 'BBC', 'EAO', 'EMD', 'GEA'];
+    'IFM', 'HTM', 'NKE', 'ACU', 'AEG', 'AMK', 'APC', 'BBC', 'EAO', 'EMD', 'GEA', 'B&R'];
   
   const brandLower = brandName.toLowerCase().trim();
   const brandUpper = brandName.toUpperCase().trim();
   
-  // Check if it's an all-caps brand
   if (allCaps.includes(brandUpper)) {
     return brandUpper;
+  }
+  
+  // Handle + in brand names
+  if (brandLower.includes('+')) {
+    return brandLower.split('+').map(part => 
+      part.charAt(0).toUpperCase() + part.slice(1)
+    ).join('+');
   }
   
   // Handle hyphenated brands
@@ -43,15 +97,30 @@ function capitalizeBrand(brandName) {
     }).join('-');
   }
   
-  // Handle + in brand names (like Bihl+Wiedemann)
-  if (brandLower.includes('+')) {
-    return brandLower.split('+').map(part => 
-      part.charAt(0).toUpperCase() + part.slice(1)
-    ).join('+');
+  return capitalizeWords(brandName);
+}
+
+// Get BigCommerce Brand ID
+function getBrandId(brandName) {
+  if (!brandName) return null;
+  
+  const brandLower = brandName.toLowerCase().trim();
+  
+  // Direct match
+  if (BRAND_IDS[brandLower]) {
+    return BRAND_IDS[brandLower];
   }
   
-  // Default: capitalize each word
-  return capitalizeWords(brandName);
+  // Try without special characters
+  const brandClean = brandLower.replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+  for (const [key, id] of Object.entries(BRAND_IDS)) {
+    const keyClean = key.replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (keyClean === brandClean || brandClean.includes(keyClean) || keyClean.includes(brandClean)) {
+      return id;
+    }
+  }
+  
+  return null;
 }
 
 export default async function handler(req, res) {
@@ -111,15 +180,41 @@ export default async function handler(req, res) {
     
     const sku = `AI${String(aiNumber).padStart(4, '0')}`;
     
+    // === GET UPC ===
+    let upc = null;
+    let upcWarning = null;
+    try {
+      const upcResponse = await fetch(`${req.headers.origin || 'https://camera-spec-finder.vercel.app'}/api/assign-upc`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (upcResponse.ok) {
+        const upcData = await upcResponse.json();
+        if (upcData.success && upcData.upc) {
+          upc = upcData.upc;
+          if (upcData.warning) {
+            upcWarning = upcData.warning;
+          }
+          console.log('Assigned UPC:', upc, '| Remaining:', upcData.remaining);
+        }
+      }
+    } catch (e) {
+      console.log('UPC assignment error:', e.message);
+    }
+    
     // === FORMAT FIELDS ===
     const brandFormatted = capitalizeBrand(product.brand);
     const mpnFormatted = toUpperCase(product.partNumber);
     const modelFormatted = toUpperCase(product.model || product.partNumber);
     
+    // === GET BIGCOMMERCE BRAND ID ===
+    const bigcommerceBrandId = getBrandId(product.brand);
+    
     console.log('=== FIELD FORMATTING ===');
     console.log('Brand:', product.brand, '→', brandFormatted);
     console.log('MPN:', product.partNumber, '→', mpnFormatted);
-    console.log('Model:', product.model || product.partNumber, '→', modelFormatted);
+    console.log('BigCommerce Brand ID:', bigcommerceBrandId);
+    console.log('UPC:', upc);
     
     // Build form data
     const formData = new URLSearchParams();
@@ -133,11 +228,16 @@ export default async function handler(req, res) {
     formData.append('price', product.price || '0.00');
     formData.append('stock', product.stock || '1');
     
-    // Brand and Manufacturer (both same, capitalized)
+    // Brand and Manufacturer
     formData.append('brand', brandFormatted);
     formData.append('manufacturer', brandFormatted);
     
-    // MPN, Model, PartNumber (uppercase)
+    // UPC
+    if (upc) {
+      formData.append('upc', upc);
+    }
+    
+    // MPN, Model, PartNumber
     formData.append('mpn', mpnFormatted);
     formData.append('model', modelFormatted);
     formData.append('partnumber', mpnFormatted);
@@ -176,7 +276,7 @@ export default async function handler(req, res) {
       formData.append('bigcommercebinpickingnumber', product.shelfLocation);
     }
     
-    // === BIGCOMMERCE REQUIRED FIELDS ===
+    // === BIGCOMMERCE FIELDS ===
     formData.append('bigcommerceisconditionshown', 'on');
     formData.append('bigcommerceavailabilitydescription', 'In Stock');
     formData.append('bigcommercerelatedproducts', '-1');
@@ -186,31 +286,39 @@ export default async function handler(req, res) {
     formData.append('bigcommercepagetitle', product.title);
     formData.append('bigcommercempn', mpnFormatted);
     
+    // BigCommerce Brand ID
+    if (bigcommerceBrandId) {
+      formData.append('bigcommercebrandid', bigcommerceBrandId);
+    }
+    
+    // BigCommerce Category
+    if (product.bigcommerceCategoryId) {
+      formData.append('bigcommercecategories', product.bigcommerceCategoryId);
+    }
+    
     // === META / SEO FIELDS ===
-    // Short description for meta - ensure it's populated
     const metaDescription = product.shortDescription || 
       product.metaDescription || 
       (product.description ? product.description.replace(/<[^>]*>/g, ' ').substring(0, 157) + '...' : '');
     
     if (metaDescription) {
       formData.append('bigcommercemetadescription', metaDescription);
-      console.log('Meta description:', metaDescription.substring(0, 100));
     }
     
-    // Keywords - populate BOTH fields
+    // Keywords
     if (product.metaKeywords) {
       const keywords = Array.isArray(product.metaKeywords) ? product.metaKeywords.join(', ') : product.metaKeywords;
       formData.append('bigcommercesearchkeywords', keywords);
       formData.append('bigcommercemetakeywords', keywords);
     }
     
-    // === EBAY CATEGORY (main eBay marketplace category) ===
+    // === EBAY MARKETPLACE CATEGORY (main eBay category) ===
     if (product.ebayCategoryId) {
       formData.append('ebaycatid', product.ebayCategoryId);
-      console.log('eBay Category ID:', product.ebayCategoryId);
+      console.log('eBay Marketplace Category:', product.ebayCategoryId);
     }
     
-    // === EBAY STORE CATEGORIES ===
+    // === EBAY STORE CATEGORIES (your store organization) ===
     if (product.ebayStoreCategoryId) {
       formData.append('ebaystoreid', product.ebayStoreCategoryId);
       console.log('eBay Store Category 1:', product.ebayStoreCategoryId);
@@ -220,32 +328,24 @@ export default async function handler(req, res) {
       console.log('eBay Store Category 2:', product.ebayStoreCategoryId2);
     }
     
-    // BigCommerce category
-    if (product.bigcommerceCategoryId) {
-      formData.append('bigcommercecategories', product.bigcommerceCategoryId);
-    }
-    
     // === EBAY SHIPPING PROFILE ===
     formData.append('ebayshippingprofileid', product.ebayShippingProfileId || '69077991015');
     
-    // === EBAY RETURN POLICY (not for "For Parts") ===
+    // === EBAY RETURN POLICY ===
     if (!isForParts) {
       formData.append('ebayreturnprofileid', product.ebayReturnProfileId || '61860297015');
     }
     
     // === MAP SPECIFICATIONS TO EBAY ITEM SPECIFICS ===
-    // Only add specs that have actual values
     if (product.specifications && typeof product.specifications === 'object') {
-      console.log('=== MAPPING SPECIFICATIONS ===');
-      
       const ebaySpecMappings = {
         'voltage': 'ebayitemspecificsvoltage',
         'amperage': 'ebayitemspecificscurrent',
-        'horsepower': 'ebayitemspecificsratedhorsepower',
+        'horsepower': 'ebayitemspecificshorsepower',
         'kw_rating': 'ebayitemspecificspoweroutput',
         'rpm': 'ebayitemspecificsspeed',
         'frame_size': 'ebayitemspecificsframesize',
-        'phase': 'ebayitemspecificsacphase',
+        'phase': 'ebayitemspecificsphase',
         'frequency': 'ebayitemspecificsfrequency',
         'enclosure': 'ebayitemspecificsenclosure',
         'ip_rating': 'ebayitemspecificsiprating',
@@ -260,40 +360,32 @@ export default async function handler(req, res) {
       };
       
       for (const [key, value] of Object.entries(product.specifications)) {
-        if (value && value !== 'null' && value !== null && value !== 'N/A' && value !== 'Unknown') {
+        if (value && value !== 'null' && value !== null && value !== 'N/A') {
           const ebayField = ebaySpecMappings[key];
           if (ebayField) {
             formData.append(ebayField, value);
-            console.log(`Spec: ${key} = "${value}" → ${ebayField}`);
           }
         }
       }
     }
     
     // === RAW SPECS AS CUSTOM FIELDS ===
-    // Only add if they are actual spec strings, not numbers
     if (product.rawSpecifications && Array.isArray(product.rawSpecifications)) {
       let customFieldIndex = 1;
       for (const spec of product.rawSpecifications) {
-        // Skip if it's just a number or empty
         if (spec && typeof spec === 'string' && spec.includes(':') && customFieldIndex <= 20) {
           formData.append(`customfield${customFieldIndex}`, spec);
           customFieldIndex++;
         }
       }
-      console.log('Added', customFieldIndex - 1, 'custom fields');
     }
     
-    console.log('=== FINAL FORM DATA ===');
-    const formDataObj = Object.fromEntries(formData.entries());
-    console.log('Key fields:', {
-      sku,
-      brand: brandFormatted,
-      mpn: mpnFormatted,
-      ebaycatid: formDataObj.ebaycatid,
-      ebaystoreid: formDataObj.ebaystoreid,
-      bigcommercemetadescription: formDataObj.bigcommercemetadescription?.substring(0, 50)
-    });
+    console.log('=== SENDING TO SUREDONE ===');
+    console.log('SKU:', sku);
+    console.log('UPC:', upc);
+    console.log('Brand:', brandFormatted);
+    console.log('BigCommerce Brand ID:', bigcommerceBrandId);
+    console.log('eBay Category:', product.ebayCategoryId);
     
     // === SEND TO SUREDONE ===
     const response = await fetch(`${SUREDONE_URL}/editor/items/add`, {
@@ -321,13 +413,20 @@ export default async function handler(req, res) {
     }
 
     if (data.result === 'success') {
-      res.status(200).json({ 
+      const responseObj = { 
         success: true, 
         message: 'Product created in SureDone',
         sku: data.sku || sku,
+        upc: upc,
         brandFormatted,
-        mpnFormatted
-      });
+        bigcommerceBrandId
+      };
+      
+      if (upcWarning) {
+        responseObj.warning = upcWarning;
+      }
+      
+      res.status(200).json(responseObj);
     } else {
       res.status(400).json({ 
         success: false, 

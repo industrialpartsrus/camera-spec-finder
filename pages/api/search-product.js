@@ -1,41 +1,93 @@
 // pages/api/search-product.js
 // Complete AI search with bullet point descriptions, categories, and structured specs
 
-// eBay Category IDs for common industrial products
-const EBAY_CATEGORIES = {
-  'Electric Motors': { ebayCategoryId: '181732', ebayStoreCategoryId: '17167471', ebayStoreCategoryId2: '6690340015' },
-  'Servo Motors': { ebayCategoryId: '181732', ebayStoreCategoryId: '393389015', ebayStoreCategoryId2: '6686262015' },
-  'Servo Drives': { ebayCategoryId: '181737', ebayStoreCategoryId: '393390015', ebayStoreCategoryId2: '6686262015' },
-  'VFDs': { ebayCategoryId: '181737', ebayStoreCategoryId: '2242358015', ebayStoreCategoryId2: '6686272015' },
-  'PLCs': { ebayCategoryId: '181739', ebayStoreCategoryId: '5404089015', ebayStoreCategoryId2: '5384028015' },
-  'HMIs': { ebayCategoryId: '181739', ebayStoreCategoryId: '6686264015', ebayStoreCategoryId2: '5384028015' },
-  'Power Supplies': { ebayCategoryId: '181738', ebayStoreCategoryId: '2242362015', ebayStoreCategoryId2: '5384028015' },
-  'I/O Modules': { ebayCategoryId: '181739', ebayStoreCategoryId: '18373835', ebayStoreCategoryId2: '5384028015' },
-  'Proximity Sensors': { ebayCategoryId: '181744', ebayStoreCategoryId: '4173791015', ebayStoreCategoryId2: '6686267015' },
-  'Photoelectric Sensors': { ebayCategoryId: '181744', ebayStoreCategoryId: '4173793015', ebayStoreCategoryId2: '6686267015' },
-  'Light Curtains': { ebayCategoryId: '181744', ebayStoreCategoryId: '393379015', ebayStoreCategoryId2: '6686267015' },
-  'Laser Sensors': { ebayCategoryId: '181744', ebayStoreCategoryId: '2479732015', ebayStoreCategoryId2: '6686267015' },
-  'Pressure Sensors': { ebayCategoryId: '181744', ebayStoreCategoryId: '6690386015', ebayStoreCategoryId2: '6686267015' },
-  'Temperature Sensors': { ebayCategoryId: '181744', ebayStoreCategoryId: '6690556015', ebayStoreCategoryId2: '6686267015' },
-  'Pneumatic Cylinders': { ebayCategoryId: '181738', ebayStoreCategoryId: '2461873015', ebayStoreCategoryId2: '6689961015' },
-  'Pneumatic Valves': { ebayCategoryId: '181738', ebayStoreCategoryId: '2461874015', ebayStoreCategoryId2: '6689961015' },
-  'Pneumatic Grippers': { ebayCategoryId: '181738', ebayStoreCategoryId: '6699359015', ebayStoreCategoryId2: '6689961015' },
-  'Hydraulic Pumps': { ebayCategoryId: '181738', ebayStoreCategoryId: '6696064015', ebayStoreCategoryId2: '6689962015' },
-  'Hydraulic Valves': { ebayCategoryId: '181738', ebayStoreCategoryId: '6696060015', ebayStoreCategoryId2: '6689962015' },
-  'Hydraulic Cylinders': { ebayCategoryId: '181738', ebayStoreCategoryId: '6696061015', ebayStoreCategoryId2: '6689962015' },
-  'Circuit Breakers': { ebayCategoryId: '181738', ebayStoreCategoryId: '5634105015', ebayStoreCategoryId2: '393385015' },
-  'Contactors': { ebayCategoryId: '181738', ebayStoreCategoryId: '2348910015', ebayStoreCategoryId2: '6688149015' },
-  'Safety Relays': { ebayCategoryId: '181739', ebayStoreCategoryId: '2464037015', ebayStoreCategoryId2: '6688149015' },
-  'Control Relays': { ebayCategoryId: '181738', ebayStoreCategoryId: '2242359015', ebayStoreCategoryId2: '6688149015' },
-  'Bearings': { ebayCategoryId: '181745', ebayStoreCategoryId: '6690505015', ebayStoreCategoryId2: '' },
-  'Linear Bearings': { ebayCategoryId: '181745', ebayStoreCategoryId: '4173713015', ebayStoreCategoryId2: '6690505015' },
-  'Encoders': { ebayCategoryId: '181737', ebayStoreCategoryId: '1802953015', ebayStoreCategoryId2: '6686262015' },
-  'Gearboxes': { ebayCategoryId: '181732', ebayStoreCategoryId: '17167471', ebayStoreCategoryId2: '' },
-  'Transformers': { ebayCategoryId: '181738', ebayStoreCategoryId: '5634104015', ebayStoreCategoryId2: '393385015' },
-  'Industrial Gateways': { ebayCategoryId: '181739', ebayStoreCategoryId: '5384028015', ebayStoreCategoryId2: '6688149015' },
-  'AS-Interface': { ebayCategoryId: '181739', ebayStoreCategoryId: '5384028015', ebayStoreCategoryId2: '6688149015' },
-  'Network Modules': { ebayCategoryId: '181739', ebayStoreCategoryId: '5384028015', ebayStoreCategoryId2: '18373835' },
-  'Unknown': { ebayCategoryId: '181739', ebayStoreCategoryId: '23399313015', ebayStoreCategoryId2: '' }
+// eBay MARKETPLACE Category IDs (these are the main eBay categories, NOT store categories)
+// These are used for ebaycatid field
+const EBAY_MARKETPLACE_CATEGORIES = {
+  'Electric Motors': '181732',      // Business & Industrial > Electrical Equipment > Industrial Electric Motors
+  'Servo Motors': '181732',         // Same parent category
+  'Servo Drives': '181737',         // Business & Industrial > Electrical Equipment > Drives & Starters
+  'VFDs': '181737',                 // Drives & Starters
+  'PLCs': '181739',                 // Industrial Automation & Control
+  'HMIs': '181739',
+  'Power Supplies': '181738',
+  'I/O Modules': '181739',
+  'Proximity Sensors': '181744',    // Sensors
+  'Photoelectric Sensors': '181744',
+  'Light Curtains': '181744',
+  'Laser Sensors': '181744',
+  'Pressure Sensors': '181744',
+  'Temperature Sensors': '181744',
+  'Pneumatic Cylinders': '181738',
+  'Pneumatic Valves': '181738',
+  'Pneumatic Grippers': '181738',
+  'Hydraulic Pumps': '181738',
+  'Hydraulic Valves': '181738',
+  'Hydraulic Cylinders': '181738',
+  'Circuit Breakers': '181738',
+  'Contactors': '181738',
+  'Safety Relays': '181739',
+  'Control Relays': '181738',
+  'Bearings': '181745',
+  'Linear Bearings': '181745',
+  'Encoders': '181737',
+  'Gearboxes': '181732',
+  'Transformers': '181738',
+  'Industrial Gateways': '181739',
+  'AS-Interface': '181739',
+  'Network Modules': '181739',
+  'Unknown': '181739'
+};
+
+// eBay STORE Category IDs (YOUR store categories)
+// These are used for ebaystoreid and ebaystoreid2 fields
+const EBAY_STORE_CATEGORIES = {
+  'Electric Motors': { primary: '17167471', secondary: '17167474' },      // ELECTRIC MOTORS under POWER TRANSMISSION
+  'Servo Motors': { primary: '393389015', secondary: '17167474' },        // SERVO MOTORS under POWER TRANSMISSION
+  'Servo Drives': { primary: '393390015', secondary: '6686262015' },      // SERVO DRIVES under MOTION CONTROL
+  'VFDs': { primary: '2242358015', secondary: '6686272015' },             // AC DRIVE under SPEED CONTROLS
+  'PLCs': { primary: '5404089015', secondary: '5384028015' },             // PLC under AUTOMATION CONTROL
+  'HMIs': { primary: '6686264015', secondary: '5384028015' },             // HMI under AUTOMATION CONTROL
+  'Power Supplies': { primary: '2242362015', secondary: '5384028015' },   // POWER SUPPLY
+  'I/O Modules': { primary: '18373835', secondary: '5384028015' },        // I/O BOARDS
+  'Proximity Sensors': { primary: '4173791015', secondary: '6686267015' },// PROXIMITY SENSORS under SENSING DEVICES
+  'Photoelectric Sensors': { primary: '4173793015', secondary: '6686267015' },
+  'Light Curtains': { primary: '393379015', secondary: '6686267015' },
+  'Laser Sensors': { primary: '2479732015', secondary: '6686267015' },
+  'Pressure Sensors': { primary: '6690386015', secondary: '6686267015' },
+  'Temperature Sensors': { primary: '6690556015', secondary: '6686267015' },
+  'Pneumatic Cylinders': { primary: '2461873015', secondary: '6689961015' },  // CYLINDERS under PNEUMATICS
+  'Pneumatic Valves': { primary: '2461874015', secondary: '6689961015' },
+  'Pneumatic Grippers': { primary: '6699359015', secondary: '6689961015' },
+  'Hydraulic Pumps': { primary: '6696064015', secondary: '6689962015' },      // under HYDRAULICS
+  'Hydraulic Valves': { primary: '6696060015', secondary: '6689962015' },
+  'Hydraulic Cylinders': { primary: '6696061015', secondary: '6689962015' },
+  'Circuit Breakers': { primary: '5634105015', secondary: '393385015' },      // under ELECTRICAL
+  'Contactors': { primary: '2348910015', secondary: '6688149015' },           // MOTOR CONTROLS under INDUSTRIAL CONTROL
+  'Safety Relays': { primary: '2464037015', secondary: '6688149015' },        // MACHINE SAFETY
+  'Control Relays': { primary: '2242359015', secondary: '6688149015' },
+  'Bearings': { primary: '6690505015', secondary: '' },
+  'Linear Bearings': { primary: '4173713015', secondary: '6690505015' },
+  'Encoders': { primary: '1802953015', secondary: '6686262015' },             // under MOTION CONTROL
+  'Gearboxes': { primary: '17167474', secondary: '' },                        // POWER TRANSMISSION
+  'Transformers': { primary: '5634104015', secondary: '393385015' },
+  'Industrial Gateways': { primary: '5384028015', secondary: '6688149015' },
+  'AS-Interface': { primary: '5384028015', secondary: '6688149015' },
+  'Network Modules': { primary: '5384028015', secondary: '18373835' },
+  'Unknown': { primary: '23399313015', secondary: '' }                        // MISCELLANEOUS
+};
+
+// BigCommerce Category IDs
+const BIGCOMMERCE_CATEGORIES = {
+  'Electric Motors': '115',
+  'Servo Motors': '115',
+  'Servo Drives': '116',
+  'VFDs': '116',
+  'PLCs': '117',
+  'HMIs': '117',
+  'Proximity Sensors': '118',
+  'Photoelectric Sensors': '118',
+  'Unknown': '100'
 };
 
 export default async function handler(req, res) {
@@ -49,7 +101,7 @@ export default async function handler(req, res) {
   console.log('Searching for:', brand, partNumber);
 
   try {
-    const categoryList = Object.keys(EBAY_CATEGORIES).join(', ');
+    const categoryList = Object.keys(EBAY_MARKETPLACE_CATEGORIES).join(', ');
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -65,17 +117,28 @@ export default async function handler(req, res) {
           role: 'user',
           content: `Search for industrial product: ${brand} ${partNumber}
 
-Return a JSON object with product information. You MUST include ALL of these fields.
+Return a JSON object with product information.
 
 PRODUCT CATEGORY - Choose the BEST match from this list:
 ${categoryList}
 
-Return ONLY valid JSON (no markdown, no code blocks, no explanation):
+TITLE REQUIREMENTS:
+- Maximum 80 characters
+- Format: "Brand Model - Key Specs"
+- For Electric Motors: Include HP, Voltage, RPM, Phase, Frame if available
+  Example: "Baldor M3211T - 3HP 230/460V 1800RPM 3-Phase 182T Frame Motor"
+- For Servo Motors: Include kW/Wattage, Voltage, RPM
+- For VFDs/Drives: Include HP/kW rating, Voltage
+- For Sensors: Include sensing range, voltage
+- For PLCs/HMIs: Include I/O count or screen size
+- Make titles keyword-rich for SEO
+
+Return ONLY valid JSON (no markdown, no code blocks):
 {
-  "title": "BRAND MODEL - Brief description (80 chars max)",
+  "title": "SEO-optimized title with key specs (80 chars max)",
   "productCategory": "One category from the list above",
-  "shortDescription": "2-3 sentence meta description for SEO. Max 160 characters. Must not be empty.",
-  "description": "HTML formatted - see format below. Must include bullet points.",
+  "shortDescription": "2-3 sentence meta description for SEO. Max 160 characters. MUST NOT BE EMPTY.",
+  "description": "HTML formatted with bullet points - see format below",
   "specifications": {
     "voltage": "value or null",
     "amperage": "value or null",
@@ -100,30 +163,25 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanation):
   "qualityFlag": "STRONG or NEEDS_REVIEW"
 }
 
-DESCRIPTION FORMAT - You MUST use this exact HTML structure with bullet points:
+DESCRIPTION FORMAT - Use this exact HTML structure:
 
-<p>[2-3 sentence professional introduction about the product, what it does, and its key applications. Be specific and technical.]</p>
+<p>[2-3 sentence professional introduction about the product]</p>
 
 <h3>Specifications</h3>
 <ul>
 <li><strong>Brand:</strong> ${brand}</li>
 <li><strong>Model:</strong> ${partNumber}</li>
 <li><strong>Type:</strong> [product type]</li>
-<li><strong>Voltage:</strong> [value]</li>
-<li><strong>Communication:</strong> [protocols if applicable]</li>
-<li><strong>Protection Rating:</strong> [IP rating if known]</li>
-<li><strong>Mounting:</strong> [mounting type]</li>
-[Add 8-15 more relevant specifications as bullet points]
+[Add 10-15 more relevant specifications as bullet points]
 </ul>
 
 <p>We warranty all items for 30 days from date of purchase.</p>
 
-CRITICAL REQUIREMENTS:
-1. shortDescription MUST NOT be empty - create a 2-3 sentence SEO description
-2. description MUST use <ul><li> bullet point format, NOT a table
-3. rawSpecifications should be an array of 8-15 "Label: Value" strings
-4. Only include specification fields that have actual values - omit null/unknown fields
-5. productCategory MUST match one from the provided list exactly`
+REQUIREMENTS:
+1. shortDescription MUST NOT be empty
+2. description MUST use bullet points (<ul><li>)
+3. Title should be keyword-rich with key specs
+4. Only include specification fields with actual values`
         }],
         tools: [{ type: 'web_search_20250305', name: 'web_search' }]
       })
@@ -137,9 +195,8 @@ CRITICAL REQUIREMENTS:
     const textBlocks = data.content?.filter(b => b.type === 'text') || [];
     const text = textBlocks.map(b => b.text).join('');
     
-    console.log('=== EXTRACTED TEXT ===');
-    console.log('Text length:', text.length);
-    console.log('Text preview:', text.substring(0, 1500));
+    console.log('=== EXTRACTED TEXT (first 1000 chars) ===');
+    console.log(text.substring(0, 1000));
     
     // Parse JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -152,11 +209,14 @@ CRITICAL REQUIREMENTS:
           text: JSON.stringify({
             title: `${brand} ${partNumber}`,
             productCategory: 'Unknown',
-            shortDescription: `${brand} ${partNumber} industrial automation component. Professional quality, tested and ready for use.`,
-            description: `<p>${brand} ${partNumber} is an industrial automation component.</p><h3>Specifications</h3><ul><li><strong>Brand:</strong> ${brand}</li><li><strong>Model:</strong> ${partNumber}</li></ul><p>We warranty all items for 30 days from date of purchase.</p>`,
+            shortDescription: `${brand} ${partNumber} industrial automation component.`,
+            description: `<p>${brand} ${partNumber} industrial component.</p><ul><li><strong>Brand:</strong> ${brand}</li><li><strong>Model:</strong> ${partNumber}</li></ul>`,
             specifications: {},
-            rawSpecifications: [`Brand: ${brand}`, `Model: ${partNumber}`],
-            qualityFlag: 'NEEDS_REVIEW'
+            rawSpecifications: [],
+            qualityFlag: 'NEEDS_REVIEW',
+            ebayCategoryId: '181739',
+            ebayStoreCategoryId: '23399313015',
+            ebayStoreCategoryId2: ''
           })
         }]
       });
@@ -167,7 +227,6 @@ CRITICAL REQUIREMENTS:
       product = JSON.parse(jsonMatch[0]);
     } catch (parseError) {
       console.error('JSON parse error:', parseError.message);
-      // Try to clean and parse
       const cleaned = jsonMatch[0]
         .replace(/[\x00-\x1F\x7F]/g, ' ')
         .replace(/,\s*}/g, '}')
@@ -178,41 +237,44 @@ CRITICAL REQUIREMENTS:
     console.log('=== PARSED PRODUCT ===');
     console.log('Title:', product.title);
     console.log('Category:', product.productCategory);
-    console.log('Short Description:', product.shortDescription);
-    console.log('Description length:', product.description?.length || 0);
-    console.log('Has bullet points:', product.description?.includes('<li>'));
 
     // Ensure shortDescription is never empty
     if (!product.shortDescription || product.shortDescription.trim() === '') {
-      // Extract from description or create default
       if (product.description) {
         const plainText = product.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
         product.shortDescription = plainText.substring(0, 157) + '...';
       } else {
-        product.shortDescription = `${brand} ${partNumber} industrial automation component. Professional quality, tested and ready for use.`;
+        product.shortDescription = `${brand} ${partNumber} industrial automation component. Professional quality, tested and ready.`;
       }
     }
 
-    // Ensure shortDescription is max 160 chars
+    // Truncate to 160 chars
     if (product.shortDescription.length > 160) {
       product.shortDescription = product.shortDescription.substring(0, 157) + '...';
     }
 
-    // Add category IDs
+    // === ADD CATEGORY IDs ===
     const categoryKey = product.productCategory || 'Unknown';
-    const categoryConfig = EBAY_CATEGORIES[categoryKey] || EBAY_CATEGORIES['Unknown'];
     
-    product.ebayCategoryId = categoryConfig.ebayCategoryId;
-    product.ebayStoreCategoryId = categoryConfig.ebayStoreCategoryId;
-    product.ebayStoreCategoryId2 = categoryConfig.ebayStoreCategoryId2;
+    // eBay Marketplace Category (main eBay category for listing)
+    product.ebayCategoryId = EBAY_MARKETPLACE_CATEGORIES[categoryKey] || EBAY_MARKETPLACE_CATEGORIES['Unknown'];
+    
+    // eBay Store Categories (YOUR store's organization)
+    const storeCategories = EBAY_STORE_CATEGORIES[categoryKey] || EBAY_STORE_CATEGORIES['Unknown'];
+    product.ebayStoreCategoryId = storeCategories.primary;
+    product.ebayStoreCategoryId2 = storeCategories.secondary;
+    
+    // BigCommerce Category
+    product.bigcommerceCategoryId = BIGCOMMERCE_CATEGORIES[categoryKey] || BIGCOMMERCE_CATEGORIES['Unknown'];
     
     console.log('=== CATEGORY MAPPING ===');
     console.log('Detected category:', categoryKey);
-    console.log('eBay Category ID:', product.ebayCategoryId);
-    console.log('Store Category 1:', product.ebayStoreCategoryId);
-    console.log('Store Category 2:', product.ebayStoreCategoryId2);
+    console.log('eBay Marketplace Category ID:', product.ebayCategoryId);
+    console.log('eBay Store Category 1:', product.ebayStoreCategoryId);
+    console.log('eBay Store Category 2:', product.ebayStoreCategoryId2);
+    console.log('BigCommerce Category:', product.bigcommerceCategoryId);
 
-    // Clean up specifications - remove null values
+    // Clean up specifications
     if (product.specifications && typeof product.specifications === 'object') {
       const cleanSpecs = {};
       for (const [key, value] of Object.entries(product.specifications)) {
@@ -224,9 +286,8 @@ CRITICAL REQUIREMENTS:
     }
 
     console.log('=== FINAL PRODUCT ===');
-    console.log(JSON.stringify(product).substring(0, 2000));
+    console.log(JSON.stringify(product).substring(0, 1500));
 
-    // Return in expected format
     res.status(200).json({
       content: [{
         type: 'text',
@@ -237,7 +298,6 @@ CRITICAL REQUIREMENTS:
   } catch (error) {
     console.error('=== SEARCH PRODUCT ERROR ===');
     console.error('Error:', error.message);
-    console.error('Stack:', error.stack);
     res.status(500).json({ error: error.message });
   }
 }
