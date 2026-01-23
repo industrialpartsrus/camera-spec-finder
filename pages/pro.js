@@ -169,6 +169,43 @@ export default function ProListingBuilder() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Generate keywords from product data
+  const generateKeywords = (item) => {
+    const keywords = new Set();
+    
+    // Add brand and part number
+    if (item.brand) keywords.add(item.brand.toLowerCase());
+    if (item.partNumber) keywords.add(item.partNumber.toLowerCase());
+    
+    // Add category-based keywords
+    if (item.productCategory) {
+      keywords.add(item.productCategory.toLowerCase());
+      // Add variations
+      if (item.productCategory === 'Electric Motors') {
+        keywords.add('motor');
+        keywords.add('electric motor');
+        keywords.add('industrial motor');
+      } else if (item.productCategory === 'VFDs') {
+        keywords.add('vfd');
+        keywords.add('variable frequency drive');
+        keywords.add('ac drive');
+      } else if (item.productCategory === 'PLCs') {
+        keywords.add('plc');
+        keywords.add('programmable logic controller');
+      }
+    }
+    
+    // Add spec-based keywords
+    if (item.specifications) {
+      if (item.specifications.horsepower) keywords.add(item.specifications.horsepower.toLowerCase());
+      if (item.specifications.voltage) keywords.add(item.specifications.voltage.toLowerCase());
+      if (item.specifications.phase) keywords.add(item.specifications.phase.toLowerCase());
+      if (item.specifications.frame_size) keywords.add(item.specifications.frame_size.toLowerCase());
+    }
+    
+    return Array.from(keywords).join(', ');
+  };
+
   const addToQueueWithValues = async (brand, part) => {
     if (!brand.trim() || !part.trim()) {
       alert('Enter brand and part number');
@@ -195,7 +232,10 @@ export default function ProListingBuilder() {
         boxWidth: '',
         boxHeight: '',
         weight: '',
-        qualityFlag: ''
+        qualityFlag: '',
+        ebayCategoryId: '',
+        ebayStoreCategoryId: '',
+        bigcommerceCategoryId: ''
       });
       setBrandName('');
       setPartNumber('');
@@ -307,7 +347,11 @@ export default function ProListingBuilder() {
     try {
       const conditionOption = CONDITION_OPTIONS.find(c => c.value === item.condition);
       
+      // Generate keywords from the item data
+      const keywords = generateKeywords(item);
+      
       const productData = {
+        // Core fields
         title: item.title,
         description: item.description || '',
         shortDescription: item.shortDescription || '',
@@ -315,16 +359,34 @@ export default function ProListingBuilder() {
         stock: 1,
         brand: item.brand,
         partNumber: item.partNumber,
+        
+        // Category
         productCategory: item.productCategory || '',
+        
+        // Condition
         condition: conditionOption?.label || 'Used - Good',
         conditionNotes: item.conditionNotes || '',
+        
+        // Specifications - structured object
         specifications: item.specifications || {},
+        
+        // Raw specs for custom fields
         rawSpecifications: item.rawSpecifications || [],
+        
+        // Meta/SEO fields
+        metaDescription: item.shortDescription || '',
+        metaKeywords: keywords,
+        
+        // Dimensions (only if provided)
         ...(item.boxLength && { boxLength: item.boxLength }),
         ...(item.boxWidth && { boxWidth: item.boxWidth }),
         ...(item.boxHeight && { boxHeight: item.boxHeight }),
         ...(item.weight && { weight: item.weight }),
+        
+        // Shelf location
         ...(item.shelf && { shelfLocation: item.shelf }),
+        
+        // Category IDs
         ebayCategoryId: item.ebayCategoryId || '',
         ebayStoreCategoryId: item.ebayStoreCategoryId || '',
         bigcommerceCategoryId: item.bigcommerceCategoryId || ''
@@ -338,13 +400,13 @@ export default function ProListingBuilder() {
         body: JSON.stringify({ product: productData })
       });
 
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(JSON.parse(errorText).error || 'Failed to create listing');
+        throw new Error(responseData.error || 'Failed to create listing');
       }
 
-      const data = await response.json();
-      alert(`✅ Successfully sent to SureDone!\n\nSKU: ${data.sku}\n\n${item.title}`);
+      alert(`✅ Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
       
     } catch (error) {
       console.error('SureDone error:', error);
@@ -479,6 +541,9 @@ export default function ProListingBuilder() {
                     )}
                   </div>
                 </div>
+                <button onClick={() => processItem(selected.id)} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm flex items-center gap-1">
+                  <RefreshCw className="w-4 h-4" /> Re-search
+                </button>
               </div>
 
               {selected.status === 'complete' && (
@@ -504,11 +569,11 @@ export default function ProListingBuilder() {
                       onClick={() => setShowSpecs(!showSpecs)}
                       className="w-full px-4 py-3 bg-blue-50 flex justify-between items-center hover:bg-blue-100 transition"
                     >
-                      <span className="font-semibold text-blue-800">📋 Specifications (Normalized)</span>
+                      <span className="font-semibold text-blue-800">📋 Specifications ({Object.keys(selected.specifications || {}).length} fields)</span>
                       {showSpecs ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </button>
                     
-                    {showSpecs && selected.specifications && (
+                    {showSpecs && selected.specifications && Object.keys(selected.specifications).length > 0 && (
                       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         {Object.entries(selected.specifications).map(([key, value]) => (
                           <div key={key} className="flex flex-col">
@@ -548,13 +613,24 @@ export default function ProListingBuilder() {
                     )}
                   </div>
 
+                  {/* Short Description / Meta */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Short Description / Meta ({selected.shortDescription?.length || 0}/160)</label>
+                    <textarea 
+                      value={selected.shortDescription || ''} 
+                      onChange={e => updateField(selected.id, 'shortDescription', e.target.value.slice(0, 160))} 
+                      className="w-full px-3 py-2 border rounded-lg h-20 text-sm" 
+                      maxLength={160}
+                    />
+                  </div>
+
                   {/* Condition */}
                   <div>
                     <label className="block text-sm font-semibold mb-2">Condition</label>
                     <select value={selected.condition || 'used_good'} onChange={e => updateCondition(selected.id, e.target.value)} className="w-full px-3 py-2 border rounded-lg">
                       {CONDITION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
-                    <p className="text-xs text-gray-600 mt-2">{selected.conditionNotes}</p>
+                    <p className="text-xs text-gray-600 mt-2 p-2 bg-gray-50 rounded">{selected.conditionNotes}</p>
                   </div>
 
                   {/* Dimensions */}
