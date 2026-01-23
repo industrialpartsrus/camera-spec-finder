@@ -1,5 +1,5 @@
 // pages/api/suredone-create-listing.js
-// Comprehensive SureDone integration with UPC assignment, BigCommerce fields, and brand matching
+// Comprehensive SureDone integration with UPC, BigCommerce fields, brand matching, and capitalization
 
 import { MASTER_FIELDS, CATEGORY_CONFIG, getEbayFieldName } from '../../data/master-fields';
 import bigcommerceBrands from '../../data/bigcommerce_brands.json';
@@ -8,28 +8,102 @@ import upcPool from '../../data/upc_pool.json';
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
 
-// Track assigned UPCs in memory (in production, use database)
+// Track assigned UPCs in memory
 let assignedUPCIndex = 0;
 
-// Find BigCommerce brand ID by brand name
+// Capitalize first letter of each word (for brand names)
+function capitalizeWords(str) {
+  if (!str) return str;
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// Capitalize entire string (for MPN/Model - usually all caps is preferred)
+function toUpperCase(str) {
+  if (!str) return str;
+  return str.toUpperCase();
+}
+
+// Smart brand capitalization - handles special cases
+function capitalizeBrand(brandName) {
+  if (!brandName) return brandName;
+  
+  // Special brand name capitalizations
+  const specialBrands = {
+    'abb': 'ABB',
+    'smc': 'SMC',
+    'ckd': 'CKD',
+    'iai': 'IAI',
+    'phd': 'PHD',
+    'sti': 'STI',
+    'tdk': 'TDK',
+    'nsk': 'NSK',
+    'skf': 'SKF',
+    'iko': 'IKO',
+    'thk': 'THK',
+    'ntn': 'NTN',
+    'fag': 'FAG',
+    'plc': 'PLC',
+    'hmi': 'HMI',
+    'vfd': 'VFD',
+    'ge': 'GE',
+    'ac': 'AC',
+    'dc': 'DC',
+    'sew': 'SEW',
+    'weg': 'WEG',
+    'ato': 'ATO',
+    'aro': 'ARO',
+    'aro': 'ARO',
+    'itt': 'ITT',
+    'mks': 'MKS',
+    'mts': 'MTS',
+    'nsd': 'NSD'
+  };
+  
+  const brandLower = brandName.toLowerCase().trim();
+  
+  // Check for special cases
+  if (specialBrands[brandLower]) {
+    return specialBrands[brandLower];
+  }
+  
+  // Check for hyphenated brands like "Allen-Bradley"
+  if (brandLower.includes('-')) {
+    return brandLower.split('-').map(part => {
+      if (specialBrands[part]) return specialBrands[part];
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    }).join('-');
+  }
+  
+  // Check for brands with specific capitalizations in our database
+  if (bigcommerceBrands[brandLower]) {
+    return bigcommerceBrands[brandLower].name;
+  }
+  
+  // Default: capitalize each word
+  return capitalizeWords(brandName);
+}
+
+// Find BigCommerce brand ID
 function getBigCommerceBrandId(brandName) {
   if (!brandName) return null;
   
   const brandLower = brandName.toLowerCase().trim();
   
-  // Direct match
   if (bigcommerceBrands[brandLower]) {
     return bigcommerceBrands[brandLower].id;
   }
   
-  // Fuzzy match - check if brand contains or is contained in any key
+  // Fuzzy match
   for (const [key, value] of Object.entries(bigcommerceBrands)) {
     if (key.includes(brandLower) || brandLower.includes(key)) {
       return value.id;
     }
   }
   
-  // Try without special characters
   const brandClean = brandLower.replace(/[^a-z0-9]/g, '');
   for (const [key, value] of Object.entries(bigcommerceBrands)) {
     const keyClean = key.replace(/[^a-z0-9]/g, '');
@@ -41,27 +115,21 @@ function getBigCommerceBrandId(brandName) {
   return null;
 }
 
-// Get next available UPC from pool
+// Get next available UPC
 function getNextUPC() {
-  // Find UPCs where sku is null (unassigned)
   const availableUPCs = upcPool.filter(u => !u.sku);
   
   if (availableUPCs.length === 0) {
     return { upc: null, remaining: 0, warning: 'No UPCs available! Please upload more.' };
   }
   
-  // Get the next one
   const nextUPC = availableUPCs[assignedUPCIndex % availableUPCs.length];
   assignedUPCIndex++;
   
   const remaining = availableUPCs.length - 1;
   const warning = remaining < 100 ? `Low UPC count: ${remaining} remaining. Please upload more soon.` : null;
   
-  return { 
-    upc: nextUPC.upc, 
-    remaining,
-    warning 
-  };
+  return { upc: nextUPC.upc, remaining, warning };
 }
 
 export default async function handler(req, res) {
@@ -116,13 +184,18 @@ export default async function handler(req, res) {
         }
       }
     } catch (e) {
-      console.log('SKU search error, starting from AI0001:', e.message);
+      console.log('SKU search error:', e.message);
     }
     
     const sku = `AI${String(aiNumber).padStart(4, '0')}`;
     
     // === GET UPC ===
     const upcResult = getNextUPC();
+    
+    // === CAPITALIZE FIELDS ===
+    const brandFormatted = capitalizeBrand(product.brand);
+    const mpnFormatted = toUpperCase(product.partNumber);
+    const modelFormatted = toUpperCase(product.model || product.partNumber);
     
     // Build form data
     const formData = new URLSearchParams();
@@ -135,17 +208,20 @@ export default async function handler(req, res) {
     formData.append('longdescription', product.description || '');
     formData.append('price', product.price || '0.00');
     formData.append('stock', product.stock || '1');
-    formData.append('brand', product.brand);
+    
+    // Brand and Manufacturer (both same, capitalized)
+    formData.append('brand', brandFormatted);
+    formData.append('manufacturer', brandFormatted);
     
     // === UPC ===
     if (upcResult.upc) {
       formData.append('upc', upcResult.upc);
     }
     
-    // === MPN, MODEL, PARTNUMBER ===
-    formData.append('mpn', product.partNumber);
-    formData.append('model', product.model || product.partNumber);
-    formData.append('partnumber', product.partNumber);
+    // === MPN, MODEL, PARTNUMBER (all uppercase) ===
+    formData.append('mpn', mpnFormatted);
+    formData.append('model', modelFormatted);
+    formData.append('partnumber', mpnFormatted);
     
     // === CONDITION ===
     let suredoneCondition = 'Used';
@@ -180,7 +256,7 @@ export default async function handler(req, res) {
       formData.append('shelf', product.shelfLocation);
     }
     
-    // === BIGCOMMERCE REQUIRED FIELDS ===
+    // === BIGCOMMERCE FIELDS ===
     formData.append('bigcommerceisconditionshown', 'on');
     formData.append('bigcommerceavailabilitydescription', 'In Stock');
     formData.append('bigcommercerelatedproducts', '-1');
@@ -188,9 +264,8 @@ export default async function handler(req, res) {
     formData.append('bigcommerceisvisible', 'on');
     formData.append('bigcommercechannels', '1');
     formData.append('bigcommercepagetitle', product.title);
-    formData.append('bigcommercempn', product.partNumber);
+    formData.append('bigcommercempn', mpnFormatted);
     
-    // BigCommerce bin location = shelf
     if (product.shelfLocation) {
       formData.append('bigcommercebinpickingnumber', product.shelfLocation);
     }
@@ -199,17 +274,13 @@ export default async function handler(req, res) {
     const bigcommerceBrandId = getBigCommerceBrandId(product.brand);
     if (bigcommerceBrandId) {
       formData.append('bigcommercebrandid', bigcommerceBrandId);
-      console.log(`Brand match: "${product.brand}" → ID ${bigcommerceBrandId}`);
-    } else {
-      console.log(`No brand match found for: "${product.brand}"`);
     }
     
-    // === META / SEO FIELDS ===
+    // === META / SEO ===
     if (product.shortDescription) {
       formData.append('bigcommercemetadescription', product.shortDescription);
     }
     
-    // Keywords - populate BOTH fields
     if (product.metaKeywords) {
       const keywords = Array.isArray(product.metaKeywords) ? product.metaKeywords.join(', ') : product.metaKeywords;
       formData.append('bigcommercesearchkeywords', keywords);
@@ -232,13 +303,13 @@ export default async function handler(req, res) {
       }
     }
     
-    // Override with explicit values if provided
+    // Override with explicit values
     if (product.ebayCategoryId) formData.append('ebaycatid', product.ebayCategoryId);
     if (product.ebayStoreCategoryId) formData.append('ebaystoreid', product.ebayStoreCategoryId);
     if (product.ebayStoreCategoryId2) formData.append('ebaystoreid2', product.ebayStoreCategoryId2);
     if (product.bigcommerceCategoryId) formData.append('bigcommercecategories', product.bigcommerceCategoryId);
     
-    // === EBAY SHIPPING PROFILE ===
+    // === EBAY SHIPPING ===
     formData.append('ebayshippingprofileid', product.ebayShippingProfileId || '69077991015');
     
     // === EBAY RETURN POLICY (not for "For Parts") ===
@@ -249,54 +320,36 @@ export default async function handler(req, res) {
     // === MAP SPECIFICATIONS TO EBAY ITEM SPECIFICS ===
     if (product.specifications && typeof product.specifications === 'object') {
       console.log('=== MAPPING SPECIFICATIONS ===');
-      console.log('Product Category:', productCategory);
       
       for (const [masterField, value] of Object.entries(product.specifications)) {
         if (!value || value === 'null') continue;
         
-        // Get the eBay field name for this category
         const ebayFieldName = getEbayFieldName(masterField, productCategory);
-        
         if (ebayFieldName) {
-          console.log(`Mapping: ${masterField} = "${value}" → ${ebayFieldName}`);
           formData.append(ebayFieldName, value);
         }
         
-        // Also store in generic SureDone fields
-        const genericFieldMappings = {
-          'voltage': 'voltage',
-          'amperage': 'amperage',
-          'horsepower': 'horsepower',
-          'rpm': 'rpm',
-          'frame_size': 'frame',
-          'phase': 'phase',
-          'frequency': 'hz',
-          'coil_voltage': 'coilvoltage',
-          'max_pressure': 'maxpressure',
-          'bore_diameter': 'borediameter',
-          'stroke_length': 'strokelength',
-          'port_size': 'portsize',
-          'sensing_range': 'sensingrange',
-          'kw_rating': 'kw',
-          'input_voltage': 'inputvoltage',
-          'output_voltage': 'outputvoltage',
-          'number_of_poles': 'numberofpoles',
-          'mounting_type': 'mountingtype',
-          'enclosure': 'enclosuretype',
-          'ip_rating': 'iprating',
-          'service_factor': 'servicefactor',
-          'nema_design': 'nemadesignletter',
-          'insulation_class': 'insulationclass',
-          'motor_type': 'motortype'
+        // Generic fields
+        const genericMappings = {
+          'voltage': 'voltage', 'amperage': 'amperage', 'horsepower': 'horsepower',
+          'rpm': 'rpm', 'frame_size': 'frame', 'phase': 'phase', 'frequency': 'hz',
+          'coil_voltage': 'coilvoltage', 'max_pressure': 'maxpressure',
+          'bore_diameter': 'borediameter', 'stroke_length': 'strokelength',
+          'port_size': 'portsize', 'sensing_range': 'sensingrange',
+          'kw_rating': 'kw', 'input_voltage': 'inputvoltage',
+          'output_voltage': 'outputvoltage', 'number_of_poles': 'numberofpoles',
+          'mounting_type': 'mountingtype', 'enclosure': 'enclosuretype',
+          'ip_rating': 'iprating', 'service_factor': 'servicefactor',
+          'nema_design': 'nemadesignletter', 'insulation_class': 'insulationclass'
         };
         
-        if (genericFieldMappings[masterField]) {
-          formData.append(genericFieldMappings[masterField], value);
+        if (genericMappings[masterField]) {
+          formData.append(genericMappings[masterField], value);
         }
       }
     }
     
-    // === RAW SPECIFICATIONS AS CUSTOM FIELDS ===
+    // === RAW SPECS AS CUSTOM FIELDS ===
     if (product.rawSpecifications && Array.isArray(product.rawSpecifications)) {
       product.rawSpecifications.forEach((spec, index) => {
         if (index < 20) {
@@ -306,7 +359,7 @@ export default async function handler(req, res) {
     }
     
     console.log('=== FINAL FORM DATA ===');
-    console.log('All fields:', Object.fromEntries(formData.entries()));
+    console.log('Brand:', brandFormatted, '| MPN:', mpnFormatted, '| Model:', modelFormatted);
     
     // === SEND TO SUREDONE ===
     const response = await fetch(`${SUREDONE_URL}/editor/items/add`, {
@@ -326,7 +379,6 @@ export default async function handler(req, res) {
     try {
       data = JSON.parse(responseText);
     } catch (e) {
-      console.error('Failed to parse SureDone response:', responseText.substring(0, 500));
       return res.status(500).json({ 
         success: false,
         error: 'Invalid response from SureDone',
@@ -341,10 +393,11 @@ export default async function handler(req, res) {
         sku: data.sku || sku,
         upc: upcResult.upc,
         upcRemaining: upcResult.remaining,
-        bigcommerceBrandId: bigcommerceBrandId
+        brandFormatted,
+        mpnFormatted,
+        bigcommerceBrandId
       };
       
-      // Add warning if UPC is low
       if (upcResult.warning) {
         responseObj.warning = upcResult.warning;
       }
@@ -362,8 +415,7 @@ export default async function handler(req, res) {
     console.error('SureDone integration error:', error);
     res.status(500).json({ 
       success: false,
-      error: error.message,
-      stack: error.stack 
+      error: error.message
     });
   }
 }
