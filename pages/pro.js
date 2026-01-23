@@ -1,32 +1,20 @@
 // pages/pro.js
-// Updated Pro Listing Builder with structured specifications
+// Pro Listing Builder with all features
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, User, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
-// Import category config for display
+// Product category options
 const CATEGORY_OPTIONS = [
-  'Electric Motors',
-  'Servo Motors', 
-  'Servo Drives',
-  'VFDs',
-  'PLCs',
-  'HMIs',
-  'Proximity Sensors',
-  'Photoelectric Sensors',
-  'Light Curtains',
-  'Pneumatic Cylinders',
-  'Pneumatic Valves',
-  'Hydraulic Pumps',
-  'Hydraulic Valves',
-  'Circuit Breakers',
-  'Contactors',
-  'Safety Relays',
-  'Bearings'
+  'Electric Motors', 'Servo Motors', 'Servo Drives', 'VFDs', 'PLCs', 'HMIs',
+  'Proximity Sensors', 'Photoelectric Sensors', 'Light Curtains',
+  'Pneumatic Cylinders', 'Pneumatic Valves', 'Hydraulic Pumps', 'Hydraulic Valves',
+  'Circuit Breakers', 'Contactors', 'Safety Relays', 'Bearings'
 ];
 
+// Condition options
 const CONDITION_OPTIONS = [
   { value: 'new_in_box', label: 'New In Box (NIB)' },
   { value: 'new_open_box', label: 'New - Open Box' },
@@ -49,37 +37,112 @@ const CONDITION_NOTES = {
   'for_parts': 'Item sold as-is for parts or repair. Not tested or may not be fully functional. No warranty provided.'
 };
 
-// Friendly labels for specification fields
+// Shipping profiles
+const SHIPPING_PROFILES = [
+  { id: '69077991015', name: 'Small Package Shipping' },
+  { id: '71204399015', name: 'Small Package Free Shipping' },
+  { id: '109762088015', name: 'Medium Package Shipping' },
+  { id: '110997109015', name: 'Medium Package Free Shipping' },
+  { id: '260268833015', name: 'UPS Ground' },
+  { id: '257255165015', name: 'Calculated: UPS Ground Free, Same Day' },
+  { id: '257300245015', name: 'Calculated: UPS Ground, 1 Business Day' },
+  { id: '274446469015', name: 'Small Freight Items under 1000 Lbs' },
+  { id: '274433302015', name: 'Freight Shipping 2000 Lbs & Over' },
+  { id: '124173115015', name: 'Domestic and International Freight' },
+  { id: '253736784015', name: 'Freight' },
+  { id: '161228820015', name: 'Local Pickup Only' }
+];
+
+// eBay Store Categories (Level 1 only for main dropdown, all for secondary)
+const EBAY_STORE_CATEGORIES = [
+  { id: '11495474015', name: 'ASSEMBLY TOOLS', level: 1 },
+  { id: '5384028015', name: 'AUTOMATION CONTROL', level: 1 },
+  { id: '6686264015', name: '  └ HMI', level: 2 },
+  { id: '18373835', name: '  └ I/O BOARDS', level: 2 },
+  { id: '5404089015', name: '  └ PLC', level: 2 },
+  { id: '2242362015', name: '  └ POWER SUPPLY', level: 2 },
+  { id: '6690505015', name: 'BEARINGS', level: 1 },
+  { id: '4173714015', name: '  └ BALL', level: 2 },
+  { id: '4173170015', name: '  └ CAM FOLLOWER', level: 2 },
+  { id: '4173165015', name: '  └ FLANGE BEARINGS', level: 2 },
+  { id: '4173713015', name: '  └ LINEAR', level: 2 },
+  { id: '4173171015', name: '  └ NEEDLE', level: 2 },
+  { id: '4173166015', name: '  └ PILLOW BLOCK', level: 2 },
+  { id: '4173168015', name: '  └ ROLLER', level: 2 },
+  { id: '4173167015', name: '  └ TAPERED', level: 2 },
+  { id: '4173169015', name: '  └ THRUST', level: 2 },
+  { id: '19438754015', name: 'COMPUTERS & ACCESSORIES', level: 1 },
+  { id: '393385015', name: 'ELECTRICAL', level: 1 },
+  { id: '5634105015', name: '  └ CIRCUIT BREAKERS', level: 2 },
+  { id: '20338717', name: '  └ DISCONNECTS', level: 2 },
+  { id: '18373801', name: '  └ ENCLOSURES', level: 2 },
+  { id: '18373807', name: '  └ FUSES & HOLDERS', level: 2 },
+  { id: '5634104015', name: '  └ TRANSFORMERS', level: 2 },
+  { id: '2343161015', name: 'FILTRATION', level: 1 },
+  { id: '17167473', name: 'HVAC', level: 1 },
+  { id: '6689962015', name: 'HYDRAULICS', level: 1 },
+  { id: '6696063015', name: '  └ HYDRAULIC ACCUMULATORS', level: 2 },
+  { id: '6696062015', name: '  └ HYDRAULIC ACTUATORS', level: 2 },
+  { id: '6696061015', name: '  └ HYDRAULIC CYLINDERS', level: 2 },
+  { id: '6696064015', name: '  └ HYDRAULIC PUMPS', level: 2 },
+  { id: '6696060015', name: '  └ HYDRAULIC VALVES', level: 2 },
+  { id: '6688149015', name: 'INDUSTRIAL CONTROL', level: 1 },
+  { id: '2242359015', name: '  └ CONTROL RELAYS', level: 2 },
+  { id: '4173756015', name: '  └ E-STOP SWITCHES', level: 2 },
+  { id: '4173745015', name: '  └ LIMIT SWITCHES', level: 2 },
+  { id: '2464037015', name: '  └ MACHINE SAFETY', level: 2 },
+  { id: '2348910015', name: '  └ MOTOR CONTROLS', level: 2 },
+  { id: '5634088015', name: '  └ PANEL METERS', level: 2 },
+  { id: '2464042015', name: '  └ PILOT LIGHTS', level: 2 },
+  { id: '18373798', name: '  └ TIMERS', level: 2 },
+  { id: '20030375015', name: 'LIGHTING BALLASTS', level: 1 },
+  { id: '5384029015', name: 'MACHINERY', level: 1 },
+  { id: '2348909015', name: 'MATERIAL HANDLING', level: 1 },
+  { id: '23399313015', name: 'MISCELLANEOUS', level: 1 },
+  { id: '6686262015', name: 'MOTION CONTROL', level: 1 },
+  { id: '1802953015', name: '  └ ENCODERS', level: 2 },
+  { id: '393390015', name: '  └ SERVO DRIVES', level: 2 },
+  { id: '6689961015', name: 'PNEUMATICS', level: 1 },
+  { id: '2461878015', name: '  └ ACTUATORS', level: 2 },
+  { id: '2461873015', name: '  └ CYLINDERS', level: 2 },
+  { id: '2461877015', name: '  └ DRYERS', level: 2 },
+  { id: '2461880015', name: '  └ FILTERS', level: 2 },
+  { id: '6699359015', name: '  └ GRIPPER', level: 2 },
+  { id: '2461874015', name: '  └ VALVES', level: 2 },
+  { id: '2461879015', name: '  └ REGULATORS', level: 2 },
+  { id: '17167471', name: 'MOTORS', level: 1 },
+  { id: '393389015', name: '  └ SERVO MOTORS', level: 2 },
+  { id: '6686267015', name: 'SENSING DEVICES', level: 1 },
+  { id: '6690176015', name: '  └ BARCODE SCANNERS', level: 2 },
+  { id: '5785856015', name: '  └ FIBER OPTIC SENSORS', level: 2 },
+  { id: '2479732015', name: '  └ LASER SENSORS', level: 2 },
+  { id: '393379015', name: '  └ LIGHT CURTAINS', level: 2 },
+  { id: '4173793015', name: '  └ PHOTOELECTRIC SENSORS', level: 2 },
+  { id: '6690386015', name: '  └ PRESSURE SENSORS', level: 2 },
+  { id: '4173791015', name: '  └ PROXIMITY SENSORS', level: 2 },
+  { id: '6690556015', name: '  └ TEMPERATURE SENSORS', level: 2 },
+  { id: '6686272015', name: 'SPEED CONTROLS', level: 1 },
+  { id: '2242358015', name: '  └ AC DRIVE', level: 2 },
+  { id: '6688299015', name: '  └ DC DRIVE', level: 2 },
+  { id: '6690464015', name: 'VALVES', level: 1 },
+  { id: '6690466015', name: '  └ BALL VALVES', level: 2 },
+  { id: '6690465015', name: '  └ BUTTERFLY VALVES', level: 2 },
+  { id: '6690467015', name: '  └ CHECK VALVES', level: 2 },
+  { id: '6690468015', name: '  └ SOLENOID VALVES', level: 2 }
+];
+
+// Spec field labels
 const SPEC_LABELS = {
-  voltage: 'Voltage',
-  amperage: 'Amperage',
-  horsepower: 'Horsepower',
-  rpm: 'RPM',
-  frame_size: 'Frame Size',
-  nema_frame_suffix: 'NEMA Frame Suffix',
-  nema_design: 'NEMA Design',
-  service_factor: 'Service Factor',
-  phase: 'Phase',
-  frequency: 'Frequency',
-  enclosure: 'Enclosure Type',
-  insulation_class: 'Insulation Class',
-  motor_type: 'Motor Type',
-  sensing_range: 'Sensing Range',
-  output_type: 'Output Type',
-  bore_diameter: 'Bore Diameter',
-  stroke_length: 'Stroke Length',
-  port_size: 'Port Size',
-  max_pressure: 'Max Pressure',
-  coil_voltage: 'Coil Voltage',
-  contact_rating: 'Contact Rating',
-  number_of_poles: 'Number of Poles',
-  communication_protocol: 'Communication Protocol',
-  input_voltage: 'Input Voltage',
-  output_voltage: 'Output Voltage',
-  kw_rating: 'kW Rating',
-  ip_rating: 'IP Rating',
-  mounting_type: 'Mounting Type',
-  weight: 'Weight'
+  voltage: 'Voltage', amperage: 'Amperage', horsepower: 'Horsepower', rpm: 'RPM',
+  frame_size: 'Frame Size', nema_frame_suffix: 'NEMA Frame Suffix', nema_design: 'NEMA Design',
+  service_factor: 'Service Factor', phase: 'Phase', frequency: 'Frequency',
+  enclosure: 'Enclosure Type', insulation_class: 'Insulation Class', motor_type: 'Motor Type',
+  sensing_range: 'Sensing Range', output_type: 'Output Type', bore_diameter: 'Bore Diameter',
+  stroke_length: 'Stroke Length', port_size: 'Port Size', max_pressure: 'Max Pressure',
+  coil_voltage: 'Coil Voltage', contact_rating: 'Contact Rating', number_of_poles: 'Number of Poles',
+  communication_protocol: 'Communication', input_voltage: 'Input Voltage',
+  output_voltage: 'Output Voltage', kw_rating: 'kW Rating', ip_rating: 'IP Rating',
+  mounting_type: 'Mounting Type', weight: 'Weight'
 };
 
 export default function ProListingBuilder() {
@@ -115,20 +178,15 @@ export default function ProListingBuilder() {
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-          canvas.width = width;
-          canvas.height = height;
+          let width = img.width, height = img.height;
+          if (width > maxWidth) { height = (height * maxWidth) / width; width = maxWidth; }
+          canvas.width = width; canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
           canvas.toBlob((blob) => {
-            const compressedReader = new FileReader();
-            compressedReader.readAsDataURL(blob);
-            compressedReader.onloadend = () => resolve(compressedReader.result.split(',')[1]);
+            const r = new FileReader();
+            r.readAsDataURL(blob);
+            r.onloadend = () => resolve(r.result.split(',')[1]);
           }, 'image/jpeg', quality);
         };
         img.onerror = reject;
@@ -152,14 +210,12 @@ export default function ProListingBuilder() {
       const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
       const brandMatch = text.match(/BRAND:\s*([^\|]+)/i);
       const partMatch = text.match(/PART:\s*(.+)/i);
-      let brand = brandMatch?.[1]?.trim() || '';
-      let part = partMatch?.[1]?.trim() || '';
-      if (brand && part) {
-        addToQueueWithValues(brand, part);
+      if (brandMatch && partMatch) {
+        addToQueueWithValues(brandMatch[1].trim(), partMatch[1].trim());
       } else {
         alert('Could not extract info. Please enter manually.');
-        setBrandName(brand);
-        setPartNumber(part);
+        setBrandName(brandMatch?.[1]?.trim() || '');
+        setPartNumber(partMatch?.[1]?.trim() || '');
       }
     } catch (error) {
       console.error('Image error:', error);
@@ -169,76 +225,39 @@ export default function ProListingBuilder() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Generate keywords from product data
   const generateKeywords = (item) => {
     const keywords = new Set();
-    
-    // Add brand and part number
     if (item.brand) keywords.add(item.brand.toLowerCase());
     if (item.partNumber) keywords.add(item.partNumber.toLowerCase());
-    
-    // Add category-based keywords
+    if (item.model && item.model !== item.partNumber) keywords.add(item.model.toLowerCase());
     if (item.productCategory) {
       keywords.add(item.productCategory.toLowerCase());
-      // Add variations
-      if (item.productCategory === 'Electric Motors') {
-        keywords.add('motor');
-        keywords.add('electric motor');
-        keywords.add('industrial motor');
-      } else if (item.productCategory === 'VFDs') {
-        keywords.add('vfd');
-        keywords.add('variable frequency drive');
-        keywords.add('ac drive');
-      } else if (item.productCategory === 'PLCs') {
-        keywords.add('plc');
-        keywords.add('programmable logic controller');
-      }
+      const catWords = item.productCategory.toLowerCase().split(' ');
+      catWords.forEach(w => keywords.add(w));
     }
-    
-    // Add spec-based keywords
     if (item.specifications) {
-      if (item.specifications.horsepower) keywords.add(item.specifications.horsepower.toLowerCase());
-      if (item.specifications.voltage) keywords.add(item.specifications.voltage.toLowerCase());
-      if (item.specifications.phase) keywords.add(item.specifications.phase.toLowerCase());
-      if (item.specifications.frame_size) keywords.add(item.specifications.frame_size.toLowerCase());
+      Object.values(item.specifications).forEach(v => {
+        if (v && typeof v === 'string' && v.length < 30) keywords.add(v.toLowerCase());
+      });
     }
-    
-    return Array.from(keywords).join(', ');
+    return Array.from(keywords).slice(0, 20).join(', ');
   };
 
   const addToQueueWithValues = async (brand, part) => {
-    if (!brand.trim() || !part.trim()) {
-      alert('Enter brand and part number');
-      return;
-    }
+    if (!brand.trim() || !part.trim()) return alert('Enter brand and part number');
     try {
       const docRef = await addDoc(collection(db, 'products'), {
-        brand: brand.trim(),
-        partNumber: part.trim(),
-        status: 'pending',
-        createdBy: userName || 'Unknown',
-        createdAt: serverTimestamp(),
-        title: '',
-        productCategory: '',
-        shortDescription: '',
-        description: '',
-        specifications: {},
-        rawSpecifications: [],
-        condition: 'used_good',
-        conditionNotes: CONDITION_NOTES['used_good'],
-        price: '',
-        shelf: '',
-        boxLength: '',
-        boxWidth: '',
-        boxHeight: '',
-        weight: '',
-        qualityFlag: '',
-        ebayCategoryId: '',
-        ebayStoreCategoryId: '',
-        bigcommerceCategoryId: ''
+        brand: brand.trim(), partNumber: part.trim(), model: part.trim(),
+        status: 'pending', createdBy: userName || 'Unknown', createdAt: serverTimestamp(),
+        title: '', productCategory: '', shortDescription: '', description: '',
+        specifications: {}, rawSpecifications: [],
+        condition: 'used_good', conditionNotes: CONDITION_NOTES['used_good'],
+        price: '', quantity: '1', shelf: '',
+        boxLength: '', boxWidth: '', boxHeight: '', weight: '',
+        qualityFlag: '', ebayCategoryId: '', ebayStoreCategoryId: '', ebayStoreCategoryId2: '',
+        bigcommerceCategoryId: '', ebayShippingProfileId: '69077991015'
       });
-      setBrandName('');
-      setPartNumber('');
+      setBrandName(''); setPartNumber('');
       setSelectedItem(docRef.id);
       setTimeout(() => processItemById(docRef.id, brand.trim(), part.trim()), 1000);
     } catch (error) {
@@ -258,21 +277,16 @@ export default function ProListingBuilder() {
 
     try {
       await updateDoc(doc(db, 'products', itemId), { status: 'searching' });
-      
       const response = await fetch('/api/search-product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brand: item.brand, partNumber: item.partNumber })
       });
-
       if (!response.ok) throw new Error(`API returned ${response.status}`);
-
       const data = await response.json();
       const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
       const jsonMatch = text.match(/\{[\s\S]*\}/);
-      
       if (!jsonMatch) throw new Error('No product data found');
-
       const product = JSON.parse(jsonMatch[0]);
       
       await updateDoc(doc(db, 'products', itemId), {
@@ -288,13 +302,9 @@ export default function ProListingBuilder() {
         ebayStoreCategoryId: product.ebayStoreCategoryId || '',
         bigcommerceCategoryId: product.bigcommerceCategoryId || ''
       });
-      
     } catch (error) {
       console.error('Processing error:', error);
-      await updateDoc(doc(db, 'products', itemId), {
-        status: 'error',
-        error: error.message
-      });
+      await updateDoc(doc(db, 'products', itemId), { status: 'error', error: error.message });
     }
   };
 
@@ -304,11 +314,8 @@ export default function ProListingBuilder() {
   };
 
   const updateField = async (itemId, field, value) => {
-    try {
-      await updateDoc(doc(db, 'products', itemId), { [field]: value });
-    } catch (error) {
-      console.error('Error updating field:', error);
-    }
+    try { await updateDoc(doc(db, 'products', itemId), { [field]: value }); }
+    catch (error) { console.error('Error updating field:', error); }
   };
 
   const updateSpecification = async (itemId, specKey, value) => {
@@ -324,18 +331,14 @@ export default function ProListingBuilder() {
         condition: conditionValue,
         conditionNotes: CONDITION_NOTES[conditionValue]
       });
-    } catch (error) {
-      console.error('Error updating condition:', error);
-    }
+    } catch (error) { console.error('Error updating condition:', error); }
   };
 
   const deleteItem = async (itemId) => {
     try {
       await deleteDoc(doc(db, 'products', itemId));
       if (selectedItem === itemId) setSelectedItem(null);
-    } catch (error) {
-      console.error('Error deleting item:', error);
-    }
+    } catch (error) { console.error('Error deleting item:', error); }
   };
 
   const sendToSureDone = async (itemId) => {
@@ -346,50 +349,33 @@ export default function ProListingBuilder() {
     setIsSending(true);
     try {
       const conditionOption = CONDITION_OPTIONS.find(c => c.value === item.condition);
-      
-      // Generate keywords from the item data
       const keywords = generateKeywords(item);
       
       const productData = {
-        // Core fields
         title: item.title,
         description: item.description || '',
         shortDescription: item.shortDescription || '',
         price: item.price || '0.00',
-        stock: 1,
+        stock: item.quantity || '1',
         brand: item.brand,
         partNumber: item.partNumber,
-        
-        // Category
+        model: item.model || item.partNumber,
         productCategory: item.productCategory || '',
-        
-        // Condition
         condition: conditionOption?.label || 'Used - Good',
         conditionNotes: item.conditionNotes || '',
-        
-        // Specifications - structured object
         specifications: item.specifications || {},
-        
-        // Raw specs for custom fields
         rawSpecifications: item.rawSpecifications || [],
-        
-        // Meta/SEO fields
-        metaDescription: item.shortDescription || '',
         metaKeywords: keywords,
-        
-        // Dimensions (only if provided)
         ...(item.boxLength && { boxLength: item.boxLength }),
         ...(item.boxWidth && { boxWidth: item.boxWidth }),
         ...(item.boxHeight && { boxHeight: item.boxHeight }),
         ...(item.weight && { weight: item.weight }),
-        
-        // Shelf location
         ...(item.shelf && { shelfLocation: item.shelf }),
-        
-        // Category IDs
         ebayCategoryId: item.ebayCategoryId || '',
         ebayStoreCategoryId: item.ebayStoreCategoryId || '',
-        bigcommerceCategoryId: item.bigcommerceCategoryId || ''
+        ebayStoreCategoryId2: item.ebayStoreCategoryId2 || '',
+        bigcommerceCategoryId: item.bigcommerceCategoryId || '',
+        ebayShippingProfileId: item.ebayShippingProfileId || '69077991015'
       };
       
       console.log('Sending to SureDone:', productData);
@@ -401,13 +387,8 @@ export default function ProListingBuilder() {
       });
 
       const responseData = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to create listing');
-      }
-
+      if (!response.ok) throw new Error(responseData.error || 'Failed to create listing');
       alert(`✅ Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
-      
     } catch (error) {
       console.error('SureDone error:', error);
       alert(`❌ Error: ${error.message}`);
@@ -429,15 +410,12 @@ export default function ProListingBuilder() {
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
           <h1 className="text-2xl font-bold mb-4">Pro Listing Builder</h1>
           <p className="text-gray-600 mb-6">Enter your name to begin</p>
-          <input
-            type="text"
-            placeholder="Your Name"
-            value={userName}
+          <input type="text" placeholder="Your Name" value={userName}
             onChange={e => setUserName(e.target.value)}
             onKeyPress={e => e.key === 'Enter' && userName.trim() && setIsNameSet(true)}
-            className="w-full px-4 py-3 border rounded-lg mb-4"
-          />
-          <button onClick={() => userName.trim() && setIsNameSet(true)} disabled={!userName.trim()} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            className="w-full px-4 py-3 border rounded-lg mb-4" />
+          <button onClick={() => userName.trim() && setIsNameSet(true)} disabled={!userName.trim()}
+            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
             Start
           </button>
         </div>
@@ -476,13 +454,11 @@ export default function ProListingBuilder() {
             <div className="flex gap-2 mb-2">
               <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageUpload} className="hidden" id="cam" />
               <label htmlFor="cam" className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer flex items-center justify-center gap-2 text-sm">
-                <Camera className="w-4 h-4" />
-                {isProcessingImage ? '...' : 'Camera'}
+                <Camera className="w-4 h-4" />{isProcessingImage ? '...' : 'Camera'}
               </label>
               <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="upload" />
               <label htmlFor="upload" className="flex-1 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 cursor-pointer flex items-center justify-center gap-2 text-sm">
-                <Upload className="w-4 h-4" />
-                Upload
+                <Upload className="w-4 h-4" />Upload
               </label>
             </div>
             <input type="text" placeholder="Brand" value={brandName} onChange={e => setBrandName(e.target.value)} className="w-full px-3 py-2 border rounded-lg mb-2 text-sm" />
@@ -491,7 +467,6 @@ export default function ProListingBuilder() {
               <Plus className="w-4 h-4 inline mr-1" /> Add
             </button>
           </div>
-
           <div className="p-2">
             <h3 className="text-sm font-semibold text-gray-600 mb-2 px-2">Queue ({queue.length})</h3>
             {queue.map(item => (
@@ -505,9 +480,7 @@ export default function ProListingBuilder() {
                       <span className="text-sm font-semibold text-gray-800 truncate">{item.brand}</span>
                     </div>
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
-                    {item.productCategory && (
-                      <p className="text-xs text-blue-600 mt-1">{item.productCategory}</p>
-                    )}
+                    {item.productCategory && <p className="text-xs text-blue-600 mt-1">{item.productCategory}</p>}
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-1 rounded ml-2">
                     <X className="w-4 h-4" />
@@ -525,7 +498,7 @@ export default function ProListingBuilder() {
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h2 className="text-2xl font-bold">{selected.brand} {selected.partNumber}</h2>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className={`text-sm px-2 py-1 rounded ${selected.status === 'complete' ? 'bg-green-100 text-green-700' : selected.status === 'error' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                       {selected.status}
                     </span>
@@ -534,11 +507,7 @@ export default function ProListingBuilder() {
                         {selected.qualityFlag}
                       </span>
                     )}
-                    {selected.productCategory && (
-                      <span className="text-sm px-2 py-1 rounded bg-blue-100 text-blue-700">
-                        {selected.productCategory}
-                      </span>
-                    )}
+                    {selected.productCategory && <span className="text-sm px-2 py-1 rounded bg-blue-100 text-blue-700">{selected.productCategory}</span>}
                   </div>
                 </div>
                 <button onClick={() => processItem(selected.id)} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm flex items-center gap-1">
@@ -554,7 +523,19 @@ export default function ProListingBuilder() {
                     <input type="text" value={selected.title || ''} onChange={e => updateField(selected.id, 'title', e.target.value.slice(0, 80))} className="w-full px-3 py-2 border rounded-lg" maxLength={80} />
                   </div>
 
-                  {/* Category Override */}
+                  {/* MPN and Model */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">MPN (Full Part Number)</label>
+                      <input type="text" value={selected.partNumber || ''} onChange={e => updateField(selected.id, 'partNumber', e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Model (Base/Series)</label>
+                      <input type="text" value={selected.model || ''} onChange={e => updateField(selected.id, 'model', e.target.value)} className="w-full px-3 py-2 border rounded-lg" placeholder="Same as MPN if identical" />
+                    </div>
+                  </div>
+
+                  {/* Category */}
                   <div>
                     <label className="block text-sm font-semibold mb-2">Product Category</label>
                     <select value={selected.productCategory || ''} onChange={e => updateField(selected.id, 'productCategory', e.target.value)} className="w-full px-3 py-2 border rounded-lg">
@@ -563,35 +544,44 @@ export default function ProListingBuilder() {
                     </select>
                   </div>
 
-                  {/* Structured Specifications */}
+                  {/* eBay Store Categories */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">eBay Store Category 1</label>
+                      <select value={selected.ebayStoreCategoryId || ''} onChange={e => updateField(selected.id, 'ebayStoreCategoryId', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm">
+                        <option value="">Select...</option>
+                        {EBAY_STORE_CATEGORIES.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">eBay Store Category 2</label>
+                      <select value={selected.ebayStoreCategoryId2 || ''} onChange={e => updateField(selected.id, 'ebayStoreCategoryId2', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm">
+                        <option value="">Select...</option>
+                        {EBAY_STORE_CATEGORIES.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Specifications */}
                   <div className="border rounded-lg overflow-hidden">
-                    <button 
-                      onClick={() => setShowSpecs(!showSpecs)}
-                      className="w-full px-4 py-3 bg-blue-50 flex justify-between items-center hover:bg-blue-100 transition"
-                    >
+                    <button onClick={() => setShowSpecs(!showSpecs)} className="w-full px-4 py-3 bg-blue-50 flex justify-between items-center hover:bg-blue-100 transition">
                       <span className="font-semibold text-blue-800">📋 Specifications ({Object.keys(selected.specifications || {}).length} fields)</span>
                       {showSpecs ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </button>
-                    
                     {showSpecs && selected.specifications && Object.keys(selected.specifications).length > 0 && (
                       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         {Object.entries(selected.specifications).map(([key, value]) => (
                           <div key={key} className="flex flex-col">
-                            <label className="text-xs font-medium text-gray-600 mb-1">
-                              {SPEC_LABELS[key] || key}
-                            </label>
-                            <input
-                              type="text"
-                              value={value || ''}
-                              onChange={e => updateSpecification(selected.id, key, e.target.value)}
-                              className="px-3 py-2 border rounded-lg text-sm"
-                              placeholder={`Enter ${SPEC_LABELS[key] || key}`}
-                            />
+                            <label className="text-xs font-medium text-gray-600 mb-1">{SPEC_LABELS[key] || key}</label>
+                            <input type="text" value={value || ''} onChange={e => updateSpecification(selected.id, key, e.target.value)} className="px-3 py-2 border rounded-lg text-sm" />
                           </div>
                         ))}
                       </div>
                     )}
-                    
                     {showSpecs && (!selected.specifications || Object.keys(selected.specifications).length === 0) && (
                       <div className="p-4 text-gray-500 text-sm">No specifications found</div>
                     )}
@@ -600,11 +590,7 @@ export default function ProListingBuilder() {
                   {/* Description */}
                   <div>
                     <label className="block text-sm font-semibold mb-2">Description</label>
-                    <textarea 
-                      value={selected.description || ''} 
-                      onChange={e => updateField(selected.id, 'description', e.target.value)} 
-                      className="w-full px-3 py-2 border rounded-lg h-40 font-mono text-sm" 
-                    />
+                    <textarea value={selected.description || ''} onChange={e => updateField(selected.id, 'description', e.target.value)} className="w-full px-3 py-2 border rounded-lg h-40 font-mono text-sm" />
                     {selected.description?.includes('<') && (
                       <div className="mt-2 p-3 bg-gray-50 border rounded-lg">
                         <p className="text-xs font-semibold text-gray-600 mb-2">Preview:</p>
@@ -613,15 +599,10 @@ export default function ProListingBuilder() {
                     )}
                   </div>
 
-                  {/* Short Description / Meta */}
+                  {/* Short Description */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Short Description / Meta ({selected.shortDescription?.length || 0}/160)</label>
-                    <textarea 
-                      value={selected.shortDescription || ''} 
-                      onChange={e => updateField(selected.id, 'shortDescription', e.target.value.slice(0, 160))} 
-                      className="w-full px-3 py-2 border rounded-lg h-20 text-sm" 
-                      maxLength={160}
-                    />
+                    <label className="block text-sm font-semibold mb-2">Meta Description ({selected.shortDescription?.length || 0}/160)</label>
+                    <textarea value={selected.shortDescription || ''} onChange={e => updateField(selected.id, 'shortDescription', e.target.value.slice(0, 160))} className="w-full px-3 py-2 border rounded-lg h-20 text-sm" maxLength={160} />
                   </div>
 
                   {/* Condition */}
@@ -633,8 +614,16 @@ export default function ProListingBuilder() {
                     <p className="text-xs text-gray-600 mt-2 p-2 bg-gray-50 rounded">{selected.conditionNotes}</p>
                   </div>
 
-                  {/* Dimensions */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* Shipping Profile */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Shipping Profile</label>
+                    <select value={selected.ebayShippingProfileId || '69077991015'} onChange={e => updateField(selected.id, 'ebayShippingProfileId', e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+                      {SHIPPING_PROFILES.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Dimensions & Quantity */}
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div>
                       <label className="block text-xs font-semibold mb-1">Length (in)</label>
                       <input type="text" value={selected.boxLength || ''} onChange={e => updateField(selected.id, 'boxLength', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
@@ -651,6 +640,10 @@ export default function ProListingBuilder() {
                       <label className="block text-xs font-semibold mb-1">Weight (lbs)</label>
                       <input type="text" value={selected.weight || ''} onChange={e => updateField(selected.id, 'weight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">Quantity</label>
+                      <input type="number" min="1" value={selected.quantity || '1'} onChange={e => updateField(selected.id, 'quantity', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    </div>
                   </div>
 
                   {/* Price & Shelf */}
@@ -666,16 +659,9 @@ export default function ProListingBuilder() {
                   </div>
 
                   {/* Send Button */}
-                  <button 
-                    onClick={() => sendToSureDone(selected.id)} 
-                    disabled={isSending || !selected.title || !selected.price}
-                    className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isSending ? (
-                      <><Loader className="w-5 h-5 animate-spin" /> Sending...</>
-                    ) : (
-                      '🚀 Send to SureDone'
-                    )}
+                  <button onClick={() => sendToSureDone(selected.id)} disabled={isSending || !selected.title || !selected.price}
+                    className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    {isSending ? <><Loader className="w-5 h-5 animate-spin" /> Sending...</> : '🚀 Send to SureDone'}
                   </button>
                 </div>
               )}
@@ -693,9 +679,7 @@ export default function ProListingBuilder() {
                   <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                   <p className="text-red-600 font-semibold text-lg">Error Processing Item</p>
                   <p className="text-red-500 mt-2">{selected.error}</p>
-                  <button onClick={() => processItem(selected.id)} className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    🔄 Retry
-                  </button>
+                  <button onClick={() => processItem(selected.id)} className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">🔄 Retry</button>
                 </div>
               )}
             </div>

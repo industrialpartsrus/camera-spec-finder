@@ -1,7 +1,10 @@
 // pages/api/suredone-create-listing.js
-// Updated to properly map master fields to eBay item specifics and SureDone fields
+// Comprehensive SureDone integration with all eBay item specifics and BigCommerce fields
 
-import { MASTER_FIELDS, CATEGORY_CONFIG, mapToEbayFields, getEbayFieldName } from '../../data/master-fields';
+import { MASTER_FIELDS, CATEGORY_CONFIG, getEbayFieldName } from '../../data/master-fields';
+
+// 30-day warranty text
+const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -72,10 +75,16 @@ export default async function handler(req, res) {
     formData.append('price', product.price || '0.00');
     formData.append('stock', product.stock || '1');
     formData.append('brand', product.brand);
+    
+    // === MPN AND MODEL ===
+    // MPN = full part number, Model = base/series number (if different)
     formData.append('mpn', product.partNumber);
+    formData.append('model', product.model || product.partNumber); // Use model if provided, otherwise same as MPN
+    formData.append('partnumber', product.partNumber); // Also fill partnumber field
     
     // === CONDITION ===
     let suredoneCondition = 'Used';
+    let isForParts = false;
     if (product.condition) {
       const condLower = product.condition.toLowerCase();
       if (condLower.includes('new in box') || condLower.includes('nib')) {
@@ -86,6 +95,7 @@ export default async function handler(req, res) {
         suredoneCondition = 'Manufacturer Refurbished';
       } else if (condLower.includes('parts') || condLower.includes('not working')) {
         suredoneCondition = 'For Parts or Not Working';
+        isForParts = true;
       }
     }
     formData.append('condition', suredoneCondition);
@@ -103,18 +113,27 @@ export default async function handler(req, res) {
     // === SHELF LOCATION ===
     if (product.shelfLocation) formData.append('shelf', product.shelfLocation);
     
-    // === META ===
-    if (product.metaDescription || product.shortDescription) {
-      formData.append('bigcommercemetadescription', product.metaDescription || product.shortDescription);
+    // === BIGCOMMERCE REQUIRED FIELDS ===
+    formData.append('bigcommerceisconditionshown', 'on');
+    formData.append('bigcommerceavailabilitydescription', 'In Stock');
+    formData.append('bigcommercerelatedproducts', '-1'); // Show related items
+    formData.append('bigcommercewarranty', WARRANTY_TEXT);
+    formData.append('bigcommerceisvisible', 'true');
+    
+    // === META / SEO FIELDS ===
+    // Short description for meta
+    if (product.shortDescription) {
+      formData.append('bigcommercemetadescription', product.shortDescription);
     }
+    
+    // Keywords - populate BOTH fields
     if (product.metaKeywords) {
-      formData.append('bigcommercesearchkeywords', 
-        Array.isArray(product.metaKeywords) ? product.metaKeywords.join(', ') : product.metaKeywords
-      );
+      const keywords = Array.isArray(product.metaKeywords) ? product.metaKeywords.join(', ') : product.metaKeywords;
+      formData.append('bigcommercesearchkeywords', keywords);
+      formData.append('bigcommercemetakeywords', keywords);
     }
     
     // === CATEGORIES ===
-    // Get category config
     const productCategory = product.productCategory || 'Unknown';
     const categoryConfig = CATEGORY_CONFIG[productCategory];
     
@@ -123,7 +142,7 @@ export default async function handler(req, res) {
       if (categoryConfig.ebayCategoryId) {
         formData.append('ebaycatid', categoryConfig.ebayCategoryId);
       }
-      // eBay store categories
+      // eBay store category 1
       if (categoryConfig.ebayStoreCategoryId) {
         formData.append('ebaystoreid', categoryConfig.ebayStoreCategoryId);
       }
@@ -139,16 +158,21 @@ export default async function handler(req, res) {
     if (product.ebayStoreCategoryId2) formData.append('ebaystoreid2', product.ebayStoreCategoryId2);
     if (product.bigcommerceCategoryId) formData.append('bigcommercecategories', product.bigcommerceCategoryId);
     
-    // === EBAY SHIPPING/RETURN PROFILES ===
-    // Default profiles - can be overridden
-    formData.append('ebayshippingprofileid', product.ebayShippingProfileId || '69077991015'); // Small Package Shipping
-    formData.append('ebayreturnprofileid', product.ebayReturnProfileId || '61860297015');
+    // === EBAY SHIPPING PROFILE ===
+    formData.append('ebayshippingprofileid', product.ebayShippingProfileId || '69077991015'); // Default: Small Package Shipping
+    
+    // === EBAY RETURN POLICY ===
+    // Only add return policy if NOT "For Parts or Not Working"
+    if (!isForParts) {
+      formData.append('ebayreturnprofileid', product.ebayReturnProfileId || '61860297015'); // Returns Accepted, 30 Days
+    }
+    // For "For Parts" items, we don't set a return policy (or could set a "No Returns" policy if you have one)
     
     // === MAP MASTER SPECIFICATIONS TO EBAY ITEM SPECIFICS ===
     if (product.specifications && typeof product.specifications === 'object') {
       console.log('=== MAPPING SPECIFICATIONS ===');
       console.log('Product Category:', productCategory);
-      console.log('Raw specifications:', product.specifications);
+      console.log('Raw specifications:', JSON.stringify(product.specifications));
       
       for (const [masterField, value] of Object.entries(product.specifications)) {
         if (!value || value === 'null') continue;
@@ -164,7 +188,6 @@ export default async function handler(req, res) {
         }
         
         // Also store in generic SureDone fields for BigCommerce/other channels
-        // These use the simple field names from SureDone headers
         const genericFieldMappings = {
           'voltage': 'voltage',
           'amperage': 'amperage',
@@ -185,7 +208,11 @@ export default async function handler(req, res) {
           'number_of_poles': 'numberofpoles',
           'mounting_type': 'mountingtype',
           'enclosure': 'enclosuretype',
-          'ip_rating': 'iprating'
+          'ip_rating': 'iprating',
+          'service_factor': 'servicefactor',
+          'nema_design': 'nemadesignletter',
+          'insulation_class': 'insulationclass',
+          'motor_type': 'motortype'
         };
         
         if (genericFieldMappings[masterField]) {
@@ -194,11 +221,10 @@ export default async function handler(req, res) {
       }
     }
     
-    // === ALSO MAP RAW SPECIFICATIONS AS BACKUP ===
-    // This ensures we don't lose any data if the structured mapping misses something
+    // === RAW SPECIFICATIONS AS CUSTOM FIELDS (BACKUP) ===
     if (product.rawSpecifications && Array.isArray(product.rawSpecifications)) {
       product.rawSpecifications.forEach((spec, index) => {
-        if (index < 20) { // SureDone supports customfield1-20
+        if (index < 20) {
           formData.append(`customfield${index + 1}`, spec);
         }
       });
