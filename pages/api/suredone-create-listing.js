@@ -1,10 +1,68 @@
 // pages/api/suredone-create-listing.js
-// Comprehensive SureDone integration with all eBay item specifics and BigCommerce fields
+// Comprehensive SureDone integration with UPC assignment, BigCommerce fields, and brand matching
 
 import { MASTER_FIELDS, CATEGORY_CONFIG, getEbayFieldName } from '../../data/master-fields';
+import bigcommerceBrands from '../../data/bigcommerce_brands.json';
+import upcPool from '../../data/upc_pool.json';
 
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
+
+// Track assigned UPCs in memory (in production, use database)
+let assignedUPCIndex = 0;
+
+// Find BigCommerce brand ID by brand name
+function getBigCommerceBrandId(brandName) {
+  if (!brandName) return null;
+  
+  const brandLower = brandName.toLowerCase().trim();
+  
+  // Direct match
+  if (bigcommerceBrands[brandLower]) {
+    return bigcommerceBrands[brandLower].id;
+  }
+  
+  // Fuzzy match - check if brand contains or is contained in any key
+  for (const [key, value] of Object.entries(bigcommerceBrands)) {
+    if (key.includes(brandLower) || brandLower.includes(key)) {
+      return value.id;
+    }
+  }
+  
+  // Try without special characters
+  const brandClean = brandLower.replace(/[^a-z0-9]/g, '');
+  for (const [key, value] of Object.entries(bigcommerceBrands)) {
+    const keyClean = key.replace(/[^a-z0-9]/g, '');
+    if (keyClean === brandClean) {
+      return value.id;
+    }
+  }
+  
+  return null;
+}
+
+// Get next available UPC from pool
+function getNextUPC() {
+  // Find UPCs where sku is null (unassigned)
+  const availableUPCs = upcPool.filter(u => !u.sku);
+  
+  if (availableUPCs.length === 0) {
+    return { upc: null, remaining: 0, warning: 'No UPCs available! Please upload more.' };
+  }
+  
+  // Get the next one
+  const nextUPC = availableUPCs[assignedUPCIndex % availableUPCs.length];
+  assignedUPCIndex++;
+  
+  const remaining = availableUPCs.length - 1;
+  const warning = remaining < 100 ? `Low UPC count: ${remaining} remaining. Please upload more soon.` : null;
+  
+  return { 
+    upc: nextUPC.upc, 
+    remaining,
+    warning 
+  };
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -30,7 +88,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Generate SKU
+    // === GENERATE SKU ===
     let aiNumber = 1;
     try {
       const searchResponse = await fetch(`${SUREDONE_URL}/editor/items?search=sku:AI`, {
@@ -63,6 +121,9 @@ export default async function handler(req, res) {
     
     const sku = `AI${String(aiNumber).padStart(4, '0')}`;
     
+    // === GET UPC ===
+    const upcResult = getNextUPC();
+    
     // Build form data
     const formData = new URLSearchParams();
     
@@ -76,11 +137,15 @@ export default async function handler(req, res) {
     formData.append('stock', product.stock || '1');
     formData.append('brand', product.brand);
     
-    // === MPN AND MODEL ===
-    // MPN = full part number, Model = base/series number (if different)
+    // === UPC ===
+    if (upcResult.upc) {
+      formData.append('upc', upcResult.upc);
+    }
+    
+    // === MPN, MODEL, PARTNUMBER ===
     formData.append('mpn', product.partNumber);
-    formData.append('model', product.model || product.partNumber); // Use model if provided, otherwise same as MPN
-    formData.append('partnumber', product.partNumber); // Also fill partnumber field
+    formData.append('model', product.model || product.partNumber);
+    formData.append('partnumber', product.partNumber);
     
     // === CONDITION ===
     let suredoneCondition = 'Used';
@@ -111,17 +176,35 @@ export default async function handler(req, res) {
     if (product.weight) formData.append('weight', product.weight);
     
     // === SHELF LOCATION ===
-    if (product.shelfLocation) formData.append('shelf', product.shelfLocation);
+    if (product.shelfLocation) {
+      formData.append('shelf', product.shelfLocation);
+    }
     
     // === BIGCOMMERCE REQUIRED FIELDS ===
     formData.append('bigcommerceisconditionshown', 'on');
     formData.append('bigcommerceavailabilitydescription', 'In Stock');
-    formData.append('bigcommercerelatedproducts', '-1'); // Show related items
+    formData.append('bigcommercerelatedproducts', '-1');
     formData.append('bigcommercewarranty', WARRANTY_TEXT);
-    formData.append('bigcommerceisvisible', 'true');
+    formData.append('bigcommerceisvisible', 'on');
+    formData.append('bigcommercechannels', '1');
+    formData.append('bigcommercepagetitle', product.title);
+    formData.append('bigcommercempn', product.partNumber);
+    
+    // BigCommerce bin location = shelf
+    if (product.shelfLocation) {
+      formData.append('bigcommercebinpickingnumber', product.shelfLocation);
+    }
+    
+    // === BIGCOMMERCE BRAND ID ===
+    const bigcommerceBrandId = getBigCommerceBrandId(product.brand);
+    if (bigcommerceBrandId) {
+      formData.append('bigcommercebrandid', bigcommerceBrandId);
+      console.log(`Brand match: "${product.brand}" → ID ${bigcommerceBrandId}`);
+    } else {
+      console.log(`No brand match found for: "${product.brand}"`);
+    }
     
     // === META / SEO FIELDS ===
-    // Short description for meta
     if (product.shortDescription) {
       formData.append('bigcommercemetadescription', product.shortDescription);
     }
@@ -138,15 +221,12 @@ export default async function handler(req, res) {
     const categoryConfig = CATEGORY_CONFIG[productCategory];
     
     if (categoryConfig) {
-      // eBay category ID
       if (categoryConfig.ebayCategoryId) {
         formData.append('ebaycatid', categoryConfig.ebayCategoryId);
       }
-      // eBay store category 1
       if (categoryConfig.ebayStoreCategoryId) {
         formData.append('ebaystoreid', categoryConfig.ebayStoreCategoryId);
       }
-      // BigCommerce category
       if (categoryConfig.bigcommerceCategoryId) {
         formData.append('bigcommercecategories', categoryConfig.bigcommerceCategoryId.toString());
       }
@@ -159,35 +239,30 @@ export default async function handler(req, res) {
     if (product.bigcommerceCategoryId) formData.append('bigcommercecategories', product.bigcommerceCategoryId);
     
     // === EBAY SHIPPING PROFILE ===
-    formData.append('ebayshippingprofileid', product.ebayShippingProfileId || '69077991015'); // Default: Small Package Shipping
+    formData.append('ebayshippingprofileid', product.ebayShippingProfileId || '69077991015');
     
-    // === EBAY RETURN POLICY ===
-    // Only add return policy if NOT "For Parts or Not Working"
+    // === EBAY RETURN POLICY (not for "For Parts") ===
     if (!isForParts) {
-      formData.append('ebayreturnprofileid', product.ebayReturnProfileId || '61860297015'); // Returns Accepted, 30 Days
+      formData.append('ebayreturnprofileid', product.ebayReturnProfileId || '61860297015');
     }
-    // For "For Parts" items, we don't set a return policy (or could set a "No Returns" policy if you have one)
     
-    // === MAP MASTER SPECIFICATIONS TO EBAY ITEM SPECIFICS ===
+    // === MAP SPECIFICATIONS TO EBAY ITEM SPECIFICS ===
     if (product.specifications && typeof product.specifications === 'object') {
       console.log('=== MAPPING SPECIFICATIONS ===');
       console.log('Product Category:', productCategory);
-      console.log('Raw specifications:', JSON.stringify(product.specifications));
       
       for (const [masterField, value] of Object.entries(product.specifications)) {
         if (!value || value === 'null') continue;
         
-        // Get the eBay field name for this master field in this category
+        // Get the eBay field name for this category
         const ebayFieldName = getEbayFieldName(masterField, productCategory);
         
         if (ebayFieldName) {
           console.log(`Mapping: ${masterField} = "${value}" → ${ebayFieldName}`);
           formData.append(ebayFieldName, value);
-        } else {
-          console.log(`No eBay mapping for: ${masterField} in category ${productCategory}`);
         }
         
-        // Also store in generic SureDone fields for BigCommerce/other channels
+        // Also store in generic SureDone fields
         const genericFieldMappings = {
           'voltage': 'voltage',
           'amperage': 'amperage',
@@ -221,7 +296,7 @@ export default async function handler(req, res) {
       }
     }
     
-    // === RAW SPECIFICATIONS AS CUSTOM FIELDS (BACKUP) ===
+    // === RAW SPECIFICATIONS AS CUSTOM FIELDS ===
     if (product.rawSpecifications && Array.isArray(product.rawSpecifications)) {
       product.rawSpecifications.forEach((spec, index) => {
         if (index < 20) {
@@ -260,12 +335,21 @@ export default async function handler(req, res) {
     }
 
     if (data.result === 'success') {
-      res.status(200).json({ 
+      const responseObj = { 
         success: true, 
         message: 'Product created in SureDone',
         sku: data.sku || sku,
-        mappedFields: Object.fromEntries(formData.entries())
-      });
+        upc: upcResult.upc,
+        upcRemaining: upcResult.remaining,
+        bigcommerceBrandId: bigcommerceBrandId
+      };
+      
+      // Add warning if UPC is low
+      if (upcResult.warning) {
+        responseObj.warning = upcResult.warning;
+      }
+      
+      res.status(200).json(responseObj);
     } else {
       res.status(400).json({ 
         success: false, 
