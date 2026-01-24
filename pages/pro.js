@@ -6,13 +6,53 @@ import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Uplo
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
-// Product category options
+// Product category options (internal categories)
 const CATEGORY_OPTIONS = [
   'Electric Motors', 'Servo Motors', 'Servo Drives', 'VFDs', 'PLCs', 'HMIs',
-  'Proximity Sensors', 'Photoelectric Sensors', 'Light Curtains',
-  'Pneumatic Cylinders', 'Pneumatic Valves', 'Hydraulic Pumps', 'Hydraulic Valves',
-  'Circuit Breakers', 'Contactors', 'Safety Relays', 'Bearings'
+  'Power Supplies', 'I/O Modules',
+  'Proximity Sensors', 'Photoelectric Sensors', 'Light Curtains', 'Laser Sensors',
+  'Pressure Sensors', 'Temperature Sensors',
+  'Pneumatic Cylinders', 'Pneumatic Valves', 'Pneumatic Grippers',
+  'Hydraulic Pumps', 'Hydraulic Valves', 'Hydraulic Cylinders',
+  'Circuit Breakers', 'Contactors', 'Safety Relays', 'Control Relays',
+  'Bearings', 'Linear Bearings', 'Encoders', 'Gearboxes', 'Transformers',
+  'Industrial Gateways', 'Network Modules'
 ];
+
+// eBay MARKETPLACE Categories (main eBay listing categories - for display)
+const EBAY_MARKETPLACE_CATEGORIES = {
+  'Electric Motors': { id: '181732', path: 'Business & Industrial > Electric Motors' },
+  'Servo Motors': { id: '181732', path: 'Business & Industrial > Electric Motors' },
+  'Servo Drives': { id: '181737', path: 'Business & Industrial > Drives & Starters' },
+  'VFDs': { id: '181737', path: 'Business & Industrial > Drives & Starters' },
+  'PLCs': { id: '181739', path: 'Business & Industrial > PLCs & HMIs' },
+  'HMIs': { id: '181739', path: 'Business & Industrial > PLCs & HMIs' },
+  'Power Supplies': { id: '181738', path: 'Business & Industrial > Power Supplies' },
+  'I/O Modules': { id: '181739', path: 'Business & Industrial > PLCs & HMIs' },
+  'Proximity Sensors': { id: '181744', path: 'Business & Industrial > Sensors' },
+  'Photoelectric Sensors': { id: '181744', path: 'Business & Industrial > Sensors' },
+  'Light Curtains': { id: '181744', path: 'Business & Industrial > Sensors' },
+  'Laser Sensors': { id: '181744', path: 'Business & Industrial > Sensors' },
+  'Pressure Sensors': { id: '181744', path: 'Business & Industrial > Sensors' },
+  'Temperature Sensors': { id: '181744', path: 'Business & Industrial > Sensors' },
+  'Pneumatic Cylinders': { id: '181738', path: 'Business & Industrial > Pneumatics' },
+  'Pneumatic Valves': { id: '181738', path: 'Business & Industrial > Pneumatics' },
+  'Pneumatic Grippers': { id: '181738', path: 'Business & Industrial > Pneumatics' },
+  'Hydraulic Pumps': { id: '181738', path: 'Business & Industrial > Hydraulics' },
+  'Hydraulic Valves': { id: '181738', path: 'Business & Industrial > Hydraulics' },
+  'Hydraulic Cylinders': { id: '181738', path: 'Business & Industrial > Hydraulics' },
+  'Circuit Breakers': { id: '181738', path: 'Business & Industrial > Circuit Breakers' },
+  'Contactors': { id: '181738', path: 'Business & Industrial > Motor Starters' },
+  'Safety Relays': { id: '181739', path: 'Business & Industrial > Safety Equipment' },
+  'Control Relays': { id: '181738', path: 'Business & Industrial > Relays' },
+  'Bearings': { id: '181745', path: 'Business & Industrial > Bearings' },
+  'Linear Bearings': { id: '181745', path: 'Business & Industrial > Bearings' },
+  'Encoders': { id: '181737', path: 'Business & Industrial > Encoders' },
+  'Gearboxes': { id: '181732', path: 'Business & Industrial > Gearboxes' },
+  'Transformers': { id: '181738', path: 'Business & Industrial > Transformers' },
+  'Industrial Gateways': { id: '181739', path: 'Business & Industrial > Automation' },
+  'Network Modules': { id: '181739', path: 'Business & Industrial > Automation' }
+};
 
 // Condition options
 const CONDITION_OPTIONS = [
@@ -53,8 +93,10 @@ const SHIPPING_PROFILES = [
   { id: '161228820015', name: 'Local Pickup Only' }
 ];
 
-// eBay Store Categories (Level 1 only for main dropdown, all for secondary)
+// eBay Store Categories (YOUR store's categories)
+// ALL PRODUCTS at top for easy access
 const EBAY_STORE_CATEGORIES = [
+  { id: '23399313015', name: '★ ALL PRODUCTS', level: 1 },
   { id: '11495474015', name: 'ASSEMBLY TOOLS', level: 1 },
   { id: '5384028015', name: 'AUTOMATION CONTROL', level: 1 },
   { id: '6686264015', name: '  └ HMI', level: 2 },
@@ -98,7 +140,6 @@ const EBAY_STORE_CATEGORIES = [
   { id: '20030375015', name: 'LIGHTING BALLASTS', level: 1 },
   { id: '5384029015', name: 'MACHINERY', level: 1 },
   { id: '2348909015', name: 'MATERIAL HANDLING', level: 1 },
-  { id: '23399313015', name: 'ALL PRODUCTS', level: 1 },
   { id: '6686262015', name: 'MOTION CONTROL', level: 1 },
   { id: '1802953015', name: '  └ ENCODERS', level: 2 },
   { id: '393390015', name: '  └ SERVO DRIVES', level: 2 },
@@ -132,18 +173,28 @@ const EBAY_STORE_CATEGORIES = [
   { id: '6690468015', name: '  └ SOLENOID VALVES', level: 2 }
 ];
 
-// Spec field labels
+// Spec field labels (proper display names - includes lowercase variants)
 const SPEC_LABELS = {
   voltage: 'Voltage', amperage: 'Amperage', horsepower: 'Horsepower', rpm: 'RPM',
-  frame_size: 'Frame Size', nema_frame_suffix: 'NEMA Frame Suffix', nema_design: 'NEMA Design',
-  service_factor: 'Service Factor', phase: 'Phase', frequency: 'Frequency',
-  enclosure: 'Enclosure Type', insulation_class: 'Insulation Class', motor_type: 'Motor Type',
-  sensing_range: 'Sensing Range', output_type: 'Output Type', bore_diameter: 'Bore Diameter',
-  stroke_length: 'Stroke Length', port_size: 'Port Size', max_pressure: 'Max Pressure',
-  coil_voltage: 'Coil Voltage', contact_rating: 'Contact Rating', number_of_poles: 'Number of Poles',
-  communication_protocol: 'Communication', input_voltage: 'Input Voltage',
-  output_voltage: 'Output Voltage', kw_rating: 'kW Rating', ip_rating: 'IP Rating',
-  mounting_type: 'Mounting Type', weight: 'Weight'
+  frame_size: 'Frame Size', framesize: 'Frame Size',
+  nema_frame_suffix: 'NEMA Frame Suffix', nema_design: 'NEMA Design',
+  service_factor: 'Service Factor', servicefactor: 'Service Factor',
+  phase: 'Phase', frequency: 'Frequency',
+  enclosure: 'Enclosure Type', enclosure_type: 'Enclosure Type',
+  insulation_class: 'Insulation Class', insulationclass: 'Insulation Class',
+  motor_type: 'Motor Type',
+  sensing_range: 'Sensing Range', output_type: 'Output Type',
+  bore_diameter: 'Bore Diameter', stroke_length: 'Stroke Length',
+  port_size: 'Port Size', max_pressure: 'Max Pressure',
+  coil_voltage: 'Coil Voltage', contact_rating: 'Contact Rating',
+  number_of_poles: 'Number of Poles',
+  communication_protocol: 'Communication Protocol', communication: 'Communication Protocol',
+  input_voltage: 'Input Voltage', output_voltage: 'Output Voltage',
+  kw_rating: 'kW Rating', kw: 'kW Rating',
+  ip_rating: 'IP Rating', mounting_type: 'Mounting Type', weight: 'Weight',
+  current: 'Current', hp: 'Horsepower',
+  shaft_type: 'Shaft Type', shaft_diameter: 'Shaft Diameter',
+  efficiency: 'Efficiency', duty_cycle: 'Duty Cycle'
 };
 
 export default function ProListingBuilder() {
@@ -543,6 +594,12 @@ export default function ProListingBuilder() {
                       <option value="">Select category...</option>
                       {CATEGORY_OPTIONS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
+                    {/* Display eBay Marketplace Category Path */}
+                    {selected.productCategory && EBAY_MARKETPLACE_CATEGORIES[selected.productCategory] && (
+                      <p className="text-xs text-green-700 mt-2 p-2 bg-green-50 rounded border border-green-200">
+                        📦 <strong>eBay Category:</strong> {EBAY_MARKETPLACE_CATEGORIES[selected.productCategory].path}
+                      </p>
+                    )}
                   </div>
 
                   {/* eBay Store Categories */}
