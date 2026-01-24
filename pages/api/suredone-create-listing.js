@@ -238,7 +238,7 @@ export default async function handler(req, res) {
       k => k.toLowerCase() === categoryKey.toLowerCase()
     ) || 'Unknown';
     const bigcommerceCategories = BIGCOMMERCE_CATEGORY_MAP[categoryLookup] || BIGCOMMERCE_CATEGORY_MAP['Unknown'];
-    const bigcommerceCategoriesStr = bigcommerceCategories.join(',');
+    const bigcommerceCategoriesStr = bigcommerceCategories.join('*');
     
     console.log('=== FIELD FORMATTING ===');
     console.log('Product Category:', categoryKey, '→ Lookup:', categoryLookup);
