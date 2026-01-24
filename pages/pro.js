@@ -587,19 +587,45 @@ export default function ProListingBuilder() {
                     </div>
                   </div>
 
-                  {/* Category */}
+                  {/* eBay Product Category - Display Only with Re-detect */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Product Category</label>
-                    <select value={selected.productCategory || ''} onChange={e => updateField(selected.id, 'productCategory', e.target.value)} className="w-full px-3 py-2 border rounded-lg">
-                      <option value="">Select category...</option>
-                      {CATEGORY_OPTIONS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-                    {/* Display eBay Marketplace Category Path */}
+                    <label className="block text-sm font-semibold mb-2">eBay Product Category</label>
+                    <div className="flex gap-2">
+                      <div className="flex-1 px-3 py-2 bg-gray-100 border rounded-lg text-sm">
+                        {selected.productCategory ? (
+                          <span className="font-medium">{selected.productCategory}</span>
+                        ) : (
+                          <span className="text-gray-400">Not detected</span>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => processItem(selected.id)} 
+                        className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm flex items-center gap-1"
+                        title="Re-detect category"
+                      >
+                        <RefreshCw className="w-4 h-4" /> Re-detect
+                      </button>
+                    </div>
+                    {/* Display full eBay Category Path */}
                     {selected.productCategory && EBAY_MARKETPLACE_CATEGORIES[selected.productCategory] && (
                       <p className="text-xs text-green-700 mt-2 p-2 bg-green-50 rounded border border-green-200">
-                        📦 <strong>eBay Category:</strong> {EBAY_MARKETPLACE_CATEGORIES[selected.productCategory].path}
+                        📦 <strong>Full Path:</strong> {EBAY_MARKETPLACE_CATEGORIES[selected.productCategory].path}
+                        <br/>
+                        <span className="text-gray-500">Category ID: {EBAY_MARKETPLACE_CATEGORIES[selected.productCategory].id}</span>
                       </p>
                     )}
+                    {/* Manual override dropdown - hidden by default, shown on click */}
+                    <details className="mt-2">
+                      <summary className="text-xs text-blue-600 cursor-pointer hover:underline">Override category manually</summary>
+                      <select 
+                        value={selected.productCategory || ''} 
+                        onChange={e => updateField(selected.id, 'productCategory', e.target.value)} 
+                        className="w-full px-3 py-2 border rounded-lg text-sm mt-2"
+                      >
+                        <option value="">Select category...</option>
+                        {CATEGORY_OPTIONS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                      </select>
+                    </details>
                   </div>
 
                   {/* eBay Store Categories */}
@@ -634,7 +660,7 @@ export default function ProListingBuilder() {
                       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         {Object.entries(selected.specifications).map(([key, value]) => (
                           <div key={key} className="flex flex-col">
-                            <label className="text-xs font-medium text-gray-600 mb-1">{SPEC_LABELS[key] || key}</label>
+                            <label className="text-xs font-medium text-gray-600 mb-1">{SPEC_LABELS[key] || SPEC_LABELS[key.toLowerCase()] || SPEC_LABELS[key.replace(/([A-Z])/g, '_$1').toLowerCase()] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</label>
                             <input type="text" value={value || ''} onChange={e => updateSpecification(selected.id, key, e.target.value)} className="px-3 py-2 border rounded-lg text-sm" />
                           </div>
                         ))}

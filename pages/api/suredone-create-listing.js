@@ -233,10 +233,15 @@ export default async function handler(req, res) {
     
     // === GET BIGCOMMERCE MULTI-CATEGORIES ===
     const categoryKey = product.productCategory || 'Unknown';
-    const bigcommerceCategories = BIGCOMMERCE_CATEGORY_MAP[categoryKey] || BIGCOMMERCE_CATEGORY_MAP['Unknown'];
+    // Case-insensitive lookup
+    const categoryLookup = Object.keys(BIGCOMMERCE_CATEGORY_MAP).find(
+      k => k.toLowerCase() === categoryKey.toLowerCase()
+    ) || 'Unknown';
+    const bigcommerceCategories = BIGCOMMERCE_CATEGORY_MAP[categoryLookup] || BIGCOMMERCE_CATEGORY_MAP['Unknown'];
     const bigcommerceCategoriesStr = bigcommerceCategories.join(',');
     
     console.log('=== FIELD FORMATTING ===');
+    console.log('Product Category:', categoryKey, '→ Lookup:', categoryLookup);
     console.log('Brand:', product.brand, '→', brandFormatted);
     console.log('MPN:', product.partNumber, '→', mpnFormatted);
     console.log('BigCommerce Brand ID:', bigcommerceBrandId);
