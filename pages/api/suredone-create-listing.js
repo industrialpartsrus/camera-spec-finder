@@ -527,6 +527,11 @@ export default async function handler(req, res) {
     formData.append('guid', sku);
     formData.append('sku', sku);
     formData.append('title', product.title);
+
+    // === SKIP AUTO-PUSH TO CHANNELS (create as draft for manual review/images) ===
+    formData.append('ebayskip', '1');
+    formData.append('bigcommerceskip', '1');
+    console.log('Channels skipped: eBay and BigCommerce (draft mode)');
     formData.append('longdescription', product.description || '');
     formData.append('price', product.price || '0.00');
     formData.append('stock', product.stock || '1');
