@@ -231,6 +231,7 @@ Return ONLY valid JSON:
 {
   "title": "SEO title with specs (80 chars max)",
   "productCategory": "Category from list",
+  "usertype": "Descriptive product type for Google/eBay (e.g., 'General Purpose Motor', '3-Phase Induction Motor', 'Variable Frequency Drive', 'Proximity Sensor')",
   "shortDescription": "2-3 sentences, max 160 chars. REQUIRED.",
   "description": "HTML with <ul><li> bullet points",
   "specifications": {
@@ -249,6 +250,13 @@ Return ONLY valid JSON:
   "rawSpecifications": ["Label: Value", "Label: Value"],
   "qualityFlag": "STRONG or NEEDS_REVIEW"
 }
+
+USERTYPE EXAMPLES by category:
+- Electric Motors: "General Purpose Motor", "3-Phase Induction Motor", "Single Phase Motor", "TEFC Motor", "Explosion Proof Motor", "Farm Duty Motor", "Washdown Motor"
+- Servo Motors: "AC Servo Motor", "Brushless Servo Motor", "Integrated Servo Motor"
+- VFDs: "Variable Frequency Drive", "AC Drive", "Adjustable Speed Drive", "Inverter Drive"
+- PLCs: "Programmable Logic Controller", "Compact PLC", "Modular PLC", "Safety PLC"
+- Sensors: "Inductive Proximity Sensor", "Capacitive Sensor", "Photoelectric Sensor", "Laser Distance Sensor"
 
 DESCRIPTION FORMAT:
 <p>[Professional 2-3 sentence introduction]</p>

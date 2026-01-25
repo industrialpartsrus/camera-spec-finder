@@ -307,7 +307,8 @@ export default function ProListingBuilder() {
         price: '', quantity: '1', shelf: '',
         boxLength: '', boxWidth: '', boxHeight: '', weight: '',
         qualityFlag: '', ebayCategoryId: '', ebayStoreCategoryId: '', ebayStoreCategoryId2: '',
-        bigcommerceCategoryId: '', ebayShippingProfileId: '69077991015'
+        bigcommerceCategoryId: '', ebayShippingProfileId: '69077991015',
+        countryOfOrigin: '', usertype: ''
       });
       setBrandName(''); setPartNumber('');
       setSelectedItem(docRef.id);
@@ -345,6 +346,7 @@ export default function ProListingBuilder() {
         status: 'complete',
         title: product.title || `${item.brand} ${item.partNumber}`,
         productCategory: product.productCategory || '',
+        usertype: product.usertype || '',
         shortDescription: product.shortDescription || '',
         description: product.description || '',
         specifications: product.specifications || {},
@@ -423,6 +425,8 @@ export default function ProListingBuilder() {
         ...(item.boxHeight && { boxHeight: item.boxHeight }),
         ...(item.weight && { weight: item.weight }),
         ...(item.shelf && { shelfLocation: item.shelf }),
+        ...(item.countryOfOrigin && { countryOfOrigin: item.countryOfOrigin }),
+        ...(item.usertype && { usertype: item.usertype }),
         ebayCategoryId: item.ebayCategoryId || '',
         ebayStoreCategoryId: item.ebayStoreCategoryId || '',
         ebayStoreCategoryId2: item.ebayStoreCategoryId2 || '',
@@ -669,6 +673,46 @@ export default function ProListingBuilder() {
                     {showSpecs && (!selected.specifications || Object.keys(selected.specifications).length === 0) && (
                       <div className="p-4 text-gray-500 text-sm">No specifications found</div>
                     )}
+                  </div>
+
+                  {/* Product Type and Country of Origin */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Product Type (usertype)</label>
+                      <input
+                        type="text"
+                        value={selected.usertype || ''}
+                        onChange={e => updateField(selected.id, 'usertype', e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                        placeholder="e.g., General Purpose Motor, 3-Phase Induction Motor"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Displays as "Type" on eBay/website. AI will auto-generate.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Country of Origin</label>
+                      <select
+                        value={selected.countryOfOrigin || ''}
+                        onChange={e => updateField(selected.id, 'countryOfOrigin', e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                      >
+                        <option value="">Select country...</option>
+                        <option value="United States">United States</option>
+                        <option value="China">China</option>
+                        <option value="Japan">Japan</option>
+                        <option value="Germany">Germany</option>
+                        <option value="Mexico">Mexico</option>
+                        <option value="Taiwan">Taiwan</option>
+                        <option value="South Korea">South Korea</option>
+                        <option value="Italy">Italy</option>
+                        <option value="France">France</option>
+                        <option value="United Kingdom">United Kingdom</option>
+                        <option value="Canada">Canada</option>
+                        <option value="India">India</option>
+                        <option value="Brazil">Brazil</option>
+                        <option value="Unknown">Unknown</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Sets both eBay country fields automatically.</p>
+                    </div>
                   </div>
 
                   {/* Description */}
