@@ -1,5 +1,6 @@
 // pages/api/suredone-create-listing.js
 // Complete SureDone integration with UPC, BigCommerce multi-category, comprehensive eBay item specifics
+// Uses EXACT field names from Suredone_Headers.csv
 
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
@@ -57,96 +58,292 @@ const BIGCOMMERCE_CATEGORY_MAP = {
   'Unknown': ['23']
 };
 
-// eBay Item Specifics: our field → SureDone's actual field name (from Suredone_Headers.csv)
-// Comprehensive mapping for all product categories
+// -----------------------------------------------------------------------------
+// USERTYPE GENERATION: AI-generated descriptive product type
+// Examples: "General Purpose Motor", "Industrial Proximity Sensor", etc.
+// -----------------------------------------------------------------------------
+function generateUserType(productCategory, specifications = {}) {
+  const categoryTypeMap = {
+    'Electric Motors': specifications.enclosure_type || specifications.enclosuretype
+      ? `${specifications.enclosure_type || specifications.enclosuretype} Electric Motor`
+      : 'General Purpose Motor',
+    'Servo Motors': 'Industrial Servo Motor',
+    'Servo Drives': 'Industrial Servo Drive',
+    'VFDs': 'Variable Frequency Drive',
+    'PLCs': 'Programmable Logic Controller',
+    'HMIs': 'Human Machine Interface',
+    'Power Supplies': 'Industrial Power Supply',
+    'I/O Modules': 'Industrial I/O Module',
+    'Proximity Sensors': 'Industrial Proximity Sensor',
+    'Photoelectric Sensors': 'Photoelectric Sensor',
+    'Light Curtains': 'Safety Light Curtain',
+    'Laser Sensors': 'Industrial Laser Sensor',
+    'Pressure Sensors': 'Industrial Pressure Sensor',
+    'Temperature Sensors': 'Industrial Temperature Sensor',
+    'Pneumatic Cylinders': 'Pneumatic Air Cylinder',
+    'Pneumatic Valves': 'Pneumatic Control Valve',
+    'Pneumatic Grippers': 'Pneumatic Gripper',
+    'Hydraulic Pumps': 'Hydraulic Pump',
+    'Hydraulic Valves': 'Hydraulic Control Valve',
+    'Hydraulic Cylinders': 'Hydraulic Cylinder',
+    'Circuit Breakers': 'Industrial Circuit Breaker',
+    'Contactors': 'Motor Contactor',
+    'Safety Relays': 'Safety Relay Module',
+    'Control Relays': 'Industrial Control Relay',
+    'Bearings': 'Industrial Bearing',
+    'Linear Bearings': 'Linear Motion Bearing',
+    'Encoders': 'Rotary Encoder',
+    'Gearboxes': 'Industrial Gearbox',
+    'Transformers': 'Industrial Transformer',
+    'Industrial Gateways': 'Industrial Communication Gateway',
+    'Network Modules': 'Industrial Network Module'
+  };
+
+  return categoryTypeMap[productCategory] || 'Industrial Equipment';
+}
+
+// -----------------------------------------------------------------------------
+// WEBSITE FIELD -> eBay Item Specifics MAPPING
+// Maps our spec fields to BOTH website fields AND eBay item specifics
+// Field names are EXACT matches from Suredone_Headers.csv
+// -----------------------------------------------------------------------------
+const WEBSITE_TO_EBAY_MAPPING = {
+  // Motors - populate both motor horsepower AND rated horsepower
+  'horsepower': ['ebayitemspecificsmotorhorsepower', 'ebayitemspecificsratedhorsepower'],
+  'hp': ['ebayitemspecificsmotorhorsepower', 'ebayitemspecificsratedhorsepower'],
+  'rpm': ['ebayitemspecificsratedrpm'],
+  'frame': ['ebayitemspecificsnemaframesize'],
+  'frame_size': ['ebayitemspecificsnemaframesize'],
+  'framesize': ['ebayitemspecificsnemaframesize'],
+  'motortype': ['ebayitemspecificsacmotortype'],
+  'motor_type': ['ebayitemspecificsacmotortype'],
+  'enclosure': ['ebayitemspecificsenclosure'],
+  'enclosure_type': ['ebayitemspecificsenclosure'],
+  'enclosuretype': ['ebayitemspecificsenclosure'],
+
+  // Electrical
+  'voltage': ['ebayitemspecificsratedvoltage', 'ebayitemspecificsactualratedinputvoltage'],
+  'inputvoltage': ['ebayitemspecificsnominalinputvoltagerating', 'ebayitemspecificsinputvoltagerange'],
+  'input_voltage': ['ebayitemspecificsnominalinputvoltagerating', 'ebayitemspecificsinputvoltagerange'],
+  'outputvoltage': ['ebayitemspecificsouputvoltage', 'ebayitemspecificsoutputvoltageratingac'],
+  'output_voltage': ['ebayitemspecificsouputvoltage', 'ebayitemspecificsoutputvoltageratingac'],
+  'amperage': ['ebayitemspecificsamps', 'ebayitemspecificsactualcurrentrating'],
+  'current': ['ebayitemspecificsamps', 'ebayitemspecificsactualcurrentrating'],
+  'phase': ['ebayitemspecificsacphase', 'ebayitemspecificscurrentphase'],
+  'hz': ['ebayitemspecificsacfrequencyrating'],
+  'frequency': ['ebayitemspecificsacfrequencyrating', 'ebayitemspecificspowerfrequency'],
+  'watts': ['ebayitemspecificswattage'],
+  'wattage': ['ebayitemspecificswattage'],
+  'kw': ['ebayitemspecificspowerkw'],
+  'kw_rating': ['ebayitemspecificspowerkw'],
+  'coilvoltage': ['ebayitemspecificscoilvoltagerating'],
+  'coil_voltage': ['ebayitemspecificscoilvoltagerating'],
+
+  // Motor specific
+  'servicefactor': ['ebayitemspecificsservicefactor'],
+  'service_factor': ['ebayitemspecificsservicefactor'],
+  'insulationclass': ['ebayitemspecificsinsulationclass'],
+  'insulation_class': ['ebayitemspecificsinsulationclass'],
+  'nema_design': ['ebayitemspecificsnemadesignletter'],
+  'nemadesign': ['ebayitemspecificsnemadesignletter'],
+  'nema_frame_suffix': ['ebayitemspecificsnemaframesuffix'],
+
+  // Mechanical
+  'torque': ['ebayitemspecificscontinuoustorque'],
+  'mountingtype': ['ebayitemspecificsmountingtype'],
+  'mounting_type': ['ebayitemspecificsmountingtype'],
+  'psi': ['ebayitemspecificsmaxpsi', 'ebayitemspecificsratedpressure'],
+  'pressure': ['ebayitemspecificsratedpressure', 'ebayitemspecificsmaximumpressure'],
+  'max_pressure': ['ebayitemspecificsmaximumpressure', 'ebayitemspecificsmaximumoutputpressure'],
+  'flowrate': ['ebayitemspecificsmaximumflowrate'],
+  'flow_rate': ['ebayitemspecificsmaximumflowrate'],
+  'gpm': ['ebayitemspecificsgpm'],
+
+  // Sensors
+  'sensingrange': ['ebayitemspecificsnominalsensingradius'],
+  'sensing_range': ['ebayitemspecificsnominalsensingradius'],
+  'sensing_distance': ['ebayitemspecificsnominalsensingradius'],
+  'operatingdistance': ['ebayitemspecificsoperatingdistance'],
+  'operating_distance': ['ebayitemspecificsoperatingdistance'],
+  'sensortype': ['ebayitemspecificssensortype'],
+  'sensor_type': ['ebayitemspecificssensortype'],
+  'outputtype': ['ebayitemspecificsoutputtype'],
+  'output_type': ['ebayitemspecificsoutputtype'],
+
+  // Pneumatic/Hydraulic
+  'bore_diameter': ['ebayitemspecificsboresize'],
+  'bore_size': ['ebayitemspecificsboresize'],
+  'stroke_length': ['ebayitemspecificsstrokelength'],
+  'stroke': ['ebayitemspecificsstrokelength'],
+  'cylinder_type': ['ebayitemspecificscylindertype'],
+  'port_size': ['ebayitemspecificsinletportdiameter'],
+
+  // Switches/Buttons
+  'button_type': ['ebayitemspecificsbuttontype'],
+  'button_color': ['ebayitemspecificsbuttoncolor'],
+  'switch_action': ['ebayitemspecificsswitchaction'],
+  'contact_configuration': ['ebayitemspecificscontactconfiguration'],
+  'contact_rating': ['ebayitemspecificscontactcurrentrating'],
+
+  // Circuit Breakers/Relays
+  'circuit_breaker_type': ['ebayitemspecificscircuitbreakertype'],
+  'number_of_poles': ['ebayitemspecificsnumberofpoles', 'ebayitemspecificspoleconfiguration'],
+
+  // Communication/Display
+  'communication': ['ebayitemspecificscommunicationstandard'],
+  'communication_protocol': ['ebayitemspecificscommunicationstandard'],
+  'display_type': ['ebayitemspecificsdisplaytype'],
+  'display_size': ['ebayitemspecificsdisplayscreensize'],
+  'screen_size': ['ebayitemspecificsdisplayscreensize'],
+  'resolution': ['ebayitemspecificsdisplayresolution'],
+
+  // IP Rating
+  'ip_rating': ['ebayitemspecificsiprating'],
+  'iprating': ['ebayitemspecificsiprating'],
+
+  // Country/Origin - populate BOTH fields
+  'countryoforigin': ['ebayitemspecificscountryoforigin'],
+  'country_of_origin': ['ebayitemspecificscountryoforigin'],
+  'countryregionofmanufacture': ['ebayitemspecificscountryoforigin']
+};
+
+// Direct eBay field mapping (spec key -> exact eBay field name from CSV)
 const EBAY_ITEM_SPECIFICS_MAP = {
   // === MOTOR FIELDS ===
-  'voltage': 'actualratedinputvoltage',
-  'horsepower': 'motorhorsepower',
-  'hp': 'motorhorsepower',
-  'kw_rating': 'ratedhorsepower',
-  'kw': 'ratedhorsepower',
-  'rpm': 'ratedrpm',
-  'frame_size': 'iecframesize',
-  'framesize': 'iecframesize',
-  'phase': 'acphase',
-  'frequency': 'acfrequencyrating',
-  'enclosure': 'enclosure',
-  'enclosure_type': 'enclosure',
-  'insulation_class': 'insulationclass',
-  'service_factor': 'servicefactor',
-  'servicefactor': 'servicefactor',
-  'mounting_type': 'mountingtype',
-  'shaft_type': 'shafttype',
-  'shaft_diameter': 'shaftdiameter',
-  'nema_design': 'nemadesignletter',
-  'nema_frame_suffix': 'nemaframesuffix',
-  'efficiency': 'efficiency',
-  'duty_cycle': 'dutycycle',
-  
+  'voltage': 'ebayitemspecificsratedvoltage',
+  'horsepower': 'ebayitemspecificsmotorhorsepower',
+  'hp': 'ebayitemspecificsmotorhorsepower',
+  'kw_rating': 'ebayitemspecificsratedhorsepower',
+  'kw': 'ebayitemspecificspowerkw',
+  'rpm': 'ebayitemspecificsratedrpm',
+  'frame_size': 'ebayitemspecificsnemaframesize',
+  'framesize': 'ebayitemspecificsnemaframesize',
+  'frame': 'ebayitemspecificsnemaframesize',
+  'phase': 'ebayitemspecificsacphase',
+  'frequency': 'ebayitemspecificsacfrequencyrating',
+  'hz': 'ebayitemspecificsacfrequencyrating',
+  'enclosure': 'ebayitemspecificsenclosure',
+  'enclosure_type': 'ebayitemspecificsenclosure',
+  'enclosuretype': 'ebayitemspecificsenclosure',
+  'insulation_class': 'ebayitemspecificsinsulationclass',
+  'insulationclass': 'ebayitemspecificsinsulationclass',
+  'service_factor': 'ebayitemspecificsservicefactor',
+  'servicefactor': 'ebayitemspecificsservicefactor',
+  'mounting_type': 'ebayitemspecificsmountingtype',
+  'mountingtype': 'ebayitemspecificsmountingtype',
+  'shaft_type': 'ebayitemspecificsshafttype',
+  'shaft_diameter': 'ebayitemspecificsshaftdiameter',
+  'nema_design': 'ebayitemspecificsnemadesignletter',
+  'nema_frame_suffix': 'ebayitemspecificsnemaframesuffix',
+  'motor_type': 'ebayitemspecificsacmotortype',
+  'motortype': 'ebayitemspecificsacmotortype',
+  'efficiency': 'ebayitemspecificsefficiency',
+
   // === ELECTRICAL / CURRENT ===
-  'amperage': 'actualcurrentrating',
-  'current': 'actualcurrentrating',
-  'input_voltage': 'inputvoltagerange',
-  'output_voltage': 'outputvoltageratingac',
-  'coil_voltage': 'coilvoltagerating',
-  'max_input_current': 'maximuminputcurrent',
-  'max_output_current': 'maximumpeakoutputcurrent',
-  
+  'amperage': 'ebayitemspecificsamps',
+  'amps': 'ebayitemspecificsamps',
+  'current': 'ebayitemspecificsactualcurrentrating',
+  'input_voltage': 'ebayitemspecificsnominalinputvoltagerating',
+  'inputvoltage': 'ebayitemspecificsnominalinputvoltagerating',
+  'output_voltage': 'ebayitemspecificsouputvoltage',
+  'outputvoltage': 'ebayitemspecificsouputvoltage',
+  'coil_voltage': 'ebayitemspecificscoilvoltagerating',
+  'coilvoltage': 'ebayitemspecificscoilvoltagerating',
+  'max_input_current': 'ebayitemspecificsmaximuminputcurrent',
+  'max_output_current': 'ebayitemspecificsmaximumpeakoutputcurrent',
+  'full_load_amps': 'ebayitemspecificsfullloadamps',
+  'fullloadamps': 'ebayitemspecificsfullloadamps',
+
+  // === POWER ===
+  'watts': 'ebayitemspecificswattage',
+  'wattage': 'ebayitemspecificswattage',
+  'power': 'ebayitemspecificspower',
+  'power_rating': 'ebayitemspecificspowerrating',
+  'max_wattage': 'ebayitemspecificsmaxwattage',
+  'output_power': 'ebayitemspecificsoutputpower',
+
+  // === TORQUE ===
+  'torque': 'ebayitemspecificscontinuoustorque',
+  'continuous_torque': 'ebayitemspecificscontinuoustorque',
+  'holding_torque': 'ebayitemspecificsholdingtorque',
+  'stall_torque': 'ebayitemspecificsstalltorque',
+
   // === SENSORS ===
-  'sensing_range': 'nominalsensingradius',
-  'sensing_distance': 'nominalsensingradius',
-  'sensing_type': 'sensingtype',
-  'sensor_type': 'levelsensortype',
-  'output_type': 'outputtype',
-  'ip_rating': 'iprating',
-  
+  'sensing_range': 'ebayitemspecificsnominalsensingradius',
+  'sensingrange': 'ebayitemspecificsnominalsensingradius',
+  'sensing_distance': 'ebayitemspecificsnominalsensingradius',
+  'sensing_type': 'ebayitemspecificssensingtype',
+  'sensor_type': 'ebayitemspecificssensortype',
+  'sensortype': 'ebayitemspecificssensortype',
+  'output_type': 'ebayitemspecificsoutputtype',
+  'outputtype': 'ebayitemspecificsoutputtype',
+  'ip_rating': 'ebayitemspecificsiprating',
+  'iprating': 'ebayitemspecificsiprating',
+  'operating_distance': 'ebayitemspecificsoperatingdistance',
+
   // === PUSHBUTTONS / SWITCHES ===
-  'button_type': 'buttontype',
-  'button_color': 'buttoncolor',
-  'button_shape': 'buttonshape',
-  'switch_action': 'switchaction',
-  'switch_style': 'switchstyle',
-  'contact_configuration': 'contactconfiguration',
-  'contact_form': 'contactform',
-  'contact_material': 'contactmaterial',
-  'contact_rating': 'contactcurrentrating',
-  
+  'button_type': 'ebayitemspecificsbuttontype',
+  'button_color': 'ebayitemspecificsbuttoncolor',
+  'button_shape': 'ebayitemspecificsbuttonshape',
+  'switch_action': 'ebayitemspecificsswitchaction',
+  'switch_style': 'ebayitemspecificsswitchstyle',
+  'contact_configuration': 'ebayitemspecificscontactconfiguration',
+  'contact_form': 'ebayitemspecificscontactform',
+  'contact_material': 'ebayitemspecificscontactmaterial',
+  'contact_rating': 'ebayitemspecificscontactcurrentrating',
+
   // === PNEUMATIC / HYDRAULIC ===
-  'bore_diameter': 'boresize',
-  'bore_size': 'boresize',
-  'stroke_length': 'strokelength',
-  'stroke': 'strokelength',
-  'cylinder_type': 'cylindertype',
-  'port_size': 'inletportdiameter',
-  'inlet_port': 'inletportdiameter',
-  'outlet_port': 'outletportdiameter',
-  'max_pressure': 'maximumoutputpressure',
-  'operating_pressure': 'operatingpressure',
-  'flow_rate': 'maximumflowrate',
-  'valve_type': 'solenoidvalvetype',
-  'valve_operation': 'valveoperation',
-  'number_of_ports': 'numberofports',
-  
+  'bore_diameter': 'ebayitemspecificsboresize',
+  'bore_size': 'ebayitemspecificsboresize',
+  'stroke_length': 'ebayitemspecificsstrokelength',
+  'stroke': 'ebayitemspecificsstrokelength',
+  'cylinder_type': 'ebayitemspecificscylindertype',
+  'port_size': 'ebayitemspecificsinletportdiameter',
+  'inlet_port': 'ebayitemspecificsinletportdiameter',
+  'outlet_port': 'ebayitemspecificsoutletportdiameter',
+  'max_pressure': 'ebayitemspecificsmaximumpressure',
+  'pressure': 'ebayitemspecificsratedpressure',
+  'operating_pressure': 'ebayitemspecificsoperatingpressure',
+  'flow_rate': 'ebayitemspecificsmaximumflowrate',
+  'flowrate': 'ebayitemspecificsmaximumflowrate',
+  'valve_type': 'ebayitemspecificssolenoidvalvetype',
+  'valve_operation': 'ebayitemspecificsvalveoperation',
+  'number_of_ports': 'ebayitemspecificsnumberofports',
+  'psi': 'ebayitemspecificsmaxpsi',
+  'gpm': 'ebayitemspecificsgpm',
+
   // === CIRCUIT BREAKERS / RELAYS ===
-  'circuit_breaker_type': 'circuitbreakertype',
-  'pole_configuration': 'poleconfiguration',
-  'number_of_poles': 'poleconfiguration',
-  'fuse_type': 'fusetype',
-  'fuse_class': 'fuseclassification',
-  
+  'circuit_breaker_type': 'ebayitemspecificscircuitbreakertype',
+  'pole_configuration': 'ebayitemspecificspoleconfiguration',
+  'number_of_poles': 'ebayitemspecificsnumberofpoles',
+  'fuse_type': 'ebayitemspecificsfusetype',
+  'fuse_class': 'ebayitemspecificsfuseclassification',
+
   // === PLC / HMI / COMMUNICATION ===
-  'communication_protocol': 'communicationstandard',
-  'communication': 'communicationstandard',
-  'display_type': 'displaytype',
-  'display_size': 'displayscreensize',
-  'screen_size': 'displayscreensize',
-  'resolution': 'displayresolution'
+  'communication_protocol': 'ebayitemspecificscommunicationstandard',
+  'communication': 'ebayitemspecificscommunicationstandard',
+  'display_type': 'ebayitemspecificsdisplaytype',
+  'display_size': 'ebayitemspecificsdisplayscreensize',
+  'screen_size': 'ebayitemspecificsdisplayscreensize',
+  'resolution': 'ebayitemspecificsdisplayresolution',
+
+  // === DIMENSIONS ===
+  'length': 'ebayitemspecificsitemlength',
+  'width': 'ebayitemspecificsitemwidth',
+  'height': 'ebayitemspecificsitemheight',
+  'depth': 'ebayitemspecificsitemdepth',
+  'diameter': 'ebayitemspecificsitemdiameter',
+
+  // === COUNTRY/ORIGIN ===
+  'country_of_origin': 'ebayitemspecificscountryoforigin',
+  'countryoforigin': 'ebayitemspecificscountryoforigin',
+  'country_of_manufacture': 'ebayitemspecificscountryoforigin',
+  'origin': 'ebayitemspecificscountryoforigin'
 };
 
 function capitalizeWords(str) {
   if (!str) return str;
-  return str.toLowerCase().split(' ').map(word => 
+  return str.toLowerCase().split(' ').map(word =>
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');
 }
@@ -158,29 +355,29 @@ function toUpperCase(str) {
 
 function capitalizeBrand(brandName) {
   if (!brandName) return brandName;
-  
-  const allCaps = ['ABB', 'SMC', 'CKD', 'IAI', 'PHD', 'STI', 'TDK', 'NSK', 'SKF', 'IKO', 
+
+  const allCaps = ['ABB', 'SMC', 'CKD', 'IAI', 'PHD', 'STI', 'TDK', 'NSK', 'SKF', 'IKO',
     'THK', 'NTN', 'FAG', 'GE', 'SEW', 'WEG', 'ATO', 'ARO', 'ITT', 'MKS', 'MTS', 'NSD',
     'IFM', 'HTM', 'NKE', 'ACU', 'AEG', 'AMK', 'APC', 'BBC', 'EAO', 'EMD', 'GEA', 'B&R'];
-  
+
   const brandLower = brandName.toLowerCase().trim();
   const brandUpper = brandName.toUpperCase().trim();
-  
+
   if (allCaps.includes(brandUpper)) return brandUpper;
-  
+
   if (brandLower.includes('+')) {
-    return brandLower.split('+').map(part => 
+    return brandLower.split('+').map(part =>
       part.charAt(0).toUpperCase() + part.slice(1)
     ).join('+');
   }
-  
+
   if (brandLower.includes('-')) {
     return brandLower.split('-').map(part => {
       if (allCaps.includes(part.toUpperCase())) return part.toUpperCase();
       return part.charAt(0).toUpperCase() + part.slice(1);
     }).join('-');
   }
-  
+
   return capitalizeWords(brandName);
 }
 
@@ -188,7 +385,7 @@ function getBrandId(brandName) {
   if (!brandName) return null;
   const brandLower = brandName.toLowerCase().trim();
   if (BRAND_IDS[brandLower]) return BRAND_IDS[brandLower];
-  
+
   const brandClean = brandLower.replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
   for (const [key, id] of Object.entries(BRAND_IDS)) {
     const keyClean = key.replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -230,7 +427,7 @@ export default async function handler(req, res) {
         method: 'GET',
         headers: { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN }
       });
-      
+
       if (searchResponse.ok) {
         const searchData = await searchResponse.json();
         const skus = [];
@@ -248,15 +445,15 @@ export default async function handler(req, res) {
     } catch (e) {
       console.log('SKU search error:', e.message);
     }
-    
+
     const sku = `AI${String(aiNumber).padStart(4, '0')}`;
-    
+
     // === GET UPC ===
     let upc = null;
     let upcWarning = null;
     try {
-      const baseUrl = req.headers.origin || (req.headers.host?.includes('localhost') 
-        ? `http://${req.headers.host}` 
+      const baseUrl = req.headers.origin || (req.headers.host?.includes('localhost')
+        ? `http://${req.headers.host}`
         : 'https://camera-spec-finder.vercel.app');
       const upcResponse = await fetch(`${baseUrl}/api/assign-upc`, {
         method: 'POST',
@@ -273,13 +470,13 @@ export default async function handler(req, res) {
     } catch (e) {
       console.log('UPC assignment error:', e.message);
     }
-    
+
     // === FORMAT FIELDS ===
     const brandFormatted = capitalizeBrand(product.brand);
     const mpnFormatted = toUpperCase(product.partNumber);
     const modelFormatted = toUpperCase(product.model || product.partNumber);
     const bigcommerceBrandId = getBrandId(product.brand);
-    
+
     // === GET BIGCOMMERCE MULTI-CATEGORIES ===
     const categoryKey = product.productCategory || 'Unknown';
     // Case-insensitive lookup
@@ -288,7 +485,10 @@ export default async function handler(req, res) {
     ) || 'Unknown';
     const bigcommerceCategories = BIGCOMMERCE_CATEGORY_MAP[categoryLookup] || BIGCOMMERCE_CATEGORY_MAP['Unknown'];
     const bigcommerceCategoriesStr = bigcommerceCategories.join('*');
-    
+
+    // === GENERATE USERTYPE ===
+    const userType = generateUserType(categoryKey, product.specifications || {});
+
     console.log('=== FIELD FORMATTING ===');
     console.log('Product Category:', categoryKey, '→ Lookup:', categoryLookup);
     console.log('Brand:', product.brand, '→', brandFormatted);
@@ -296,9 +496,10 @@ export default async function handler(req, res) {
     console.log('BigCommerce Brand ID:', bigcommerceBrandId);
     console.log('BigCommerce Categories:', bigcommerceCategoriesStr);
     console.log('UPC:', upc);
-    
+    console.log('UserType:', userType);
+
     const formData = new URLSearchParams();
-    
+
     // === CORE FIELDS ===
     formData.append('identifier', 'guid');
     formData.append('guid', sku);
@@ -309,13 +510,17 @@ export default async function handler(req, res) {
     formData.append('stock', product.stock || '1');
     formData.append('brand', brandFormatted);
     formData.append('manufacturer', brandFormatted);
-    
+
     if (upc) formData.append('upc', upc);
-    
+
     formData.append('mpn', mpnFormatted);
     formData.append('model', modelFormatted);
     formData.append('partnumber', mpnFormatted);
-    
+
+    // === USERTYPE - AI-generated descriptive product type ===
+    formData.append('usertype', userType);
+    console.log('UserType field set:', userType);
+
     // === CONDITION ===
     let suredoneCondition = 'Used';
     let isForParts = false;
@@ -334,19 +539,19 @@ export default async function handler(req, res) {
     }
     formData.append('condition', suredoneCondition);
     if (product.conditionNotes) formData.append('notes', product.conditionNotes);
-    
+
     // === DIMENSIONS ===
     if (product.boxLength) formData.append('boxlength', product.boxLength);
     if (product.boxWidth) formData.append('boxwidth', product.boxWidth);
     if (product.boxHeight) formData.append('boxheight', product.boxHeight);
     if (product.weight) formData.append('weight', product.weight);
-    
+
     // === SHELF LOCATION ===
     if (product.shelfLocation) {
       formData.append('shelf', product.shelfLocation);
       formData.append('bigcommercebinpickingnumber', product.shelfLocation);
     }
-    
+
     // === BIGCOMMERCE FIELDS ===
     formData.append('bigcommerceisconditionshown', 'on');
     formData.append('bigcommerceavailabilitydescription', 'In Stock');
@@ -356,32 +561,32 @@ export default async function handler(req, res) {
     formData.append('bigcommercechannels', '1');
     formData.append('bigcommercepagetitle', product.title);
     formData.append('bigcommercempn', mpnFormatted);
-    
+
     if (bigcommerceBrandId) formData.append('bigcommercebrandid', bigcommerceBrandId);
-    
+
     // BigCommerce MULTI-CATEGORIES (Shop All + Parent + Leaf)
     formData.append('bigcommercecategories', bigcommerceCategoriesStr);
     console.log('BigCommerce Categories Sent:', bigcommerceCategoriesStr);
-    
+
     // === META / SEO FIELDS ===
-    const metaDescription = product.shortDescription || 
-      product.metaDescription || 
+    const metaDescription = product.shortDescription ||
+      product.metaDescription ||
       (product.description ? product.description.replace(/<[^>]*>/g, ' ').substring(0, 157) + '...' : '');
-    
+
     if (metaDescription) formData.append('bigcommercemetadescription', metaDescription);
-    
+
     if (product.metaKeywords) {
       const keywords = Array.isArray(product.metaKeywords) ? product.metaKeywords.join(', ') : product.metaKeywords;
       formData.append('bigcommercesearchkeywords', keywords);
       formData.append('bigcommercemetakeywords', keywords);
     }
-    
+
     // === EBAY MARKETPLACE CATEGORY ===
     if (product.ebayCategoryId) {
       formData.append('ebaycatid', product.ebayCategoryId);
       console.log('eBay Marketplace Category:', product.ebayCategoryId);
     }
-    
+
     // === EBAY STORE CATEGORIES ===
     if (product.ebayStoreCategoryId) {
       formData.append('ebaystoreid', product.ebayStoreCategoryId);
@@ -391,28 +596,69 @@ export default async function handler(req, res) {
       formData.append('ebaystoreid2', product.ebayStoreCategoryId2);
       console.log('eBay Store Category 2:', product.ebayStoreCategoryId2);
     }
-    
+
     // === EBAY SHIPPING & RETURN ===
     formData.append('ebayshippingprofileid', product.ebayShippingProfileId || '69077991015');
     if (!isForParts) {
       formData.append('ebayreturnprofileid', product.ebayReturnProfileId || '61860297015');
     }
-    
-    // === MAP SPECIFICATIONS TO EBAY ITEM SPECIFICS ===
+
+    // === MAP SPECIFICATIONS TO BOTH WEBSITE AND EBAY FIELDS ===
     if (product.specifications && typeof product.specifications === 'object') {
+      console.log('=== PROCESSING SPECIFICATIONS ===');
+
       for (const [key, value] of Object.entries(product.specifications)) {
         if (value && value !== 'null' && value !== null && value !== 'N/A' && value !== 'Unknown') {
-          const suredoneFieldSuffix = EBAY_ITEM_SPECIFICS_MAP[key] || EBAY_ITEM_SPECIFICS_MAP[key.toLowerCase()];
-          if (suredoneFieldSuffix) {
-            // SureDone format: ebayitemspecifics + lowercase field name (no spaces)
-            const suredoneField = 'ebayitemspecifics' + suredoneFieldSuffix;
-            formData.append(suredoneField, value);
-            console.log(`eBay Item Specific: ${key} → ${suredoneField} = ${value}`);
+          const keyLower = key.toLowerCase().replace(/\s+/g, '_');
+          const keyClean = key.toLowerCase().replace(/[_\s]+/g, '');
+
+          // 1. Set the WEBSITE field directly (e.g., horsepower, voltage, rpm)
+          formData.append(keyLower, value);
+          console.log(`Website Field: ${keyLower} = ${value}`);
+
+          // 2. Check WEBSITE_TO_EBAY_MAPPING for dual population
+          const websiteMapping = WEBSITE_TO_EBAY_MAPPING[key] ||
+                                WEBSITE_TO_EBAY_MAPPING[keyLower] ||
+                                WEBSITE_TO_EBAY_MAPPING[keyClean];
+
+          if (websiteMapping && Array.isArray(websiteMapping)) {
+            for (const ebayField of websiteMapping) {
+              formData.append(ebayField, value);
+              console.log(`eBay Field (from mapping): ${ebayField} = ${value}`);
+            }
+          }
+
+          // 3. Also check direct EBAY_ITEM_SPECIFICS_MAP
+          const directEbayField = EBAY_ITEM_SPECIFICS_MAP[key] ||
+                                  EBAY_ITEM_SPECIFICS_MAP[keyLower] ||
+                                  EBAY_ITEM_SPECIFICS_MAP[keyClean];
+
+          if (directEbayField && !formData.has(directEbayField)) {
+            formData.append(directEbayField, value);
+            console.log(`eBay Field (direct): ${directEbayField} = ${value}`);
           }
         }
       }
     }
-    
+
+    // === HANDLE COUNTRY OF ORIGIN SPECIALLY ===
+    // Populate both countryoforigin (website) AND ebayitemspecificscountryoforigin (eBay)
+    // AND countryregionofmanufacture (website)
+    if (product.countryOfOrigin || product.specifications?.country_of_origin || product.specifications?.countryoforigin) {
+      const countryValue = product.countryOfOrigin ||
+                          product.specifications?.country_of_origin ||
+                          product.specifications?.countryoforigin;
+
+      // Website fields
+      formData.append('countryoforigin', countryValue);
+      formData.append('countryregionofmanufacture', countryValue);
+
+      // eBay item specific
+      formData.append('ebayitemspecificscountryoforigin', countryValue);
+
+      console.log(`Country of Origin: ${countryValue} → countryoforigin, countryregionofmanufacture, ebayitemspecificscountryoforigin`);
+    }
+
     // === RAW SPECS AS CUSTOM FIELDS ===
     if (product.rawSpecifications && Array.isArray(product.rawSpecifications)) {
       let customFieldIndex = 1;
@@ -423,12 +669,13 @@ export default async function handler(req, res) {
         }
       }
     }
-    
+
     console.log('=== SENDING TO SUREDONE ===');
     console.log('SKU:', sku);
     console.log('UPC:', upc);
     console.log('Brand:', brandFormatted);
-    
+    console.log('UserType:', userType);
+
     // === SEND TO SUREDONE ===
     const response = await fetch(`${SUREDONE_URL}/editor/items/add`, {
       method: 'POST',
@@ -447,7 +694,7 @@ export default async function handler(req, res) {
     try {
       data = JSON.parse(responseText);
     } catch (e) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         success: false,
         error: 'Invalid response from SureDone',
         details: responseText.substring(0, 500)
@@ -455,25 +702,26 @@ export default async function handler(req, res) {
     }
 
     if (data.result === 'success') {
-      const responseObj = { 
-        success: true, 
+      const responseObj = {
+        success: true,
         message: 'Product created in SureDone',
         sku: data.sku || sku,
         upc: upc,
         brandFormatted,
         bigcommerceBrandId,
-        bigcommerceCategories: bigcommerceCategoriesStr
+        bigcommerceCategories: bigcommerceCategoriesStr,
+        userType
       };
       if (upcWarning) responseObj.warning = upcWarning;
       res.status(200).json(responseObj);
     } else {
-      res.status(400).json({ 
-        success: false, 
+      res.status(400).json({
+        success: false,
         error: data.message || 'SureDone API error',
         details: data
       });
     }
-    
+
   } catch (error) {
     console.error('SureDone integration error:', error);
     res.status(500).json({ success: false, error: error.message });
