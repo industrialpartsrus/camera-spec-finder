@@ -115,11 +115,18 @@ const WEBSITE_TO_EBAY_MAPPING = {
   'frame': ['ebayitemspecificsnemaframesize'],
   'frame_size': ['ebayitemspecificsnemaframesize'],
   'framesize': ['ebayitemspecificsnemaframesize'],
+  'nemaframesize': ['ebayitemspecificsnemaframesize'],
   'motortype': ['ebayitemspecificsacmotortype'],
   'motor_type': ['ebayitemspecificsacmotortype'],
   'enclosure': ['ebayitemspecificsenclosure'],
   'enclosure_type': ['ebayitemspecificsenclosure'],
   'enclosuretype': ['ebayitemspecificsenclosure'],
+  'nema_design': ['ebayitemspecificsnemadesignletter'],
+  'nemadesign': ['ebayitemspecificsnemadesignletter'],
+  'insulation_class': ['ebayitemspecificsinsulationclass'],
+  'insulationclass': ['ebayitemspecificsinsulationclass'],
+  'shaft_diameter': ['ebayitemspecificsshaftdiameter'],
+  'shaftdiameter': ['ebayitemspecificsshaftdiameter'],
 
   // Electrical
   'voltage': ['ebayitemspecificsratedvoltage', 'ebayitemspecificsactualratedinputvoltage'],
@@ -169,14 +176,20 @@ const WEBSITE_TO_EBAY_MAPPING = {
   'sensor_type': ['ebayitemspecificssensortype'],
   'outputtype': ['ebayitemspecificsoutputtype'],
   'output_type': ['ebayitemspecificsoutputtype'],
+  'npnpnp': ['ebayitemspecificsoutputtype'],
 
   // Pneumatic/Hydraulic
   'bore_diameter': ['ebayitemspecificsboresize'],
   'bore_size': ['ebayitemspecificsboresize'],
+  'boresize': ['ebayitemspecificsboresize'],
   'stroke_length': ['ebayitemspecificsstrokelength'],
   'stroke': ['ebayitemspecificsstrokelength'],
+  'strokelength': ['ebayitemspecificsstrokelength'],
   'cylinder_type': ['ebayitemspecificscylindertype'],
+  'cylindertype': ['ebayitemspecificscylindertype'],
   'port_size': ['ebayitemspecificsinletportdiameter'],
+  'max_pressure': ['ebayitemspecificsmaximumpressure'],
+  'maxpressure': ['ebayitemspecificsmaximumpressure'],
 
   // Switches/Buttons
   'button_type': ['ebayitemspecificsbuttontype'],
@@ -403,6 +416,9 @@ export default async function handler(req, res) {
 
   const { product } = req.body;
 
+  console.log('=== SUREDONE CREATE LISTING START ===');
+  console.log('Raw product received:', JSON.stringify(product, null, 2));
+
   if (!product) {
     return res.status(400).json({ error: 'No product data provided' });
   }
@@ -410,6 +426,12 @@ export default async function handler(req, res) {
   if (!product.title || !product.brand || !product.partNumber) {
     return res.status(400).json({ error: 'Missing required fields: title, brand, or partNumber' });
   }
+
+  console.log('Product title:', product.title);
+  console.log('Product brand:', product.brand);
+  console.log('Product partNumber:', product.partNumber);
+  console.log('Product productCategory:', product.productCategory);
+  console.log('Product specifications keys:', product.specifications ? Object.keys(product.specifications) : 'NONE');
 
   const SUREDONE_USER = process.env.SUREDONE_USER;
   const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
@@ -604,13 +626,23 @@ export default async function handler(req, res) {
     }
 
     // === MAP SPECIFICATIONS TO BOTH WEBSITE AND EBAY FIELDS ===
+    console.log('=== RAW SPECIFICATIONS RECEIVED ===');
+    console.log('product.specifications:', JSON.stringify(product.specifications, null, 2));
+    console.log('Type:', typeof product.specifications);
+
     if (product.specifications && typeof product.specifications === 'object') {
       console.log('=== PROCESSING SPECIFICATIONS ===');
+      console.log('Number of specs:', Object.keys(product.specifications).length);
 
       for (const [key, value] of Object.entries(product.specifications)) {
+        console.log(`Processing: "${key}" = "${value}"`);
+
         if (value && value !== 'null' && value !== null && value !== 'N/A' && value !== 'Unknown') {
           const keyLower = key.toLowerCase().replace(/\s+/g, '_');
           const keyClean = key.toLowerCase().replace(/[_\s]+/g, '');
+          const keyUnderscore = key.toLowerCase().replace(/\s+/g, '_');
+
+          console.log(`  Key variants: original="${key}", lower="${keyLower}", clean="${keyClean}"`);
 
           // 1. Set the WEBSITE field directly (e.g., horsepower, voltage, rpm)
           formData.append(keyLower, value);
@@ -619,26 +651,41 @@ export default async function handler(req, res) {
           // 2. Check WEBSITE_TO_EBAY_MAPPING for dual population
           const websiteMapping = WEBSITE_TO_EBAY_MAPPING[key] ||
                                 WEBSITE_TO_EBAY_MAPPING[keyLower] ||
-                                WEBSITE_TO_EBAY_MAPPING[keyClean];
+                                WEBSITE_TO_EBAY_MAPPING[keyClean] ||
+                                WEBSITE_TO_EBAY_MAPPING[keyUnderscore];
+
+          console.log(`  WEBSITE_TO_EBAY_MAPPING lookup: found=${!!websiteMapping}`);
 
           if (websiteMapping && Array.isArray(websiteMapping)) {
             for (const ebayField of websiteMapping) {
               formData.append(ebayField, value);
-              console.log(`eBay Field (from mapping): ${ebayField} = ${value}`);
+              console.log(`  ✓ eBay Field (dual): ${ebayField} = ${value}`);
             }
+          } else {
+            console.log(`  ✗ No WEBSITE_TO_EBAY_MAPPING for: ${key}, ${keyLower}, ${keyClean}`);
           }
 
           // 3. Also check direct EBAY_ITEM_SPECIFICS_MAP
           const directEbayField = EBAY_ITEM_SPECIFICS_MAP[key] ||
                                   EBAY_ITEM_SPECIFICS_MAP[keyLower] ||
-                                  EBAY_ITEM_SPECIFICS_MAP[keyClean];
+                                  EBAY_ITEM_SPECIFICS_MAP[keyClean] ||
+                                  EBAY_ITEM_SPECIFICS_MAP[keyUnderscore];
 
-          if (directEbayField && !formData.has(directEbayField)) {
+          console.log(`  EBAY_ITEM_SPECIFICS_MAP lookup: found=${!!directEbayField}`);
+
+          if (directEbayField) {
             formData.append(directEbayField, value);
-            console.log(`eBay Field (direct): ${directEbayField} = ${value}`);
+            console.log(`  ✓ eBay Field (direct): ${directEbayField} = ${value}`);
+          } else {
+            console.log(`  ✗ No EBAY_ITEM_SPECIFICS_MAP for: ${key}, ${keyLower}, ${keyClean}`);
           }
+        } else {
+          console.log(`  Skipping empty/null value: "${value}"`);
         }
       }
+    } else {
+      console.log('WARNING: No specifications object found or not an object');
+      console.log('product.specifications =', product.specifications);
     }
 
     // === HANDLE COUNTRY OF ORIGIN SPECIALLY ===
