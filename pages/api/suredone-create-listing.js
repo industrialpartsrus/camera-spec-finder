@@ -57,42 +57,91 @@ const BIGCOMMERCE_CATEGORY_MAP = {
   'Unknown': ['23']
 };
 
-// eBay Item Specifics: our field → eBay's exact field name
+// eBay Item Specifics: our field → SureDone's actual field name (from Suredone_Headers.csv)
+// Comprehensive mapping for all product categories
 const EBAY_ITEM_SPECIFICS_MAP = {
-  'voltage': 'Voltage',
-  'horsepower': 'Horsepower',
-  'hp': 'Horsepower',
-  'kw_rating': 'Power Output',
-  'kw': 'Power Output',
-  'rpm': 'Speed',
-  'frame_size': 'Frame Size',
-  'framesize': 'Frame Size',
-  'phase': 'Phase',
-  'frequency': 'Frequency',
-  'enclosure': 'Enclosure Type',
-  'enclosure_type': 'Enclosure Type',
-  'insulation_class': 'Insulation Class',
-  'service_factor': 'Service Factor',
-  'servicefactor': 'Service Factor',
-  'mounting_type': 'Mounting Type',
-  'shaft_type': 'Shaft Type',
-  'shaft_diameter': 'Shaft Diameter',
-  'nema_design': 'NEMA Design',
-  'efficiency': 'Efficiency',
-  'duty_cycle': 'Duty Cycle',
-  'amperage': 'Current',
-  'current': 'Current',
-  'input_voltage': 'Input Voltage',
-  'output_voltage': 'Output Voltage',
-  'ip_rating': 'IP Rating',
-  'sensing_range': 'Sensing Distance',
-  'output_type': 'Output Type',
-  'bore_diameter': 'Bore Size',
-  'stroke_length': 'Stroke',
-  'max_pressure': 'Max Working Pressure',
-  'port_size': 'Port Size',
-  'communication_protocol': 'Connectivity',
-  'communication': 'Connectivity'
+  // === MOTOR FIELDS ===
+  'voltage': 'actualratedinputvoltage',
+  'horsepower': 'motorhorsepower',
+  'hp': 'motorhorsepower',
+  'kw_rating': 'ratedhorsepower',
+  'kw': 'ratedhorsepower',
+  'rpm': 'ratedrpm',
+  'frame_size': 'iecframesize',
+  'framesize': 'iecframesize',
+  'phase': 'acphase',
+  'frequency': 'acfrequencyrating',
+  'enclosure': 'enclosure',
+  'enclosure_type': 'enclosure',
+  'insulation_class': 'insulationclass',
+  'service_factor': 'servicefactor',
+  'servicefactor': 'servicefactor',
+  'mounting_type': 'mountingtype',
+  'shaft_type': 'shafttype',
+  'shaft_diameter': 'shaftdiameter',
+  'nema_design': 'nemadesignletter',
+  'nema_frame_suffix': 'nemaframesuffix',
+  'efficiency': 'efficiency',
+  'duty_cycle': 'dutycycle',
+  
+  // === ELECTRICAL / CURRENT ===
+  'amperage': 'actualcurrentrating',
+  'current': 'actualcurrentrating',
+  'input_voltage': 'inputvoltagerange',
+  'output_voltage': 'outputvoltageratingac',
+  'coil_voltage': 'coilvoltagerating',
+  'max_input_current': 'maximuminputcurrent',
+  'max_output_current': 'maximumpeakoutputcurrent',
+  
+  // === SENSORS ===
+  'sensing_range': 'nominalsensingradius',
+  'sensing_distance': 'nominalsensingradius',
+  'sensing_type': 'sensingtype',
+  'sensor_type': 'levelsensortype',
+  'output_type': 'outputtype',
+  'ip_rating': 'iprating',
+  
+  // === PUSHBUTTONS / SWITCHES ===
+  'button_type': 'buttontype',
+  'button_color': 'buttoncolor',
+  'button_shape': 'buttonshape',
+  'switch_action': 'switchaction',
+  'switch_style': 'switchstyle',
+  'contact_configuration': 'contactconfiguration',
+  'contact_form': 'contactform',
+  'contact_material': 'contactmaterial',
+  'contact_rating': 'contactcurrentrating',
+  
+  // === PNEUMATIC / HYDRAULIC ===
+  'bore_diameter': 'boresize',
+  'bore_size': 'boresize',
+  'stroke_length': 'strokelength',
+  'stroke': 'strokelength',
+  'cylinder_type': 'cylindertype',
+  'port_size': 'inletportdiameter',
+  'inlet_port': 'inletportdiameter',
+  'outlet_port': 'outletportdiameter',
+  'max_pressure': 'maximumoutputpressure',
+  'operating_pressure': 'operatingpressure',
+  'flow_rate': 'maximumflowrate',
+  'valve_type': 'solenoidvalvetype',
+  'valve_operation': 'valveoperation',
+  'number_of_ports': 'numberofports',
+  
+  // === CIRCUIT BREAKERS / RELAYS ===
+  'circuit_breaker_type': 'circuitbreakertype',
+  'pole_configuration': 'poleconfiguration',
+  'number_of_poles': 'poleconfiguration',
+  'fuse_type': 'fusetype',
+  'fuse_class': 'fuseclassification',
+  
+  // === PLC / HMI / COMMUNICATION ===
+  'communication_protocol': 'communicationstandard',
+  'communication': 'communicationstandard',
+  'display_type': 'displaytype',
+  'display_size': 'displayscreensize',
+  'screen_size': 'displayscreensize',
+  'resolution': 'displayresolution'
 };
 
 function capitalizeWords(str) {
@@ -238,7 +287,7 @@ export default async function handler(req, res) {
       k => k.toLowerCase() === categoryKey.toLowerCase()
     ) || 'Unknown';
     const bigcommerceCategories = BIGCOMMERCE_CATEGORY_MAP[categoryLookup] || BIGCOMMERCE_CATEGORY_MAP['Unknown'];
-    const bigcommerceCategoriesStr = bigcommerceCategories.join(',');
+    const bigcommerceCategoriesStr = bigcommerceCategories.join('*');
     
     console.log('=== FIELD FORMATTING ===');
     console.log('Product Category:', categoryKey, '→ Lookup:', categoryLookup);
@@ -353,9 +402,10 @@ export default async function handler(req, res) {
     if (product.specifications && typeof product.specifications === 'object') {
       for (const [key, value] of Object.entries(product.specifications)) {
         if (value && value !== 'null' && value !== null && value !== 'N/A' && value !== 'Unknown') {
-          const ebayFieldName = EBAY_ITEM_SPECIFICS_MAP[key] || EBAY_ITEM_SPECIFICS_MAP[key.toLowerCase()];
-          if (ebayFieldName) {
-            const suredoneField = 'ebayitemspecifics' + ebayFieldName.toLowerCase().replace(/\s+/g, '');
+          const suredoneFieldSuffix = EBAY_ITEM_SPECIFICS_MAP[key] || EBAY_ITEM_SPECIFICS_MAP[key.toLowerCase()];
+          if (suredoneFieldSuffix) {
+            // SureDone format: ebayitemspecifics + lowercase field name (no spaces)
+            const suredoneField = 'ebayitemspecifics' + suredoneFieldSuffix;
             formData.append(suredoneField, value);
             console.log(`eBay Item Specific: ${key} → ${suredoneField} = ${value}`);
           }
