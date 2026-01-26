@@ -1,6 +1,6 @@
 // pages/api/suredone-create-listing.js
 // Complete SureDone integration with UPC, BigCommerce multi-category, comprehensive eBay item specifics
-// Uses CORRECT eBay field names from Taxonomy API
+// Uses SHORT field names (no ebayitemspecifics prefix) to populate INLINE/RECOMMENDED fields
 
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
@@ -102,176 +102,176 @@ function generateUserType(productCategory, specifications = {}) {
 }
 
 // -----------------------------------------------------------------------------
-// eBay Item Specifics MAPPING - CORRECTED FROM EBAY TAXONOMY API
-// Maps AI-extracted spec fields to the ACTUAL eBay field names
-// These use the suredoneInlineField format (e.g., "ratedloadhp" not "motorhorsepower")
+// eBay Item Specifics MAPPING - USING SHORT FIELD NAMES FOR INLINE FIELDS
+// Maps AI-extracted spec fields to SureDone INLINE field names (no prefix)
+// These go to the RECOMMENDED section, not Dynamic!
 // -----------------------------------------------------------------------------
 const SPEC_TO_EBAY_FIELD = {
-  // === MOTORS - CORRECTED FIELD NAMES ===
-  'horsepower': 'ebayitemspecificsratedloadhp',        // eBay calls it "Rated Load (HP)"
-  'hp': 'ebayitemspecificsratedloadhp',
-  'rated_load': 'ebayitemspecificsratedloadhp',
-  'ratedload': 'ebayitemspecificsratedloadhp',
+  // === MOTORS - SHORT NAMES (no ebayitemspecifics prefix) ===
+  'horsepower': 'ratedloadhp',           // eBay: "Rated Load (HP)"
+  'hp': 'ratedloadhp',
+  'rated_load': 'ratedloadhp',
+  'ratedload': 'ratedloadhp',
   
-  'rpm': 'ebayitemspecificsbaserpm',                   // eBay calls it "Base RPM"
-  'base_rpm': 'ebayitemspecificsbaserpm',
-  'baserpm': 'ebayitemspecificsbaserpm',
-  'speed': 'ebayitemspecificsbaserpm',
+  'rpm': 'baserpm',                       // eBay: "Base RPM"
+  'base_rpm': 'baserpm',
+  'baserpm': 'baserpm',
+  'speed': 'baserpm',
   
-  'frame': 'ebayitemspecificsiecframesize',            // eBay calls it "IEC Frame Size"
-  'frame_size': 'ebayitemspecificsiecframesize',
-  'framesize': 'ebayitemspecificsiecframesize',
-  'iec_frame': 'ebayitemspecificsiecframesize',
-  'iecframesize': 'ebayitemspecificsiecframesize',
+  'frame': 'iecframesize',                // eBay: "IEC Frame Size"
+  'frame_size': 'iecframesize',
+  'framesize': 'iecframesize',
+  'iec_frame': 'iecframesize',
+  'iecframesize': 'iecframesize',
   
-  'motor_type': 'ebayitemspecificsacmotortype',        // eBay calls it "AC Motor Type"
-  'motortype': 'ebayitemspecificsacmotortype',
-  'ac_motor_type': 'ebayitemspecificsacmotortype',
-  'acmotortype': 'ebayitemspecificsacmotortype',
-  'type': 'ebayitemspecificsacmotortype',
+  'motor_type': 'acmotortype',            // eBay: "AC Motor Type"
+  'motortype': 'acmotortype',
+  'ac_motor_type': 'acmotortype',
+  'acmotortype': 'acmotortype',
+  'type': 'acmotortype',
   
-  'enclosure': 'ebayitemspecificsenclosuretype',       // eBay calls it "Enclosure Type"
-  'enclosure_type': 'ebayitemspecificsenclosuretype',
-  'enclosuretype': 'ebayitemspecificsenclosuretype',
+  'enclosure': 'enclosuretype',           // eBay: "Enclosure Type"
+  'enclosure_type': 'enclosuretype',
+  'enclosuretype': 'enclosuretype',
   
-  'nema_design': 'ebayitemspecificsnemadesignletter',  // eBay calls it "NEMA Design Letter"
-  'nemadesign': 'ebayitemspecificsnemadesignletter',
-  'design_code': 'ebayitemspecificsnemadesignletter',
-  'nemadesignletter': 'ebayitemspecificsnemadesignletter',
+  'nema_design': 'nemadesignletter',      // eBay: "NEMA Design Letter"
+  'nemadesign': 'nemadesignletter',
+  'design_code': 'nemadesignletter',
+  'nemadesignletter': 'nemadesignletter',
   
-  'insulation_class': 'ebayitemspecificsinsulationclass',
-  'insulationclass': 'ebayitemspecificsinsulationclass',
+  'insulation_class': 'insulationclass',
+  'insulationclass': 'insulationclass',
   
-  'service_factor': 'ebayitemspecificsservicefactor',
-  'servicefactor': 'ebayitemspecificsservicefactor',
+  'service_factor': 'servicefactor',
+  'servicefactor': 'servicefactor',
   
-  'frame_suffix': 'ebayitemspecificsnemaframesuffix',
-  'nema_frame_suffix': 'ebayitemspecificsnemaframesuffix',
-  'nemaframesuffix': 'ebayitemspecificsnemaframesuffix',
+  'frame_suffix': 'nemaframesuffix',
+  'nema_frame_suffix': 'nemaframesuffix',
+  'nemaframesuffix': 'nemaframesuffix',
   
-  'mounting': 'ebayitemspecificsmountingtype',
-  'mounting_type': 'ebayitemspecificsmountingtype',
-  'mountingtype': 'ebayitemspecificsmountingtype',
+  'mounting': 'mountingtype',
+  'mounting_type': 'mountingtype',
+  'mountingtype': 'mountingtype',
   
-  'shaft_type': 'ebayitemspecificsshafttype',
-  'shafttype': 'ebayitemspecificsshafttype',
+  'shaft_type': 'shafttype',
+  'shafttype': 'shafttype',
   
-  'shaft_diameter': 'ebayitemspecificsshaftdiameter',
-  'shaftdiameter': 'ebayitemspecificsshaftdiameter',
+  'shaft_diameter': 'shaftdiameter',
+  'shaftdiameter': 'shaftdiameter',
   
-  'special_construction': 'ebayitemspecificsspecialmotorconstruction',
-  'specialmotorconstruction': 'ebayitemspecificsspecialmotorconstruction',
+  'special_construction': 'specialmotorconstruction',
+  'specialmotorconstruction': 'specialmotorconstruction',
   
-  'inverter_duty': 'ebayitemspecificsinvertervectordutyrating',
-  'vfd_rated': 'ebayitemspecificsinvertervectordutyrating',
-  'vector_duty': 'ebayitemspecificsinvertervectordutyrating',
-  'invertervectordutyrating': 'ebayitemspecificsinvertervectordutyrating',
+  'inverter_duty': 'invertervectordutyrating',
+  'vfd_rated': 'invertervectordutyrating',
+  'vector_duty': 'invertervectordutyrating',
+  'invertervectordutyrating': 'invertervectordutyrating',
 
-  // === ELECTRICAL - CORRECTED ===
-  'voltage': 'ebayitemspecificsnominalratedinputvoltage',    // eBay calls it "Nominal Rated Input Voltage"
-  'input_voltage': 'ebayitemspecificsnominalratedinputvoltage',
-  'inputvoltage': 'ebayitemspecificsnominalratedinputvoltage',
-  'nominalratedinputvoltage': 'ebayitemspecificsnominalratedinputvoltage',
-  'rated_voltage': 'ebayitemspecificsnominalratedinputvoltage',
+  // === ELECTRICAL - SHORT NAMES ===
+  'voltage': 'nominalratedinputvoltage',    // eBay: "Nominal Rated Input Voltage"
+  'input_voltage': 'nominalratedinputvoltage',
+  'inputvoltage': 'nominalratedinputvoltage',
+  'nominalratedinputvoltage': 'nominalratedinputvoltage',
+  'rated_voltage': 'nominalratedinputvoltage',
   
-  'actual_voltage': 'ebayitemspecificsactualratedinputvoltage',  // For specific voltage values
-  'actualratedinputvoltage': 'ebayitemspecificsactualratedinputvoltage',
+  'actual_voltage': 'actualratedinputvoltage',
+  'actualratedinputvoltage': 'actualratedinputvoltage',
   
-  'amperage': 'ebayitemspecificsfullloadamps',         // eBay calls it "Full Load Amps"
-  'amps': 'ebayitemspecificsfullloadamps',
-  'current': 'ebayitemspecificsfullloadamps',
-  'fla': 'ebayitemspecificsfullloadamps',
-  'full_load_amps': 'ebayitemspecificsfullloadamps',
-  'fullloadamps': 'ebayitemspecificsfullloadamps',
+  'amperage': 'fullloadamps',               // eBay: "Full Load Amps"
+  'amps': 'fullloadamps',
+  'current': 'fullloadamps',
+  'fla': 'fullloadamps',
+  'full_load_amps': 'fullloadamps',
+  'fullloadamps': 'fullloadamps',
   
-  'phase': 'ebayitemspecificsacphase',                 // eBay calls it "AC Phase"
-  'ac_phase': 'ebayitemspecificsacphase',
-  'acphase': 'ebayitemspecificsacphase',
+  'phase': 'acphase',                       // eBay: "AC Phase"
+  'ac_phase': 'acphase',
+  'acphase': 'acphase',
   
-  'hz': 'ebayitemspecificsacfrequencyrating',          // eBay calls it "AC Frequency Rating"
-  'frequency': 'ebayitemspecificsacfrequencyrating',
-  'ac_frequency': 'ebayitemspecificsacfrequencyrating',
-  'acfrequencyrating': 'ebayitemspecificsacfrequencyrating',
+  'hz': 'acfrequencyrating',                // eBay: "AC Frequency Rating"
+  'frequency': 'acfrequencyrating',
+  'ac_frequency': 'acfrequencyrating',
+  'acfrequencyrating': 'acfrequencyrating',
   
-  'current_type': 'ebayitemspecificscurrenttype',      // AC/DC/Universal
-  'currenttype': 'ebayitemspecificscurrenttype',
+  'current_type': 'currenttype',            // AC/DC/Universal
+  'currenttype': 'currenttype',
   
-  'dc_winding': 'ebayitemspecificsdcstatorwindingtype',
-  'dcstatorwindingtype': 'ebayitemspecificsdcstatorwindingtype',
-  'stator_type': 'ebayitemspecificsdcstatorwindingtype',
+  'dc_winding': 'dcstatorwindingtype',
+  'dcstatorwindingtype': 'dcstatorwindingtype',
+  'stator_type': 'dcstatorwindingtype',
 
   // === TORQUE ===
-  'torque': 'ebayitemspecificsratedfullloadtorque',    // eBay calls it "Rated/Full-Load Torque"
-  'full_load_torque': 'ebayitemspecificsratedfullloadtorque',
-  'ratedfullloadtorque': 'ebayitemspecificsratedfullloadtorque',
+  'torque': 'ratedfullloadtorque',
+  'full_load_torque': 'ratedfullloadtorque',
+  'ratedfullloadtorque': 'ratedfullloadtorque',
   
-  'starting_torque': 'ebayitemspecificsstartinglockedrotortorque',
-  'locked_rotor_torque': 'ebayitemspecificsstartinglockedrotortorque',
-  'startinglockedrotortorque': 'ebayitemspecificsstartinglockedrotortorque',
+  'starting_torque': 'startinglockedrotortorque',
+  'locked_rotor_torque': 'startinglockedrotortorque',
+  'startinglockedrotortorque': 'startinglockedrotortorque',
 
   // === IP/PROTECTION ===
-  'ip_rating': 'ebayitemspecificsiprating',
-  'iprating': 'ebayitemspecificsiprating',
+  'ip_rating': 'iprating',
+  'iprating': 'iprating',
   
-  'protection_liquids': 'ebayitemspecificsprotectionagainstliquids',
-  'protectionagainstliquids': 'ebayitemspecificsprotectionagainstliquids',
+  'protection_liquids': 'protectionagainstliquids',
+  'protectionagainstliquids': 'protectionagainstliquids',
   
-  'protection_solids': 'ebayitemspecificsprotectionagainstsolids',
-  'protectionagainstsolids': 'ebayitemspecificsprotectionagainstsolids',
+  'protection_solids': 'protectionagainstsolids',
+  'protectionagainstsolids': 'protectionagainstsolids',
 
   // === REVERSIBILITY ===
-  'reversible': 'ebayitemspecificsreversiblenonreversible',
-  'reversiblenonreversible': 'ebayitemspecificsreversiblenonreversible',
+  'reversible': 'reversiblenonreversible',
+  'reversiblenonreversible': 'reversiblenonreversible',
 
   // === COUNTRY/ORIGIN ===
-  'country_of_origin': 'ebayitemspecificscountryoforigin',
-  'countryoforigin': 'ebayitemspecificscountryoforigin',
-  'country_of_manufacture': 'ebayitemspecificscountryoforigin',
-  'origin': 'ebayitemspecificscountryoforigin',
+  'country_of_origin': 'countryoforigin',
+  'countryoforigin': 'countryoforigin',
+  'country_of_manufacture': 'countryoforigin',
+  'origin': 'countryoforigin',
 
-  // === SENSORS (for other categories) ===
-  'sensing_range': 'ebayitemspecificsnominalsensingradius',
-  'sensingrange': 'ebayitemspecificsnominalsensingradius',
-  'sensing_distance': 'ebayitemspecificsnominalsensingradius',
-  'operating_distance': 'ebayitemspecificsoperatingdistance',
-  'operatingdistance': 'ebayitemspecificsoperatingdistance',
-  'sensor_type': 'ebayitemspecificssensortype',
-  'sensortype': 'ebayitemspecificssensortype',
-  'output_type': 'ebayitemspecificsoutputtype',
-  'outputtype': 'ebayitemspecificsoutputtype',
+  // === SENSORS ===
+  'sensing_range': 'nominalsensingradius',
+  'sensingrange': 'nominalsensingradius',
+  'sensing_distance': 'nominalsensingradius',
+  'operating_distance': 'operatingdistance',
+  'operatingdistance': 'operatingdistance',
+  'sensor_type': 'sensortype',
+  'sensortype': 'sensortype',
+  'output_type': 'outputtype',
+  'outputtype': 'outputtype',
 
   // === PNEUMATIC / HYDRAULIC ===
-  'bore_size': 'ebayitemspecificsboresize',
-  'boresize': 'ebayitemspecificsboresize',
-  'bore_diameter': 'ebayitemspecificsboresize',
-  'stroke': 'ebayitemspecificsstrokelength',
-  'stroke_length': 'ebayitemspecificsstrokelength',
-  'strokelength': 'ebayitemspecificsstrokelength',
-  'cylinder_type': 'ebayitemspecificscylindertype',
-  'cylindertype': 'ebayitemspecificscylindertype',
-  'port_size': 'ebayitemspecificsinletportdiameter',
-  'inlet_port': 'ebayitemspecificsinletportdiameter',
-  'outlet_port': 'ebayitemspecificsoutletportdiameter',
-  'valve_type': 'ebayitemspecificssolenoidvalvetype',
-  'number_of_ports': 'ebayitemspecificsnumberofports',
+  'bore_size': 'boresize',
+  'boresize': 'boresize',
+  'bore_diameter': 'boresize',
+  'stroke': 'strokelength',
+  'stroke_length': 'strokelength',
+  'strokelength': 'strokelength',
+  'cylinder_type': 'cylindertype',
+  'cylindertype': 'cylindertype',
+  'port_size': 'inletportdiameter',
+  'inlet_port': 'inletportdiameter',
+  'outlet_port': 'outletportdiameter',
+  'valve_type': 'solenoidvalvetype',
+  'number_of_ports': 'numberofports',
   
-  'psi': 'ebayitemspecificsmaxpsi',
-  'pressure': 'ebayitemspecificsratedpressure',
-  'max_pressure': 'ebayitemspecificsmaximumpressure',
-  'maxpressure': 'ebayitemspecificsmaximumpressure',
-  'flow_rate': 'ebayitemspecificsmaximumflowrate',
-  'flowrate': 'ebayitemspecificsmaximumflowrate',
+  'psi': 'maxpsi',
+  'pressure': 'ratedpressure',
+  'max_pressure': 'maximumpressure',
+  'maxpressure': 'maximumpressure',
+  'flow_rate': 'maximumflowrate',
+  'flowrate': 'maximumflowrate',
 
   // === PLC / HMI / COMMUNICATION ===
-  'communication': 'ebayitemspecificscommunicationstandard',
-  'communication_protocol': 'ebayitemspecificscommunicationstandard',
-  'display_type': 'ebayitemspecificsdisplaytype',
-  'display_size': 'ebayitemspecificsdisplayscreensize',
-  'screen_size': 'ebayitemspecificsdisplayscreensize',
+  'communication': 'communicationstandard',
+  'communication_protocol': 'communicationstandard',
+  'display_type': 'displaytype',
+  'display_size': 'displayscreensize',
+  'screen_size': 'displayscreensize',
 
   // === CIRCUIT BREAKERS / RELAYS ===
-  'number_of_poles': 'ebayitemspecificsnumberofpoles',
-  'poles': 'ebayitemspecificsnumberofpoles'
+  'number_of_poles': 'numberofpoles',
+  'poles': 'numberofpoles'
 };
 
 function capitalizeWords(str) {
@@ -550,9 +550,9 @@ export default async function handler(req, res) {
       formData.append('ebayreturnprofileid', product.ebayReturnProfileId || '61860297015');
     }
 
-    // === MAP SPECIFICATIONS TO EBAY ITEM SPECIFICS ===
-    // Using CORRECTED field names from eBay Taxonomy API
-    console.log('=== PROCESSING SPECIFICATIONS (CORRECTED MAPPING) ===');
+    // === MAP SPECIFICATIONS TO EBAY INLINE FIELDS ===
+    // Using SHORT field names (no prefix) to populate RECOMMENDED section
+    console.log('=== PROCESSING SPECIFICATIONS (SHORT NAMES FOR INLINE FIELDS) ===');
     console.log('product.specifications:', JSON.stringify(product.specifications, null, 2));
 
     const ebayFieldsSet = new Set(); // Track which eBay fields we've already set
@@ -569,7 +569,7 @@ export default async function handler(req, res) {
         const keyLower = key.toLowerCase().replace(/\s+/g, '_');
         const keyClean = key.toLowerCase().replace(/[_\s]+/g, '');
 
-        // Find the CORRECT eBay field name from our mapping
+        // Find the SHORT eBay field name from our mapping (NO PREFIX)
         const ebayField = SPEC_TO_EBAY_FIELD[key] ||
                           SPEC_TO_EBAY_FIELD[keyLower] ||
                           SPEC_TO_EBAY_FIELD[keyClean];
@@ -577,18 +577,18 @@ export default async function handler(req, res) {
         if (ebayField && !ebayFieldsSet.has(ebayField)) {
           formData.append(ebayField, value);
           ebayFieldsSet.add(ebayField);
-          console.log(`  eBay: ${ebayField} = ${value}`);
+          console.log(`  INLINE: ${ebayField} = ${value}`);
         } else if (ebayField) {
-          console.log(`  SKIP eBay (already set): ${ebayField}`);
+          console.log(`  SKIP (already set): ${ebayField}`);
         } else {
-          console.log(`  NO eBay mapping for: "${key}"`);
+          console.log(`  NO mapping for: "${key}"`);
         }
       }
     } else {
       console.log('WARNING: No specifications object found');
     }
 
-    console.log('Total eBay fields set:', ebayFieldsSet.size);
+    console.log('Total inline eBay fields set:', ebayFieldsSet.size);
 
     // === HANDLE COUNTRY OF ORIGIN SPECIALLY ===
     if (product.countryOfOrigin || product.specifications?.country_of_origin || product.specifications?.countryoforigin) {
@@ -596,8 +596,8 @@ export default async function handler(req, res) {
                           product.specifications?.country_of_origin ||
                           product.specifications?.countryoforigin;
 
-      if (!ebayFieldsSet.has('ebayitemspecificscountryoforigin')) {
-        formData.append('ebayitemspecificscountryoforigin', countryValue);
+      if (!ebayFieldsSet.has('countryoforigin')) {
+        formData.append('countryoforigin', countryValue);
         console.log(`Country of Origin: ${countryValue}`);
       }
     }
