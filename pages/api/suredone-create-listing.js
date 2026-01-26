@@ -103,13 +103,13 @@ function generateUserType(productCategory, specifications = {}) {
 }
 
 // -----------------------------------------------------------------------------
-// WEBSITE FIELD -> eBay Item Specifics MAPPING
-// Maps our spec fields to BOTH website fields AND eBay item specifics
+// eBay Item Specifics MAPPING
+// Maps AI-extracted spec fields to eBay item specifics
 // Field names are EXACT matches from Suredone_Headers.csv
 // Each spec maps to exactly ONE eBay Recommended field - no duplicates
 // -----------------------------------------------------------------------------
 const SPEC_TO_EBAY_FIELD = {
-  // === MOTORS (corrected per eBay Recommended fields) ===
+  // === MOTORS ===
   'horsepower': 'ebayitemspecificsmotorhorsepower',
   'hp': 'ebayitemspecificsmotorhorsepower',
   'rpm': 'ebayitemspecificsratedrpm',
@@ -409,7 +409,6 @@ export default async function handler(req, res) {
 
     // === GET BIGCOMMERCE MULTI-CATEGORIES ===
     const categoryKey = product.productCategory || 'Unknown';
-    // Case-insensitive lookup
     const categoryLookup = Object.keys(BIGCOMMERCE_CATEGORY_MAP).find(
       k => k.toLowerCase() === categoryKey.toLowerCase()
     ) || 'Unknown';
@@ -440,6 +439,7 @@ export default async function handler(req, res) {
     formData.append('ebayskip', '1');
     formData.append('bigcommerceskip', '1');
     console.log('Channels skipped: eBay and BigCommerce (draft mode)');
+    
     formData.append('longdescription', product.description || '');
     formData.append('price', product.price || '0.00');
     formData.append('stock', product.stock || '1');
@@ -537,9 +537,28 @@ export default async function handler(req, res) {
     if (!isForParts) {
       formData.append('ebayreturnprofileid', product.ebayReturnProfileId || '61860297015');
     }
-    
-        // 2) Set exactly ONE eBay Recommended field via SPEC_TO_EBAY_FIELD
-        // Only append ebayitemspecifics* fields — raw spec keys create Dynamic eBay fields
+
+    // === MAP SPECIFICATIONS TO EBAY ITEM SPECIFICS ONLY ===
+    // Only send to ebayitemspecifics* fields - no website fields to avoid duplicates
+    console.log('=== PROCESSING SPECIFICATIONS ===');
+    console.log('product.specifications:', JSON.stringify(product.specifications, null, 2));
+
+    const ebayFieldsSet = new Set(); // Track which eBay fields we've already set
+
+    if (product.specifications && typeof product.specifications === 'object') {
+      console.log('Spec count:', Object.keys(product.specifications).length);
+
+      for (const [key, value] of Object.entries(product.specifications)) {
+        if (!value || value === 'null' || value === null || value === 'N/A' || value === 'Unknown') {
+          console.log(`  SKIP: "${key}" = "${value}" (empty/null)`);
+          continue;
+        }
+
+        const keyLower = key.toLowerCase().replace(/\s+/g, '_');
+        const keyClean = key.toLowerCase().replace(/[_\s]+/g, '');
+
+        // Set exactly ONE eBay Recommended field via SPEC_TO_EBAY_FIELD
+        // Only append ebayitemspecifics* fields — no other fields
         const ebayField = SPEC_TO_EBAY_FIELD[key] ||
                           SPEC_TO_EBAY_FIELD[keyLower] ||
                           SPEC_TO_EBAY_FIELD[keyClean];
@@ -547,7 +566,7 @@ export default async function handler(req, res) {
         if (ebayField && !ebayFieldsSet.has(ebayField)) {
           formData.append(ebayField, value);
           ebayFieldsSet.add(ebayField);
-          console.log(`  eBay:    ${ebayField} = ${value}`);
+          console.log(`  eBay: ${ebayField} = ${value}`);
         } else if (ebayField) {
           console.log(`  SKIP eBay (already set): ${ebayField}`);
         } else {
@@ -561,21 +580,13 @@ export default async function handler(req, res) {
     console.log('Total eBay fields set:', ebayFieldsSet.size);
 
     // === HANDLE COUNTRY OF ORIGIN SPECIALLY ===
-    // Populate both countryoforigin (website) AND ebayitemspecificscountryoforigin (eBay)
-    // AND countryregionofmanufacture (website)
     if (product.countryOfOrigin || product.specifications?.country_of_origin || product.specifications?.countryoforigin) {
       const countryValue = product.countryOfOrigin ||
                           product.specifications?.country_of_origin ||
                           product.specifications?.countryoforigin;
 
-      // Website fields
-      formData.append('countryoforigin', countryValue);
-      formData.append('countryregionofmanufacture', countryValue);
-
-      // eBay item specific
       formData.append('ebayitemspecificscountryoforigin', countryValue);
-
-      console.log(`Country of Origin: ${countryValue} → countryoforigin, countryregionofmanufacture, ebayitemspecificscountryoforigin`);
+      console.log(`Country of Origin: ${countryValue}`);
     }
 
     // === RAW SPECS AS CUSTOM FIELDS ===
