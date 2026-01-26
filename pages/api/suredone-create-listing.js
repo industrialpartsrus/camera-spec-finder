@@ -262,6 +262,113 @@ const SPEC_TO_EBAY_FIELD = {
   'origin': 'ebayitemspecificscountryoforigin'
 };
 
+// Maps AI-extracted spec keys to SureDone WEBSITE field names (for BigCommerce)
+// These are standard SureDone fields from Suredone_Headers.csv (NOT ebayitemspecifics)
+const SPEC_TO_WEBSITE_FIELD = {
+  // === MOTORS ===
+  'horsepower': 'horsepower',
+  'hp': 'horsepower',
+  'rpm': 'rpm',
+  'frame': 'frame',
+  'frame_size': 'frame',
+  'framesize': 'frame',
+  'motor_type': 'motortype',
+  'motortype': 'motortype',
+  'type': 'motortype',
+  'enclosure': 'enclosuretype',
+  'enclosure_type': 'enclosuretype',
+  'enclosuretype': 'enclosuretype',
+  'nema_design': 'nemadesignletter',
+  'nemadesign': 'nemadesignletter',
+  'design_code': 'nemadesignletter',
+  'insulation_class': 'insulationclass',
+  'insulationclass': 'insulationclass',
+  'mounting': 'mountingtype',
+  'mounting_type': 'mountingtype',
+  'mountingtype': 'mountingtype',
+  'shaft_diameter': 'shaftdiameter',
+  'shaftdiameter': 'shaftdiameter',
+  'efficiency': 'efficiency',
+
+  // === ELECTRICAL ===
+  'voltage': 'voltage',
+  'input_voltage': 'voltage',
+  'inputvoltage': 'voltage',
+  'output_voltage': 'outputvoltage',
+  'outputvoltage': 'outputvoltage',
+  'amperage': 'amperage',
+  'amps': 'amperage',
+  'current': 'amperage',
+  'fla': 'amperage',
+  'full_load_amps': 'amperage',
+  'fullloadamps': 'amperage',
+  'phase': 'phase',
+  'hz': 'frequency',
+  'frequency': 'frequency',
+  'watts': 'watts',
+  'wattage': 'watts',
+  'kw': 'kw',
+  'kw_rating': 'kw',
+  'kilowatts': 'kw',
+  'power': 'powerrating',
+  'power_rating': 'powerrating',
+
+  // === TORQUE ===
+  'torque': 'torque',
+  'holding_torque': 'torque',
+  'stall_torque': 'torque',
+  'locked_rotor_torque': 'torque',
+  'starting_torque': 'torque',
+
+  // === PRESSURE / FLOW ===
+  'pressure': 'pressure',
+  'max_pressure': 'pressure',
+  'maxpressure': 'pressure',
+  'operating_pressure': 'pressure',
+
+  // === SENSORS ===
+  'sensing_range': 'sensingrange',
+  'sensingrange': 'sensingrange',
+  'sensing_distance': 'sensingrange',
+  'sensor_type': 'sensortype',
+  'sensortype': 'sensortype',
+  'output_type': 'outputtype',
+  'outputtype': 'outputtype',
+
+  // === PNEUMATIC / HYDRAULIC ===
+  'bore_size': 'borediameter',
+  'boresize': 'borediameter',
+  'bore_diameter': 'borediameter',
+  'stroke': 'strokelength',
+  'stroke_length': 'strokelength',
+  'strokelength': 'strokelength',
+  'cylinder_type': 'cylindertype',
+  'cylindertype': 'cylindertype',
+
+  // === SWITCHES ===
+  'switch_action': 'switchaction',
+  'contact_material': 'contactmaterial',
+
+  // === COMMUNICATION ===
+  'communication': 'communicationstandard',
+  'communication_protocol': 'communicationstandard',
+  'screen_size': 'screensize',
+  'display_size': 'screensize',
+
+  // === DIMENSIONS ===
+  'length': 'length',
+  'width': 'width',
+  'height': 'height',
+  'depth': 'depth',
+  'diameter': 'diameter',
+
+  // === COUNTRY ===
+  'country_of_origin': 'countryoforigin',
+  'countryoforigin': 'countryoforigin',
+  'country_of_manufacture': 'countryoforigin',
+  'origin': 'countryoforigin'
+};
+
 function capitalizeWords(str) {
   if (!str) return str;
   return str.toLowerCase().split(' ').map(word =>
@@ -544,6 +651,7 @@ export default async function handler(req, res) {
     console.log('product.specifications:', JSON.stringify(product.specifications, null, 2));
 
     const ebayFieldsSet = new Set(); // Track which eBay fields we've already set
+    const websiteFieldsSet = new Set(); // Track which website fields we've already set
 
     if (product.specifications && typeof product.specifications === 'object') {
       console.log('Spec count:', Object.keys(product.specifications).length);
@@ -557,8 +665,22 @@ export default async function handler(req, res) {
         const keyLower = key.toLowerCase().replace(/\s+/g, '_');
         const keyClean = key.toLowerCase().replace(/[_\s]+/g, '');
 
-        // Set exactly ONE eBay Recommended field via SPEC_TO_EBAY_FIELD
-        // Only append ebayitemspecifics* fields — raw spec keys create Dynamic eBay fields
+        // 1. Set the WEBSITE field (for BigCommerce) using known SureDone field names
+        const websiteField = SPEC_TO_WEBSITE_FIELD[key] ||
+                             SPEC_TO_WEBSITE_FIELD[keyLower] ||
+                             SPEC_TO_WEBSITE_FIELD[keyClean];
+
+        if (websiteField && !websiteFieldsSet.has(websiteField)) {
+          formData.append(websiteField, value);
+          websiteFieldsSet.add(websiteField);
+          console.log(`  Website: ${websiteField} = ${value}`);
+        } else if (websiteField) {
+          console.log(`  SKIP Website (already set): ${websiteField}`);
+        } else {
+          console.log(`  NO Website mapping for: "${key}"`);
+        }
+
+        // 2. Set exactly ONE eBay Recommended field (ebayitemspecifics* only)
         const ebayField = SPEC_TO_EBAY_FIELD[key] ||
                           SPEC_TO_EBAY_FIELD[keyLower] ||
                           SPEC_TO_EBAY_FIELD[keyClean];
@@ -577,6 +699,7 @@ export default async function handler(req, res) {
       console.log('WARNING: No specifications object found');
     }
 
+    console.log('Total Website fields set:', websiteFieldsSet.size);
     console.log('Total eBay fields set:', ebayFieldsSet.size);
 
     // === HANDLE COUNTRY OF ORIGIN SPECIALLY ===
