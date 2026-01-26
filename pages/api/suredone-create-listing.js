@@ -2,32 +2,167 @@
 // Complete SureDone listing creation with UPC, eBay categories, and item specifics
 
 // ============================================================================
-// EBAY STORE CATEGORIES - UPDATE THESE WITH YOUR ACTUAL STORE CATEGORY IDS
+// EBAY STORE CATEGORIES - YOUR ACTUAL STORE CATEGORY IDS
 // ============================================================================
 const EBAY_STORE_CATEGORIES = {
-  'Electric Motors': '28134837016',
-  'Servo Motors': '28134839016',
-  'Servo Drives': '28134840016',
-  'VFDs': '28134841016',
-  'PLCs': '28134842016',
-  'HMIs': '28134843016',
-  'Power Supplies': '28134844016',
-  'I/O Modules': '28134845016',
-  'Proximity Sensors': '28134846016',
-  'Photoelectric Sensors': '28134847016',
-  'Pneumatic Cylinders': '28134848016',
-  'Pneumatic Valves': '28134849016',
-  'Circuit Breakers': '28134850016',
-  'Contactors': '28134851016',
-  'Transformers': '28134852016',
-  'Encoders': '28134853016',
-  'Gearboxes': '28134854016',
-  'Bearings': '28134855016'
+  // Power Transmission
+  'Electric Motors': '17167471',
+  'Servo Motors': '393389015',
+  'Servo Drives': '393390015',
+  'Encoders': '1802953015',
+  'Gear Reducers': '6688332015',
+  'Gearboxes': '6688332015',
+  'Linear Actuators': '6690433015',
+  'Linear Rails': '6690434015',
+  'Ball Screws': '6690432015',
+  'Brakes': '6688331015',
+  'Clutches': '393386015',
+  'Belts': '6688333015',
+  'Roller Chains': '6688335015',
+  'Sprockets': '6688334015',
+  
+  // Automation Control
+  'PLCs': '5404089015',
+  'PLC': '5404089015',
+  'HMIs': '6686264015',
+  'HMI': '6686264015',
+  'I/O Modules': '18373835',
+  'I/O Boards': '18373835',
+  'Power Supplies': '2242362015',
+  'Power Supply': '2242362015',
+  
+  // Motion Control
+  'AC Drive': '2242358015',
+  'AC Drives': '2242358015',
+  'VFDs': '2242358015',
+  'VFD': '2242358015',
+  'DC Drive': '6688299015',
+  'DC Drives': '6688299015',
+  
+  // Sensing Devices
+  'Proximity Sensors': '4173791015',
+  'Photoelectric Sensors': '4173793015',
+  'Light Curtains': '393379015',
+  'Laser Sensors': '2479732015',
+  'Fiber Optic Sensors': '5785856015',
+  'Color Sensors': '4173796015',
+  'Current Sensors': '4173797015',
+  'Flow Sensors': '4173798015',
+  'Level Sensors': '4173792015',
+  'Light Sensors': '4173799015',
+  'Linear Sensors': '5634087015',
+  'Load Cells': '5436340015',
+  'Pressure Sensors': '6690386015',
+  'Temperature Sensors': '6690556015',
+  'Barcode Scanners': '6690176015',
+  'RFID Reader': '6695702015',
+  
+  // Industrial Control
+  'Control Relays': '2242359015',
+  'Motor Controls': '2348910015',
+  'Limit Switches': '4173745015',
+  'Micro Switches': '4173752015',
+  'E-Stop Switches': '4173756015',
+  'Foot Switches': '4173739015',
+  'Key Switches': '4173738015',
+  'Selector Switches': '4173742015',
+  'Momentary Buttons': '4173735015',
+  'Maintained Buttons': '4173736015',
+  'Illuminated Buttons': '4173737015',
+  'Palm Operated Buttons': '4173743015',
+  'Pilot Lights': '2464042015',
+  'Stack Lights': '6690583015',
+  'Joysticks': '4173758015',
+  'Potentiometers': '4173757015',
+  'Counters': '18373799',
+  'Timers': '18373798',
+  'Panel Meters': '5634088015',
+  'Gauges': '1484016015',
+  'Temperature Controls': '2461872015',
+  'Pressure Controls': '1484009015',
+  'Machine Safety': '2464037015',
+  'Transducers': '18373834',
+  'Transmitters': '5634089015',
+  'Cord Sets': '1856435015',
+  'Sound Modules': '6327053015',
+  
+  // Electrical
+  'Circuit Breakers': '5634105015',
+  'Transformers': '5634104015',
+  'Disconnects': '20338717',
+  'Enclosures': '18373801',
+  'Fuses & Holders': '18373807',
+  'Contactors': '2242359015',
+  
+  // Pneumatics
+  'Pneumatic Cylinders': '2461873015',
+  'Cylinders': '2461873015',
+  'Pneumatic Valves': '2461874015',
+  'Actuators': '2461878015',
+  'Grippers': '6699359015',
+  'Gripper': '6699359015',
+  'Regulators': '2461875015',
+  'Lubricators': '2461876015',
+  'Dryers': '2461877015',
+  'Filters': '2461880015',
+  'Mufflers': '6690373015',
+  'Nippers': '6699358015',
+  
+  // Hydraulics
+  'Hydraulic Cylinders': '6696061015',
+  'Hydraulic Pumps': '6696064015',
+  'Hydraulic Valves': '6696060015',
+  'Hydraulic Actuators': '6696062015',
+  'Hydraulic Accumulators': '6696063015',
+  
+  // Bearings
+  'Bearings': '6690505015',
+  'Ball Bearings': '4173714015',
+  'Roller Bearings': '4173168015',
+  'Tapered Bearings': '4173167015',
+  'Thrust Bearings': '4173169015',
+  'Needle Bearings': '4173171015',
+  'Linear Bearings': '4173713015',
+  'Pillow Block': '4173166015',
+  'Flange Bearings': '4173165015',
+  'Cam Follower': '4173170015',
+  
+  // Valves (non-pneumatic)
+  'Ball Valves': '6690466015',
+  'Butterfly Valves': '6690465015',
+  'Check Valves': '6690467015',
+  'Float Valves': '6690474015',
+  'Gas Valves': '6690469015',
+  'Globe Valves': '6690472015',
+  'Lockout Valves': '6690470015',
+  'Pressure Relief': '6690486015',
+  'Proportional Valves': '6690471015',
+  'Solenoid Valves': '6690468015',
+  'Steam Valves': '6690473015',
+  
+  // Pumps
+  'Centrifugal Pump': '6689968015',
+  'Condensate Pump': '6689971015',
+  'Diaphragm Pump': '6689969015',
+  'Hydraulic Pump': '6689966015',
+  'Metering Pump': '6689970015',
+  'Vacuum Pump': '6689967015',
+  
+  // Other
+  'Robotics': '5384030015',
+  'Machinery': '5384029015',
+  'Material Handling': '2348909015',
+  'HVAC': '17167473',
+  'Chillers': '2457873015',
+  'Fans': '2457884015',
+  'Regenerative Blowers': '18206302015',
+  'Quality & Test': '6686263015',
+  'Lighting Ballasts': '20030375015',
+  'Computers & Accessories': '19438754015'
 };
 
-// ALL PRODUCTS category ID - used as default for ebaystorecategory2
-// UPDATE THIS WITH YOUR ACTUAL "ALL PRODUCTS" STORE CATEGORY ID
-const ALL_PRODUCTS_CATEGORY = '28134836016';
+// ALL PRODUCTS category ID - YOUR ACTUAL ID
+const ALL_PRODUCTS_CATEGORY = '23399313015';
 
 // ============================================================================
 // ITEM SPECIFICS FIELD MAPPING
@@ -111,36 +246,6 @@ const ITEM_SPECIFICS_MAPPING = {
   'voltagerating': 'voltagerating',
   'coilvoltage': 'coilvoltage'
 };
-
-// ============================================================================
-// UPC POOL - Simple in-memory approach
-// For production, you'd want to use a database or external file
-// ============================================================================
-let upcPoolCache = null;
-
-async function getNextUpc(SUREDONE_URL, SUREDONE_USER, SUREDONE_TOKEN) {
-  // Try to fetch an unused UPC from SureDone's custom data or a separate API
-  // For now, we'll skip UPC assignment if no pool is available
-  // You can implement your own UPC pool logic here
-  
-  try {
-    // Option 1: Call your assign-upc API endpoint
-    const response = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/assign-upc`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      return data.upc || null;
-    }
-  } catch (e) {
-    console.log('Could not get UPC from pool:', e.message);
-  }
-  
-  return null;
-}
 
 // ============================================================================
 // MAIN HANDLER
@@ -229,12 +334,28 @@ export default async function handler(req, res) {
     console.log('Generated SKU:', sku);
 
     // ========================================================================
-    // GET UPC FROM POOL (optional)
+    // GET UPC FROM POOL (call assign-upc API)
     // ========================================================================
     let upc = null;
     try {
-      upc = await getNextUpc(SUREDONE_URL, SUREDONE_USER, SUREDONE_TOKEN);
-      console.log('Assigned UPC:', upc || 'None available');
+      // Build the base URL for internal API calls
+      const baseUrl = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : 'http://localhost:3000';
+      
+      const upcResponse = await fetch(`${baseUrl}/api/assign-upc`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku })
+      });
+      
+      if (upcResponse.ok) {
+        const upcData = await upcResponse.json();
+        if (upcData.success && upcData.upc) {
+          upc = upcData.upc;
+          console.log('Assigned UPC:', upc);
+        }
+      }
     } catch (e) {
       console.log('UPC assignment skipped:', e.message);
     }
@@ -318,7 +439,7 @@ export default async function handler(req, res) {
     // ========================================================================
     if (product.ebayCategoryId) {
       formData.append('ebaycategoryid', product.ebayCategoryId);
-      console.log('eBay Category ID:', product.ebayCategoryId);
+      console.log('eBay Marketplace Category ID:', product.ebayCategoryId);
     }
 
     // ========================================================================
@@ -326,10 +447,23 @@ export default async function handler(req, res) {
     // ========================================================================
     // Store Category 1: Based on product category
     let storeCategory1 = '';
-    if (product.productCategory && EBAY_STORE_CATEGORIES[product.productCategory]) {
-      storeCategory1 = EBAY_STORE_CATEGORIES[product.productCategory];
+    const productCat = product.productCategory || product.category || '';
+    
+    if (productCat && EBAY_STORE_CATEGORIES[productCat]) {
+      storeCategory1 = EBAY_STORE_CATEGORIES[productCat];
       formData.append('ebaystorecategory', storeCategory1);
-      console.log('eBay Store Category 1:', storeCategory1, `(${product.productCategory})`);
+      console.log('eBay Store Category 1:', storeCategory1, `(${productCat})`);
+    } else if (productCat) {
+      // Try to find a partial match
+      const catLower = productCat.toLowerCase();
+      for (const [key, value] of Object.entries(EBAY_STORE_CATEGORIES)) {
+        if (key.toLowerCase().includes(catLower) || catLower.includes(key.toLowerCase())) {
+          storeCategory1 = value;
+          formData.append('ebaystorecategory', storeCategory1);
+          console.log('eBay Store Category 1 (partial match):', storeCategory1, `(${key})`);
+          break;
+        }
+      }
     }
     
     // Store Category 2: Always "ALL PRODUCTS"
@@ -390,14 +524,15 @@ export default async function handler(req, res) {
     // Log key fields for debugging
     console.log('Key fields:', {
       sku: formDataObj.sku,
+      upc: formDataObj.upc || 'not assigned',
       title: formDataObj.title?.substring(0, 50) + '...',
       brand: formDataObj.brand,
       mpn: formDataObj.mpn,
       condition: formDataObj.condition,
-      ebaycategoryid: formDataObj.ebaycategoryid,
-      ebaystorecategory: formDataObj.ebaystorecategory,
+      ebaycategoryid: formDataObj.ebaycategoryid || 'not set',
+      ebaystorecategory: formDataObj.ebaystorecategory || 'not set',
       ebaystorecategory2: formDataObj.ebaystorecategory2,
-      countryoforigin: formDataObj.countryoforigin
+      countryoforigin: formDataObj.countryoforigin || 'not set'
     });
 
     // ========================================================================
