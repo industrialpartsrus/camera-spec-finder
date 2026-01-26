@@ -350,7 +350,7 @@ export default function ProListingBuilder() {
         specifications: product.specifications || {},
         rawSpecifications: product.rawSpecifications || [],
         qualityFlag: product.qualityFlag || 'NEEDS_REVIEW',
-        ebayCategoryId: product.ebayCategoryId || '',
+        ebayCategoryId: product.ebayCategory?.id || product.ebayCategoryId || '',
         ebayStoreCategoryId: product.ebayStoreCategoryId || '',
         bigcommerceCategoryId: product.bigcommerceCategoryId || ''
       });
