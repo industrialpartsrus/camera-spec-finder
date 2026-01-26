@@ -1,729 +1,205 @@
 // pages/api/search-product.js
-// Comprehensive product search with category-specific eBay field extraction
-// Uses exact eBay Taxonomy API field names and allowed values
+// FINAL VERSION - Complete AI search with correct category mappings
 
-// ============================================================================
-// EBAY CATEGORY FIELD DEFINITIONS WITH ALLOWED VALUES
-// These are derived from eBay Taxonomy API for your product categories
-// ============================================================================
-
-const CATEGORY_FIELD_DEFINITIONS = {
-  // ============================================================================
-  // ELECTRIC MOTORS - eBay Category 181732
-  // ============================================================================
-  'Electric Motors': {
-    ebayCategoryId: '181732',
-    ebayCategoryName: 'Electric Motors',
-    fields: {
-      // Core identifiers
-      brand: { required: true },
-      mpn: { required: true },
-      
-      // Motor specifications with allowed values
-      ratedloadhp: {
-        label: 'Rated Load (HP)',
-        allowedValues: ['1/4', '1/3', '1/2', '3/4', '1', '1 1/2', '2', '3', '5', '7 1/2', '10', '15', '20', '25', '30', '40', '50', '60', '75', '100', '125', '150', '200', '250', '300']
-      },
-      baserpm: {
-        label: 'Base RPM',
-        allowedValues: ['900', '1200', '1725', '1750', '1800', '3450', '3500', '3600']
-      },
-      acphase: {
-        label: 'AC Phase',
-        allowedValues: ['1-Phase', '3-Phase']
-      },
-      nominalratedinputvoltage: {
-        label: 'Nominal Rated Input Voltage',
-        allowedValues: ['12V', '24V', '115V', '115/208-230V', '115/230V', '200V', '208V', '208-230V', '208-230/460V', '230V', '230/460V', '460V', '575V']
-      },
-      acfrequencyrating: {
-        label: 'AC Frequency Rating',
-        allowedValues: ['50 Hz', '60 Hz', '50/60 Hz']
-      },
-      enclosuretype: {
-        label: 'Enclosure Type',
-        allowedValues: ['ODP', 'TEFC', 'TENV', 'TEAO', 'TEBC', 'TEPV', 'Explosion Proof', 'Washdown']
-      },
-      acmotortype: {
-        label: 'AC Motor Type',
-        allowedValues: ['AC Induction', 'Capacitor Start', 'Capacitor Start/Capacitor Run', 'Permanent Split Capacitor', 'Shaded Pole', 'Split Phase', 'Synchronous', 'Universal']
-      },
-      servicefactor: {
-        label: 'Service Factor',
-        allowedValues: ['1.0', '1.15', '1.25', '1.35', '1.4', '1.5']
-      },
-      iecframesize: {
-        label: 'IEC Frame Size',
-        allowedValues: ['42', '48', '56', '56C', '56H', '143T', '145T', '182T', '184T', '213T', '215T', '254T', '256T', '284T', '286T', '324T', '326T', '364T', '365T', '404T', '405T', '444T', '445T']
-      },
-      nemaframesuffix: {
-        label: 'NEMA Frame Suffix',
-        allowedValues: ['C', 'D', 'H', 'J', 'JM', 'JP', 'S', 'T', 'TC', 'U', 'Z']
-      },
-      nemadesignletter: {
-        label: 'NEMA Design Letter',
-        allowedValues: ['A', 'B', 'C', 'D']
-      },
-      insulationclass: {
-        label: 'Insulation Class',
-        allowedValues: ['A', 'B', 'F', 'H']
-      },
-      mountingtype: {
-        label: 'Mounting Type',
-        allowedValues: ['Foot Mounted', 'C-Face', 'D-Flange', 'Foot & C-Face', 'Foot & D-Flange', 'Vertical']
-      },
-      shaftdiameter: {
-        label: 'Shaft Diameter',
-        freeText: true
-      },
-      fullloadamps: {
-        label: 'Full Load Amps',
-        freeText: true
-      },
-      currenttype: {
-        label: 'Current Type',
-        allowedValues: ['AC', 'DC', 'AC/DC']
-      },
-      invertervectordutyrating: {
-        label: 'Inverter/Vector Duty Rating',
-        allowedValues: ['Inverter Duty', 'Vector Duty', 'Not Rated']
-      },
-      specialmotorconstruction: {
-        label: 'Special Motor Construction',
-        allowedValues: ['Brake Motor', 'Coolant Pump', 'Farm Duty', 'IEEE 841', 'Pump Motor', 'Severe Duty', 'Spa Motor', 'Washdown', 'None']
-      },
-      reversiblenonreversible: {
-        label: 'Reversible/Non-Reversible',
-        allowedValues: ['Reversible', 'Non-Reversible']
-      },
-      iprating: {
-        label: 'IP Rating',
-        allowedValues: ['IP44', 'IP54', 'IP55', 'IP56', 'IP65', 'IP66', 'IP67', 'IP68', 'IP69K']
-      }
-    }
-  },
-
-  // ============================================================================
-  // PLCS - eBay Category 181331
-  // ============================================================================
-  'PLCs': {
-    ebayCategoryId: '181331',
-    ebayCategoryName: 'PLCs & HMIs',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      communicationstandard: {
-        label: 'Communication Standard',
-        allowedValues: ['DeviceNet', 'EtherNet/IP', 'Ethernet', 'Modbus', 'Profibus', 'Profinet', 'RS-232', 'RS-485', 'Serial', 'USB']
-      },
-      nominalratedinputvoltage: {
-        label: 'Nominal Rated Input Voltage',
-        allowedValues: ['12V DC', '24V DC', '100-240V AC', '120V AC', '240V AC']
-      },
-      numberofiopoints: {
-        label: 'Number of I/O Points',
-        freeText: true
-      },
-      programmingmethod: {
-        label: 'Programming Method',
-        allowedValues: ['Ladder Logic', 'Function Block', 'Structured Text', 'Sequential Function Chart']
-      }
-    }
-  },
-
-  // ============================================================================
-  // HMIS - eBay Category 181331
-  // ============================================================================
-  'HMIs': {
-    ebayCategoryId: '181331',
-    ebayCategoryName: 'PLCs & HMIs',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      displayscreensize: {
-        label: 'Display Screen Size',
-        allowedValues: ['4"', '5.7"', '7"', '10"', '12"', '15"']
-      },
-      displaytype: {
-        label: 'Display Type',
-        allowedValues: ['Color TFT', 'Monochrome', 'Touchscreen', 'Touch + Keypad']
-      },
-      communicationstandard: {
-        label: 'Communication Standard',
-        allowedValues: ['Ethernet', 'EtherNet/IP', 'Modbus', 'Profinet', 'RS-232', 'RS-485', 'Serial', 'USB']
-      },
-      nominalratedinputvoltage: {
-        label: 'Nominal Rated Input Voltage',
-        allowedValues: ['12V DC', '24V DC', '100-240V AC']
-      }
-    }
-  },
-
-  // ============================================================================
-  // SERVO MOTORS - eBay Category 181330
-  // ============================================================================
-  'Servo Motors': {
-    ebayCategoryId: '181330',
-    ebayCategoryName: 'Drives & Motion Control',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      ratedtorque: {
-        label: 'Rated Torque',
-        freeText: true
-      },
-      ratedspeed: {
-        label: 'Rated Speed',
-        freeText: true
-      },
-      nominalratedinputvoltage: {
-        label: 'Nominal Rated Input Voltage',
-        allowedValues: ['100V', '200V', '230V', '400V']
-      },
-      encodertype: {
-        label: 'Encoder Type',
-        allowedValues: ['Absolute', 'Incremental', 'Resolver']
-      },
-      shaftdiameter: {
-        label: 'Shaft Diameter',
-        freeText: true
-      },
-      framesize: {
-        label: 'Frame Size',
-        freeText: true
-      }
-    }
-  },
-
-  // ============================================================================
-  // SERVO DRIVES - eBay Category 181330
-  // ============================================================================
-  'Servo Drives': {
-    ebayCategoryId: '181330',
-    ebayCategoryName: 'Drives & Motion Control',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      outputcurrent: {
-        label: 'Output Current',
-        freeText: true
-      },
-      nominalratedinputvoltage: {
-        label: 'Nominal Rated Input Voltage',
-        allowedValues: ['100-120V', '200-240V', '380-480V']
-      },
-      communicationstandard: {
-        label: 'Communication Standard',
-        allowedValues: ['Analog', 'CANopen', 'DeviceNet', 'EtherCAT', 'EtherNet/IP', 'Modbus', 'Profinet', 'Pulse/Direction']
-      },
-      feedbacktype: {
-        label: 'Feedback Type',
-        allowedValues: ['Encoder', 'Resolver', 'Hall Effect']
-      }
-    }
-  },
-
-  // ============================================================================
-  // VFDS - eBay Category 181330
-  // ============================================================================
-  'VFDs': {
-    ebayCategoryId: '181330',
-    ebayCategoryName: 'Drives & Motion Control',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      horsepowerrating: {
-        label: 'Horsepower Rating',
-        allowedValues: ['1/4', '1/2', '3/4', '1', '1.5', '2', '3', '5', '7.5', '10', '15', '20', '25', '30', '40', '50', '60', '75', '100']
-      },
-      nominalratedinputvoltage: {
-        label: 'Nominal Rated Input Voltage',
-        allowedValues: ['115V', '208V', '230V', '460V', '575V']
-      },
-      acphase: {
-        label: 'AC Phase (Input)',
-        allowedValues: ['1-Phase', '3-Phase']
-      },
-      outputphase: {
-        label: 'Output Phase',
-        allowedValues: ['3-Phase']
-      },
-      outputfrequencyrange: {
-        label: 'Output Frequency Range',
-        freeText: true
-      },
-      communicationstandard: {
-        label: 'Communication Standard',
-        allowedValues: ['BACnet', 'DeviceNet', 'EtherNet/IP', 'Modbus', 'Profibus', 'Profinet']
-      },
-      enclosuretype: {
-        label: 'Enclosure Type',
-        allowedValues: ['IP20', 'IP21', 'IP55', 'IP66', 'NEMA 1', 'NEMA 4X', 'NEMA 12']
-      }
-    }
-  },
-
-  // ============================================================================
-  // PNEUMATIC CYLINDERS - eBay Category 181408
-  // ============================================================================
-  'Pneumatic Cylinders': {
-    ebayCategoryId: '181408',
-    ebayCategoryName: 'Pneumatic Cylinders',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      boresize: {
-        label: 'Bore Size',
-        freeText: true
-      },
-      strokelength: {
-        label: 'Stroke Length',
-        freeText: true
-      },
-      cylindertype: {
-        label: 'Cylinder Type',
-        allowedValues: ['Double Acting', 'Single Acting', 'Compact', 'Guided', 'Rodless', 'Rotary']
-      },
-      mountingtype: {
-        label: 'Mounting Type',
-        allowedValues: ['Clevis', 'Foot', 'Flange', 'Nose', 'Pivot', 'Trunnion']
-      },
-      operatingpressure: {
-        label: 'Operating Pressure',
-        freeText: true
-      },
-      portsizethread: {
-        label: 'Port Size/Thread',
-        freeText: true
-      },
-      magneticpiston: {
-        label: 'Magnetic Piston',
-        allowedValues: ['Yes', 'No']
-      }
-    }
-  },
-
-  // ============================================================================
-  // PNEUMATIC VALVES - eBay Category 181407
-  // ============================================================================
-  'Pneumatic Valves': {
-    ebayCategoryId: '181407',
-    ebayCategoryName: 'Pneumatic Valves',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      valvetype: {
-        label: 'Valve Type',
-        allowedValues: ['2-Way', '3-Way', '4-Way', '5-Way', '5/2', '5/3']
-      },
-      actuationtype: {
-        label: 'Actuation Type',
-        allowedValues: ['Solenoid', 'Pilot', 'Manual', 'Mechanical', 'Pneumatic']
-      },
-      portsize: {
-        label: 'Port Size',
-        freeText: true
-      },
-      nominalratedinputvoltage: {
-        label: 'Nominal Rated Input Voltage',
-        allowedValues: ['12V DC', '24V DC', '110V AC', '120V AC', '220V AC', '240V AC']
-      },
-      flowrate: {
-        label: 'Flow Rate',
-        freeText: true
-      }
-    }
-  },
-
-  // ============================================================================
-  // PROXIMITY SENSORS - eBay Category 181408
-  // ============================================================================
-  'Proximity Sensors': {
-    ebayCategoryId: '181408',
-    ebayCategoryName: 'Sensors',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      sensortype: {
-        label: 'Sensor Type',
-        allowedValues: ['Inductive', 'Capacitive', 'Magnetic', 'Ultrasonic']
-      },
-      sensingdistance: {
-        label: 'Sensing Distance',
-        freeText: true
-      },
-      outputtype: {
-        label: 'Output Type',
-        allowedValues: ['PNP', 'NPN', 'PNP/NPN', 'Analog', 'Relay']
-      },
-      outputconfiguration: {
-        label: 'Output Configuration',
-        allowedValues: ['NO', 'NC', 'NO/NC']
-      },
-      nominalratedinputvoltage: {
-        label: 'Nominal Rated Input Voltage',
-        allowedValues: ['10-30V DC', '12-24V DC', '20-250V AC', '20-264V AC/DC']
-      },
-      housingmaterial: {
-        label: 'Housing Material',
-        allowedValues: ['Brass', 'Nickel Plated Brass', 'Plastic', 'Stainless Steel']
-      },
-      connectiontype: {
-        label: 'Connection Type',
-        allowedValues: ['Cable', 'Connector', 'M8', 'M12']
-      },
-      iprating: {
-        label: 'IP Rating',
-        allowedValues: ['IP65', 'IP67', 'IP68', 'IP69K']
-      }
-    }
-  },
-
-  // ============================================================================
-  // PHOTOELECTRIC SENSORS - eBay Category 181408
-  // ============================================================================
-  'Photoelectric Sensors': {
-    ebayCategoryId: '181408',
-    ebayCategoryName: 'Sensors',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      sensingmethod: {
-        label: 'Sensing Method',
-        allowedValues: ['Through Beam', 'Retro-Reflective', 'Diffuse', 'Background Suppression', 'Fiber Optic']
-      },
-      sensingdistance: {
-        label: 'Sensing Distance',
-        freeText: true
-      },
-      lightsource: {
-        label: 'Light Source',
-        allowedValues: ['Red LED', 'Infrared', 'Laser', 'White LED']
-      },
-      outputtype: {
-        label: 'Output Type',
-        allowedValues: ['PNP', 'NPN', 'PNP/NPN', 'Relay']
-      },
-      nominalratedinputvoltage: {
-        label: 'Nominal Rated Input Voltage',
-        allowedValues: ['10-30V DC', '12-24V DC', '20-250V AC']
-      },
-      connectiontype: {
-        label: 'Connection Type',
-        allowedValues: ['Cable', 'Connector', 'M8', 'M12']
-      }
-    }
-  },
-
-  // ============================================================================
-  // POWER SUPPLIES - eBay Category 181332
-  // ============================================================================
-  'Power Supplies': {
-    ebayCategoryId: '181332',
-    ebayCategoryName: 'Power Supplies',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      outputvoltage: {
-        label: 'Output Voltage',
-        allowedValues: ['5V DC', '12V DC', '24V DC', '48V DC']
-      },
-      outputcurrent: {
-        label: 'Output Current',
-        freeText: true
-      },
-      outputpower: {
-        label: 'Output Power',
-        freeText: true
-      },
-      inputvoltagerange: {
-        label: 'Input Voltage Range',
-        allowedValues: ['100-120V AC', '200-240V AC', '100-240V AC', '380-480V AC']
-      },
-      acphase: {
-        label: 'AC Phase',
-        allowedValues: ['1-Phase', '3-Phase']
-      },
-      mountingtype: {
-        label: 'Mounting Type',
-        allowedValues: ['DIN Rail', 'Panel Mount', 'Chassis']
-      }
-    }
-  },
-
-  // ============================================================================
-  // CIRCUIT BREAKERS - eBay Category 181327
-  // ============================================================================
-  'Circuit Breakers': {
-    ebayCategoryId: '181327',
-    ebayCategoryName: 'Circuit Breakers',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      numberofpoles: {
-        label: 'Number of Poles',
-        allowedValues: ['1', '2', '3', '4']
-      },
-      currentrating: {
-        label: 'Current Rating',
-        freeText: true
-      },
-      voltagerating: {
-        label: 'Voltage Rating',
-        freeText: true
-      },
-      interruptingrating: {
-        label: 'Interrupting Rating',
-        freeText: true
-      },
-      breakertype: {
-        label: 'Breaker Type',
-        allowedValues: ['Molded Case', 'Miniature', 'Motor Circuit Protector', 'GFCI']
-      },
-      tripcurve: {
-        label: 'Trip Curve',
-        allowedValues: ['B', 'C', 'D', 'K', 'Thermal-Magnetic', 'Electronic']
-      }
-    }
-  },
-
-  // ============================================================================
-  // CONTACTORS - eBay Category 181329
-  // ============================================================================
-  'Contactors': {
-    ebayCategoryId: '181329',
-    ebayCategoryName: 'Contactors & Relays',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      numberofpoles: {
-        label: 'Number of Poles',
-        allowedValues: ['1', '2', '3', '4']
-      },
-      coilvoltage: {
-        label: 'Coil Voltage',
-        allowedValues: ['24V AC', '24V DC', '110V AC', '120V AC', '208V AC', '220V AC', '240V AC', '277V AC', '480V AC']
-      },
-      fullloadamps: {
-        label: 'Full Load Amps',
-        freeText: true
-      },
-      auxiliarycontacts: {
-        label: 'Auxiliary Contacts',
-        freeText: true
-      },
-      nemasize: {
-        label: 'NEMA Size',
-        allowedValues: ['00', '0', '1', '2', '3', '4', '5']
-      }
-    }
-  },
-
-  // ============================================================================
-  // TRANSFORMERS - eBay Category 181337
-  // ============================================================================
-  'Transformers': {
-    ebayCategoryId: '181337',
-    ebayCategoryName: 'Transformers',
-    fields: {
-      brand: { required: true },
-      mpn: { required: true },
-      kvarating: {
-        label: 'KVA Rating',
-        freeText: true
-      },
-      primaryvoltage: {
-        label: 'Primary Voltage',
-        freeText: true
-      },
-      secondaryvoltage: {
-        label: 'Secondary Voltage',
-        freeText: true
-      },
-      acphase: {
-        label: 'AC Phase',
-        allowedValues: ['1-Phase', '3-Phase']
-      },
-      transformertype: {
-        label: 'Transformer Type',
-        allowedValues: ['Control', 'Distribution', 'Isolation', 'Step Down', 'Step Up', 'Buck-Boost', 'Auto']
-      },
-      acfrequencyrating: {
-        label: 'AC Frequency Rating',
-        allowedValues: ['50 Hz', '60 Hz', '50/60 Hz']
-      }
-    }
-  }
+// eBay MARKETPLACE Category IDs (main eBay listing categories - NOT store categories)
+const EBAY_MARKETPLACE_CATEGORIES = {
+  'Electric Motors': '181732',      // Business & Industrial > Electric Motors
+  'Servo Motors': '181732',
+  'Servo Drives': '181737',         // Drives & Starters
+  'VFDs': '181737',
+  'PLCs': '181739',                 // Industrial Automation & Control
+  'HMIs': '181739',
+  'Power Supplies': '181738',       // Electrical Equipment & Supplies
+  'I/O Modules': '181739',
+  'Proximity Sensors': '181744',    // Sensors
+  'Photoelectric Sensors': '181744',
+  'Light Curtains': '181744',
+  'Laser Sensors': '181744',
+  'Pressure Sensors': '181744',
+  'Temperature Sensors': '181744',
+  'Ultrasonic Sensors': '181744',
+  'Pneumatic Cylinders': '181738',
+  'Pneumatic Valves': '181738',
+  'Pneumatic Grippers': '181738',
+  'Hydraulic Pumps': '181738',
+  'Hydraulic Valves': '181738',
+  'Hydraulic Cylinders': '181738',
+  'Circuit Breakers': '181738',
+  'Contactors': '181738',
+  'Safety Relays': '181739',
+  'Control Relays': '181738',
+  'Bearings': '181745',             // Bearings
+  'Linear Bearings': '181745',
+  'Encoders': '181737',
+  'Gearboxes': '181732',
+  'Transformers': '181738',
+  'Industrial Gateways': '181739',
+  'AS-Interface': '181739',
+  'Network Modules': '181739',
+  'Unknown': '181739'
 };
 
-// ============================================================================
-// COUNTRY OF ORIGIN - eBay Standard Values
-// ============================================================================
-const COUNTRY_OF_ORIGIN_VALUES = [
-  'United States', 'China', 'Japan', 'Germany', 'Mexico', 'Canada', 'Italy', 
-  'France', 'United Kingdom', 'South Korea', 'Taiwan', 'India', 'Brazil', 
-  'Spain', 'Switzerland', 'Sweden', 'Austria', 'Czech Republic', 'Poland',
-  'Hungary', 'Slovakia', 'Slovenia', 'Netherlands', 'Belgium', 'Denmark',
-  'Finland', 'Norway', 'Ireland', 'Portugal', 'Greece', 'Turkey', 'Israel',
-  'Singapore', 'Malaysia', 'Thailand', 'Vietnam', 'Indonesia', 'Philippines',
-  'Australia', 'New Zealand', 'South Africa', 'Unknown'
-];
+// eBay STORE Category IDs (YOUR store's LEAF categories - subcategories only!)
+// Primary = specific category, Secondary = ALL PRODUCTS (23399313015)
+const EBAY_STORE_CATEGORIES = {
+  'Electric Motors': { primary: '17167471', secondary: '23399313015' },      // ELECTRIC MOTORS (under POWER TRANSMISSION)
+  'Servo Motors': { primary: '393389015', secondary: '23399313015' },        // SERVO MOTORS (under POWER TRANSMISSION)
+  'Servo Drives': { primary: '393390015', secondary: '23399313015' },        // SERVO DRIVES (under MOTION CONTROL)
+  'VFDs': { primary: '2242358015', secondary: '23399313015' },               // AC DRIVE (under SPEED CONTROLS)
+  'PLCs': { primary: '5404089015', secondary: '23399313015' },               // PLC (under AUTOMATION CONTROL)
+  'HMIs': { primary: '6686264015', secondary: '23399313015' },               // HMI (under AUTOMATION CONTROL)
+  'Power Supplies': { primary: '2242362015', secondary: '23399313015' },     // POWER SUPPLY
+  'I/O Modules': { primary: '18373835', secondary: '23399313015' },          // I/O BOARDS
+  'Proximity Sensors': { primary: '4173791015', secondary: '23399313015' },  // PROXIMITY SENSORS (under SENSING DEVICES)
+  'Photoelectric Sensors': { primary: '4173793015', secondary: '23399313015' },
+  'Light Curtains': { primary: '393379015', secondary: '23399313015' },
+  'Laser Sensors': { primary: '2479732015', secondary: '23399313015' },
+  'Pressure Sensors': { primary: '6690386015', secondary: '23399313015' },
+  'Temperature Sensors': { primary: '6690556015', secondary: '23399313015' },
+  'Ultrasonic Sensors': { primary: '4173791015', secondary: '23399313015' }, // Use proximity if no ultrasonic
+  'Pneumatic Cylinders': { primary: '2461873015', secondary: '23399313015' },
+  'Pneumatic Valves': { primary: '2461874015', secondary: '23399313015' },
+  'Pneumatic Grippers': { primary: '6699359015', secondary: '23399313015' },
+  'Hydraulic Pumps': { primary: '6696064015', secondary: '23399313015' },
+  'Hydraulic Valves': { primary: '6696060015', secondary: '23399313015' },
+  'Hydraulic Cylinders': { primary: '6696061015', secondary: '23399313015' },
+  'Circuit Breakers': { primary: '5634105015', secondary: '23399313015' },
+  'Contactors': { primary: '2348910015', secondary: '23399313015' },         // MOTOR CONTROLS
+  'Safety Relays': { primary: '2464037015', secondary: '23399313015' },      // MACHINE SAFETY
+  'Control Relays': { primary: '2242359015', secondary: '23399313015' },
+  'Bearings': { primary: '4173714015', secondary: '23399313015' },           // BALL (default bearing type)
+  'Linear Bearings': { primary: '4173713015', secondary: '23399313015' },
+  'Encoders': { primary: '1802953015', secondary: '23399313015' },
+  'Gearboxes': { primary: '6690340015', secondary: '23399313015' },          // GEAR REDUCERS if exists, else POWER TRANSMISSION leaf
+  'Transformers': { primary: '5634104015', secondary: '23399313015' },
+  'Industrial Gateways': { primary: '18373835', secondary: '23399313015' },  // I/O BOARDS (closest match)
+  'AS-Interface': { primary: '18373835', secondary: '23399313015' },
+  'Network Modules': { primary: '18373835', secondary: '23399313015' },
+  'Unknown': { primary: '23399313015', secondary: '' }                        // ALL PRODUCTS
+};
 
-// ============================================================================
-// GENERATE CATEGORY-SPECIFIC AI PROMPT
-// ============================================================================
-function generatePrompt(brand, partNumber, detectedCategory = null) {
-  // Try to detect category from brand/part patterns if not provided
-  let category = detectedCategory;
+// BigCommerce Category IDs (from your bigcommerce_categories.json)
+// Using "Shop All" (23) as default + specific category
+const BIGCOMMERCE_CATEGORIES = {
+  'Electric Motors': '30',           // Power Transmission -> Electric Motors
+  'Servo Motors': '54',              // Motion Control -> Servo Motors
+  'Servo Drives': '32',              // Motion Control -> Servo Drives & Amplifiers
+  'VFDs': '34',                      // Speed Controls -> AC Drive
+  'PLCs': '24',                      // Automation Control -> PLC
+  'HMIs': '27',                      // Automation Control -> HMI
+  'Power Supplies': '28',            // Automation Control -> Power Supply
+  'I/O Modules': '61',               // Automation Control -> I/O Boards & Replacement Parts
+  'Proximity Sensors': '41',         // Sensing Devices -> Proximity Sensors
+  'Photoelectric Sensors': '42',     // Sensing Devices -> Photoelectric Sensors
+  'Light Curtains': '71',            // Sensing Devices -> Light Curtains
+  'Laser Sensors': '41',             // Use proximity
+  'Pressure Sensors': '116',         // Sensing Devices -> Pressure Sensors
+  'Temperature Sensors': '65',       // Sensing Devices -> Temperature Sensors
+  'Ultrasonic Sensors': '115',       // Sensing Devices -> Ultrasonic Sensors
+  'Pneumatic Cylinders': '47',       // Pneumatics -> Cylinders
+  'Pneumatic Valves': '68',          // Pneumatics -> Valves & Manifolds
+  'Pneumatic Grippers': '117',       // Pneumatics -> Grippers
+  'Hydraulic Pumps': '94',           // Hydraulics -> Pumps
+  'Hydraulic Valves': '91',          // Hydraulics -> Control Valves
+  'Hydraulic Cylinders': '107',      // Hydraulics -> Cylinders
+  'Circuit Breakers': '44',          // Electrical -> Circuit Breakers
+  'Contactors': '50',                // Industrial Controls -> Motor Starters
+  'Safety Relays': '96',             // Industrial Controls -> Safety Relays
+  'Control Relays': '51',            // Industrial Controls -> Control Relays
+  'Bearings': '43',                  // Power Transmission -> Bearings
+  'Linear Bearings': '70',           // Power Transmission -> Bearings -> Linear Bearings
+  'Encoders': '81',                  // Motion Control -> Encoders
+  'Gearboxes': '36',                 // Power Transmission -> Gear Reducer
+  'Transformers': '37',              // Electrical -> Transformers
+  'Industrial Gateways': '18',       // Automation Control
+  'AS-Interface': '18',
+  'Network Modules': '61',
+  'Unknown': '23'                    // Shop All
+};
+
+// Pre-detect category from brand/part number patterns
+function detectCategoryFromPartNumber(brand, partNumber) {
+  const brandLower = (brand || '').toLowerCase();
+  const partLower = (partNumber || '').toLowerCase();
+  const combined = `${brandLower} ${partLower}`;
   
-  if (!category) {
-    const partLower = partNumber.toLowerCase();
-    const brandLower = brand.toLowerCase();
-    
-    // Motor detection patterns
-    if (partLower.match(/^[a-z]?\d{4}[a-z]?$/i) || // Baldor pattern: M3211T
-        brandLower.includes('baldor') || brandLower.includes('marathon') ||
-        brandLower.includes('weg') || brandLower.includes('leeson')) {
-      category = 'Electric Motors';
+  // Electric Motors - Baldor patterns
+  if (brandLower === 'baldor' || brandLower === 'baldor reliance' || brandLower === 'reliance') {
+    if (/^[me]?\d{4}t?$/i.test(partNumber) || /motor/i.test(combined)) {
+      return 'Electric Motors';
     }
-    // PLC detection
-    else if (partLower.includes('plc') || partLower.includes('1756') || 
-             partLower.includes('1769') || partLower.includes('1746') ||
-             brandLower.includes('allen') || brandLower.includes('siemens s7')) {
-      category = 'PLCs';
-    }
-    // Sensor detection
-    else if (partLower.includes('prox') || partLower.includes('sensor') ||
-             brandLower.includes('turck') || brandLower.includes('sick') ||
-             brandLower.includes('banner') || brandLower.includes('keyence')) {
-      category = 'Proximity Sensors';
-    }
-    // Cylinder detection
-    else if (partLower.includes('cyl') || partLower.includes('ncd') ||
-             brandLower.includes('smc') || brandLower.includes('festo')) {
-      category = 'Pneumatic Cylinders';
-    }
-    // VFD detection
-    else if (partLower.includes('vfd') || partLower.includes('drive') ||
-             partLower.includes('powerflex') || partLower.includes('micromaster')) {
-      category = 'VFDs';
-    }
-    // Default
-    else {
-      category = 'Electric Motors'; // Default for now
-    }
+    return 'Electric Motors'; // Baldor is primarily motors
   }
-
-  const categoryDef = CATEGORY_FIELD_DEFINITIONS[category];
   
-  if (!categoryDef) {
-    // Fallback to generic prompt
-    return generateGenericPrompt(brand, partNumber);
+  // Other motor brands
+  if (['weg', 'marathon', 'leeson', 'us motors', 'dayton', 'lincoln', 'teco', 'lafert'].includes(brandLower)) {
+    return 'Electric Motors';
   }
-
-  // Build field instructions with allowed values
-  let fieldInstructions = '';
-  for (const [fieldName, fieldDef] of Object.entries(categoryDef.fields)) {
-    if (fieldName === 'brand' || fieldName === 'mpn') continue;
-    
-    if (fieldDef.allowedValues) {
-      fieldInstructions += `\n      "${fieldName}": "MUST be one of: ${fieldDef.allowedValues.join(', ')}",`;
-    } else {
-      fieldInstructions += `\n      "${fieldName}": "Extract from specs (${fieldDef.label})",`;
-    }
+  
+  // Servo Motors - Mitsubishi, Yaskawa, Fanuc patterns
+  if (/^hf-|^hc-|^hg-|^ha-/i.test(partNumber)) return 'Servo Motors';
+  if (/^sgm|^msmd|^mhmd|^usm/i.test(partNumber)) return 'Servo Motors';
+  if (/servo.*motor/i.test(combined)) return 'Servo Motors';
+  
+  // Servo Drives
+  if (/^mr-j|^sgdv|^sgdm|^sgds|^cacr/i.test(partNumber)) return 'Servo Drives';
+  if (/servo.*drive|servo.*amplifier/i.test(combined)) return 'Servo Drives';
+  
+  // VFDs
+  if (/^powerflex|^altivar|^micromaster|^fr-[dea]|^vfd/i.test(combined)) return 'VFDs';
+  if (/inverter|variable.*frequency/i.test(combined)) return 'VFDs';
+  
+  // PLCs
+  if (/^1756-|^1769-|^1762-|^1766-|^1763-/i.test(partNumber)) return 'PLCs';
+  if (/^q0[0-9]|^qx|^qy|^fx[0-9]|^cj[12]m|^cp1|^cpm/i.test(partNumber)) return 'PLCs';
+  if (brandLower === 'allen bradley' && /logix|slc|plc/i.test(combined)) return 'PLCs';
+  
+  // Sensors by brand
+  if (['keyence', 'banner', 'sick', 'turck', 'ifm', 'balluff', 'pepperl', 'omron'].includes(brandLower)) {
+    if (/prox|inductive|capacitive|bi[0-9]|ni[0-9]/i.test(combined)) return 'Proximity Sensors';
+    if (/photo|retroreflective|diffuse|thru-beam|qs18|q45/i.test(combined)) return 'Photoelectric Sensors';
+    if (/laser|lv-|il-|bl-/i.test(combined)) return 'Laser Sensors';
+    if (/pressure|ps-|pf-/i.test(combined)) return 'Pressure Sensors';
+    if (/light.*curtain|safety.*light/i.test(combined)) return 'Light Curtains';
+    return 'Proximity Sensors'; // Default for sensor brands
   }
-
-  return `Search for comprehensive technical information about: ${brand} ${partNumber}
-
-This appears to be a ${category} product. Create a professional eBay product listing.
-
-Return ONLY valid JSON (no markdown, no code blocks):
-{
-  "title": "80 characters max, include brand model and key specs",
-  "productCategory": "${category}",
-  "description": "HTML formatted description with specifications table",
-  "shortDescription": "150-160 char meta description for SEO",
-  "specifications": {${fieldInstructions}
-    "countryoforigin": "MUST be one of: ${COUNTRY_OF_ORIGIN_VALUES.slice(0, 15).join(', ')}, etc."
-  },
-  "metaKeywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
-  "ebayCategory": {
-    "id": "${categoryDef.ebayCategoryId}",
-    "name": "${categoryDef.ebayCategoryName}"
+  
+  // Pneumatics by brand
+  if (['smc', 'festo', 'ckd', 'numatics', 'norgren', 'parker pneumatic'].includes(brandLower)) {
+    if (/cylinder|cdq|cq2|cm2|dsnu|advu|dng/i.test(combined)) return 'Pneumatic Cylinders';
+    if (/valve|vq|sy[0-9]|mfh|vuvs|evz/i.test(combined)) return 'Pneumatic Valves';
+    if (/gripper|mhz|hgp|mhl/i.test(combined)) return 'Pneumatic Grippers';
+    return 'Pneumatic Valves'; // Default for pneumatic brands
   }
+  
+  // Industrial Gateways
+  if (/gateway|asi-|as-interface|bwu/i.test(combined)) return 'Industrial Gateways';
+  if (brandLower.includes('bihl') || brandLower.includes('wiedemann')) return 'Industrial Gateways';
+  
+  return null; // Let AI decide
 }
 
-CRITICAL REQUIREMENTS FOR specifications OBJECT:
-1. Field names MUST be lowercase with no spaces (e.g., "ratedloadhp" not "Rated Load HP")
-2. For fields with allowed values, you MUST pick from the allowed values list
-3. If you can't determine a value, use null (don't guess)
-4. Extract ALL available specifications from the product data
-
-DESCRIPTION FORMAT (must be valid HTML):
-<p>Professional 2-3 sentence introduction explaining what this ${category} product is, its primary use cases, and key features.</p>
-
-<h3 style='margin-top: 20px; margin-bottom: 10px; font-weight: bold; color: #333;'>Technical Specifications</h3>
-<table border='1' cellpadding='8' cellspacing='0' style='border-collapse: collapse; width: 100%; max-width: 600px; margin: 20px 0; border: 1px solid #ccc;'>
-<thead>
-<tr style='background-color: #f5f5f5;'>
-<th style='text-align: left; padding: 10px; border: 1px solid #ccc; font-weight: bold;'>Specification</th>
-<th style='text-align: left; padding: 10px; border: 1px solid #ccc; font-weight: bold;'>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr><td style='padding: 8px; border: 1px solid #ddd;'>Brand</td><td style='padding: 8px; border: 1px solid #ddd;'>${brand}</td></tr>
-<tr><td style='padding: 8px; border: 1px solid #ddd;'>Model Number</td><td style='padding: 8px; border: 1px solid #ddd;'>${partNumber}</td></tr>
-<!-- ADD ALL TECHNICAL SPECS AS TABLE ROWS -->
-</tbody>
-</table>
-
-<p style='margin-top: 20px;'>We warranty all items for 30 days from date of purchase.</p>
-
-REQUIREMENTS:
-✅ Title MUST be 80 characters or less
-✅ specifications object MUST use exact field names shown above
-✅ For fields with allowed values, ONLY use values from the provided list
-✅ Include ALL available technical specifications
-✅ NO promotional language, NO warranty claims in table
-✅ NO URLs, emails, or phone numbers`;
-}
-
-function generateGenericPrompt(brand, partNumber) {
-  return `Search for comprehensive technical information about: ${brand} ${partNumber}
-
-Return ONLY valid JSON (no markdown, no code blocks):
-{
-  "title": "80 characters max product title",
-  "productCategory": "Product category name",
-  "description": "HTML formatted description",
-  "shortDescription": "150-160 char meta description",
-  "specifications": {},
-  "metaKeywords": ["keyword1", "keyword2", "keyword3"],
-  "ebayCategory": {"id": "", "name": ""}
-}`;
-}
-
-// ============================================================================
-// API HANDLER
-// ============================================================================
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { brand, partNumber, category } = req.body;
+  const { brand, partNumber } = req.body;
 
-  if (!brand || !partNumber) {
-    return res.status(400).json({ error: 'Brand and part number required' });
-  }
+  console.log('=== SEARCH PRODUCT START ===');
+  console.log('Searching for:', brand, partNumber);
+
+  // Pre-detect category
+  const preDetectedCategory = detectCategoryFromPartNumber(brand, partNumber);
+  console.log('Pre-detected category:', preDetectedCategory || 'None (AI will decide)');
 
   try {
-    const prompt = generatePrompt(brand, partNumber, category);
-    
-    console.log('=== SEARCH PRODUCT API ===');
-    console.log('Brand:', brand);
-    console.log('Part:', partNumber);
-    console.log('Detected/Provided Category:', category || 'auto-detect');
+    const categoryList = Object.keys(EBAY_MARKETPLACE_CATEGORIES).join(', ');
+
+    let categoryHint = '';
+    if (preDetectedCategory) {
+      categoryHint = `\n\nIMPORTANT: Based on the brand "${brand}" and part number "${partNumber}", this is DEFINITELY a "${preDetectedCategory}". Use this category unless you find absolute proof otherwise. Do NOT choose sensor categories for motor brands.`;
+    }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -734,26 +210,174 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4500,
-        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: `Search for industrial product: ${brand} ${partNumber}
+${categoryHint}
+
+PRODUCT CATEGORY - Choose from this list:
+${categoryList}
+
+TITLE REQUIREMENTS (80 characters max):
+- For Electric Motors: "Brand Model HP Voltage RPM Phase Frame Enclosure Motor"
+  Example: "Baldor M3211T 3HP 230/460V 1800RPM 3-Phase 182T TEFC Motor"
+- For Servo Motors: "Brand Model kW Voltage RPM Servo Motor"
+- For VFDs: "Brand Model HP/kW Voltage Drive"
+- For Sensors: "Brand Model Type Range Voltage Sensor"
+- For PLCs: "Brand Model Series I/O-Count PLC"
+
+Return ONLY valid JSON:
+{
+  "title": "SEO title with specs (80 chars max)",
+  "productCategory": "Category from list",
+  "shortDescription": "2-3 sentences, max 160 chars. REQUIRED.",
+  "description": "HTML with <ul><li> bullet points",
+  "specifications": {
+    "voltage": "value or null",
+    "horsepower": "value or null",
+    "kw": "value or null",
+    "rpm": "value or null",
+    "amperage": "value or null",
+    "phase": "value or null",
+    "frequency": "value or null",
+    "frame": "NEMA frame like 56C, 182T, 213T or null",
+    "enclosure": "TEFC, ODP, TENV, etc. or null",
+    "mounting_type": "Foot, Flange, C-Face, etc. or null",
+    "motor_type": "Induction, PMDC, etc. or null",
+    "service_factor": "value or null",
+    "insulation_class": "F, H, B, etc. or null",
+    "nema_design": "A, B, C, D or null",
+    "shaft_diameter": "value or null",
+    "ip_rating": "IP65, IP67, etc. or null",
+    "sensing_range": "for sensors, value or null",
+    "output_type": "NPN, PNP, analog, etc. or null",
+    "communication": "EtherNet/IP, Profinet, etc. or null",
+    "bore_size": "for cylinders, value or null",
+    "stroke": "for cylinders, value or null",
+    "max_pressure": "value or null",
+    "country_of_origin": "USA, Mexico, China, etc. or null"
+  },
+  "rawSpecifications": ["Label: Value", "Label: Value"],
+  "qualityFlag": "STRONG or NEEDS_REVIEW"
+}
+
+DESCRIPTION FORMAT:
+<p>[Professional 2-3 sentence introduction]</p>
+<h3>Specifications</h3>
+<ul>
+<li><strong>Brand:</strong> ${brand}</li>
+<li><strong>Model:</strong> ${partNumber}</li>
+[Add 10+ more specs]
+</ul>
+<p>We warranty all items for 30 days from date of purchase.</p>`
+        }],
         tools: [{ type: 'web_search_20250305', name: 'web_search' }]
       })
     });
 
     const data = await response.json();
+    const textBlocks = data.content?.filter(b => b.type === 'text') || [];
+    const text = textBlocks.map(b => b.text).join('');
     
-    // Also return the category definitions for UI use
+    console.log('API response received, length:', text.length);
+    
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    
+    if (!jsonMatch) {
+      console.error('No JSON found');
+      const fallbackCategory = preDetectedCategory || 'Unknown';
+      return res.status(200).json({
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            title: `${brand} ${partNumber}`,
+            productCategory: fallbackCategory,
+            shortDescription: `${brand} ${partNumber} industrial component.`,
+            description: `<p>${brand} ${partNumber}</p><ul><li><strong>Brand:</strong> ${brand}</li></ul>`,
+            specifications: {},
+            rawSpecifications: [],
+            qualityFlag: 'NEEDS_REVIEW',
+            ebayCategoryId: EBAY_MARKETPLACE_CATEGORIES[fallbackCategory] || '181739',
+            ebayStoreCategoryId: EBAY_STORE_CATEGORIES[fallbackCategory]?.primary || '23399313015',
+            ebayStoreCategoryId2: '23399313015',
+            bigcommerceCategoryId: BIGCOMMERCE_CATEGORIES[fallbackCategory] || '23'
+          })
+        }]
+      });
+    }
+
+    let product;
+    try {
+      product = JSON.parse(jsonMatch[0]);
+    } catch (parseError) {
+      const cleaned = jsonMatch[0].replace(/[\x00-\x1F\x7F]/g, ' ').replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+      product = JSON.parse(cleaned);
+    }
+
+    console.log('Parsed - Title:', product.title, '| AI Category:', product.productCategory);
+
+    // OVERRIDE: If pre-detected and AI chose wrong category type
+    if (preDetectedCategory) {
+      const aiCat = (product.productCategory || '').toLowerCase();
+      const preCat = preDetectedCategory.toLowerCase();
+      
+      // If we know it's a motor but AI picked sensors
+      if (preCat.includes('motor') && (aiCat.includes('sensor') || aiCat.includes('ultrasonic'))) {
+        console.log('OVERRIDE: Forcing', preDetectedCategory, 'instead of', product.productCategory);
+        product.productCategory = preDetectedCategory;
+      }
+      
+      // If we pre-detected anything and AI returned Unknown
+      if (!product.productCategory || product.productCategory === 'Unknown') {
+        product.productCategory = preDetectedCategory;
+      }
+    }
+
+    // Ensure shortDescription
+    if (!product.shortDescription || product.shortDescription.trim() === '') {
+      const plainText = (product.description || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      product.shortDescription = plainText.substring(0, 157) + '...';
+    }
+    if (product.shortDescription.length > 160) {
+      product.shortDescription = product.shortDescription.substring(0, 157) + '...';
+    }
+
+    // ADD CATEGORY IDs
+    const categoryKey = product.productCategory || 'Unknown';
+    
+    product.ebayCategoryId = EBAY_MARKETPLACE_CATEGORIES[categoryKey] || EBAY_MARKETPLACE_CATEGORIES['Unknown'];
+    
+    const storeCategories = EBAY_STORE_CATEGORIES[categoryKey] || EBAY_STORE_CATEGORIES['Unknown'];
+    product.ebayStoreCategoryId = storeCategories.primary;
+    product.ebayStoreCategoryId2 = storeCategories.secondary || '23399313015';
+    
+    product.bigcommerceCategoryId = BIGCOMMERCE_CATEGORIES[categoryKey] || BIGCOMMERCE_CATEGORIES['Unknown'];
+    
+    console.log('=== FINAL CATEGORIES ===');
+    console.log('Category:', categoryKey);
+    console.log('eBay Marketplace:', product.ebayCategoryId);
+    console.log('eBay Store 1:', product.ebayStoreCategoryId);
+    console.log('eBay Store 2:', product.ebayStoreCategoryId2);
+    console.log('BigCommerce:', product.bigcommerceCategoryId);
+
+    // Clean specs
+    if (product.specifications) {
+      const clean = {};
+      for (const [k, v] of Object.entries(product.specifications)) {
+        if (v && v !== 'null' && v !== null && v !== 'N/A' && v !== 'Unknown') {
+          clean[k] = v;
+        }
+      }
+      product.specifications = clean;
+    }
+
     res.status(200).json({
-      ...data,
-      _categoryDefinitions: CATEGORY_FIELD_DEFINITIONS,
-      _countryOfOriginValues: COUNTRY_OF_ORIGIN_VALUES
+      content: [{ type: 'text', text: JSON.stringify(product) }]
     });
-    
+
   } catch (error) {
-    console.error('Search API error:', error);
+    console.error('Error:', error.message);
     res.status(500).json({ error: error.message });
   }
 }
-
-// Export for use in other files
-export { CATEGORY_FIELD_DEFINITIONS, COUNTRY_OF_ORIGIN_VALUES };
