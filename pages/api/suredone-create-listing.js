@@ -557,11 +557,8 @@ export default async function handler(req, res) {
         const keyLower = key.toLowerCase().replace(/\s+/g, '_');
         const keyClean = key.toLowerCase().replace(/[_\s]+/g, '');
 
-        // 1. Set the WEBSITE field (e.g., horsepower, voltage, rpm)
-        formData.append(keyLower, value);
-        console.log(`  Website: ${keyLower} = ${value}`);
-
-        // 2. Set exactly ONE eBay Recommended field via SPEC_TO_EBAY_FIELD
+        // Set exactly ONE eBay Recommended field via SPEC_TO_EBAY_FIELD
+        // Only append ebayitemspecifics* fields — raw spec keys create Dynamic eBay fields
         const ebayField = SPEC_TO_EBAY_FIELD[key] ||
                           SPEC_TO_EBAY_FIELD[keyLower] ||
                           SPEC_TO_EBAY_FIELD[keyClean];
