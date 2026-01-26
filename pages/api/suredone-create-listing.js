@@ -545,6 +545,48 @@ export default async function handler(req, res) {
 
     const ebayFieldsSet = new Set(); // Track which eBay fields we've already set
 
+    // Website field mappings (spec key → SureDone website field name)
+    const WEBSITE_FIELD_MAP = {
+      'horsepower': 'horsepower',
+      'hp': 'horsepower',
+      'rpm': 'rpm',
+      'voltage': 'voltage',
+      'phase': 'phase',
+      'frequency': 'frequency',
+      'frame': 'frame',
+      'frame_size': 'frame',
+      'enclosure': 'enclosuretype',
+      'enclosure_type': 'enclosuretype',
+      'service_factor': 'servicefactor',
+      'amperage': 'amperage',
+      'amps': 'amperage',
+      'current': 'amperage',
+      'kw': 'kw',
+      'kw_rating': 'kw',
+      'motor_type': 'motortype',
+      'insulation_class': 'insulationclass',
+      'nema_design': 'nemadesign',
+      'mounting': 'mountingtype',
+      'mounting_type': 'mountingtype',
+      'efficiency': 'efficiency',
+      'shaft_type': 'shafttype',
+      'bearing_type': 'bearingtype',
+      'duty_rating': 'dutyrating',
+      // Sensors
+      'sensing_range': 'sensingrange',
+      'output_type': 'outputtype',
+      'ip_rating': 'iprating',
+      // Pneumatic/Hydraulic
+      'bore_size': 'boresize',
+      'stroke': 'strokelength',
+      'stroke_length': 'strokelength',
+      'pressure': 'pressure',
+      'max_pressure': 'maxpressure',
+      // General
+      'manufacturer': 'manufacturer',
+      'part_number': 'partnumber'
+    };
+
     if (product.specifications && typeof product.specifications === 'object') {
       console.log('Spec count:', Object.keys(product.specifications).length);
 
@@ -557,7 +599,17 @@ export default async function handler(req, res) {
         const keyLower = key.toLowerCase().replace(/\s+/g, '_');
         const keyClean = key.toLowerCase().replace(/[_\s]+/g, '');
 
-        // Set exactly ONE eBay Recommended field via SPEC_TO_EBAY_FIELD
+        // 1) Set WEBSITE field (for BigCommerce/WooCommerce filtering)
+        const websiteField = WEBSITE_FIELD_MAP[key] ||
+                            WEBSITE_FIELD_MAP[keyLower] ||
+                            WEBSITE_FIELD_MAP[keyClean];
+
+        if (websiteField) {
+          formData.append(websiteField, value);
+          console.log(`  Website: ${websiteField} = ${value}`);
+        }
+
+        // 2) Set exactly ONE eBay Recommended field via SPEC_TO_EBAY_FIELD
         // Only append ebayitemspecifics* fields — raw spec keys create Dynamic eBay fields
         const ebayField = SPEC_TO_EBAY_FIELD[key] ||
                           SPEC_TO_EBAY_FIELD[keyLower] ||
