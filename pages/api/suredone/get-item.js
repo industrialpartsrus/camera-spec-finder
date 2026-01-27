@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
 /**
  * Get a single item from SureDone by SKU
- * Uses the /bulk/items GET endpoint which is more reliable
+ * Uses multiple methods to find the item
  */
 async function getSureDoneItem(sku) {
   const SUREDONE_USER = process.env.SUREDONE_USER;
@@ -54,9 +54,9 @@ async function getSureDoneItem(sku) {
     throw new Error('SureDone credentials not configured');
   }
 
-  // Method 1: Try the /items/{guid} endpoint (singular)
+  // Method 1: GET /items/{guid} - should return single item
   const itemUrl = `${SUREDONE_URL}/items/${encodeURIComponent(sku)}`;
-  console.log('SureDone get-item URL (items endpoint):', itemUrl);
+  console.log('Method 1 - GET /items/{sku}:', itemUrl);
 
   try {
     const response = await fetch(itemUrl, {
@@ -68,83 +68,50 @@ async function getSureDoneItem(sku) {
       }
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Items endpoint response keys:', Object.keys(data));
-      
-      // Check if we got the item directly
-      if (data && data.guid && (data.guid === sku || data.sku === sku)) {
-        console.log('Found item via /items/ endpoint:', data.guid);
-        return formatItem(data);
-      }
-      
-      // Check if it's nested under the sku
-      if (data && data[sku]) {
-        console.log('Found item nested under SKU key:', sku);
-        return formatItem(data[sku]);
-      }
+    const responseText = await response.text();
+    console.log('Method 1 response status:', response.status);
+    console.log('Method 1 response preview:', responseText.substring(0, 200));
 
-      // Check all keys for match
-      for (const key in data) {
-        if (data[key] && typeof data[key] === 'object') {
-          if (data[key].guid === sku || data[key].sku === sku) {
-            console.log('Found item in response:', key);
-            return formatItem(data[key]);
+    if (response.ok && responseText) {
+      try {
+        const data = JSON.parse(responseText);
+        
+        // Check if we got the item directly
+        if (data && data.guid && (data.guid === sku || data.guid.toUpperCase() === sku.toUpperCase())) {
+          console.log('Found item via Method 1:', data.guid);
+          return formatItem(data);
+        }
+        
+        // Check if nested under SKU key
+        if (data && data[sku]) {
+          console.log('Found item nested under SKU:', sku);
+          return formatItem(data[sku]);
+        }
+
+        // Check all keys
+        for (const key in data) {
+          if (data[key] && typeof data[key] === 'object' && data[key].guid) {
+            if (data[key].guid.toUpperCase() === sku.toUpperCase()) {
+              console.log('Found item in response key:', key);
+              return formatItem(data[key]);
+            }
           }
         }
+      } catch (parseErr) {
+        console.log('Method 1 JSON parse error:', parseErr.message);
       }
     }
   } catch (err) {
-    console.log('Items endpoint failed:', err.message);
+    console.log('Method 1 failed:', err.message);
   }
 
-  // Method 2: Try POST to /bulk/items/get with the SKU
-  const bulkUrl = `${SUREDONE_URL}/bulk/items/get`;
-  console.log('SureDone get-item URL (bulk endpoint):', bulkUrl);
+  // Method 2: GET /editor/items with just the SKU as the search term
+  // Sometimes simple search works better
+  const simpleSearchUrl = `${SUREDONE_URL}/editor/items?search=${encodeURIComponent(sku)}&limit=100`;
+  console.log('Method 2 - Simple search:', simpleSearchUrl);
 
   try {
-    const response = await fetch(bulkUrl, {
-      method: 'POST',
-      headers: {
-        'X-Auth-User': SUREDONE_USER,
-        'X-Auth-Token': SUREDONE_TOKEN,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        items: [sku]
-      })
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Bulk endpoint response keys:', Object.keys(data));
-      
-      // Check if item is in response
-      if (data && data[sku]) {
-        console.log('Found item via bulk endpoint:', sku);
-        return formatItem(data[sku]);
-      }
-      
-      // Check numbered keys
-      for (const key in data) {
-        if (data[key] && typeof data[key] === 'object') {
-          if (data[key].guid === sku || data[key].sku === sku) {
-            console.log('Found item in bulk response:', data[key].guid);
-            return formatItem(data[key]);
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.log('Bulk endpoint failed:', err.message);
-  }
-
-  // Method 3: Last resort - search with wildcard disabled
-  const searchUrl = `${SUREDONE_URL}/editor/items?search=${encodeURIComponent(sku)}&searchaliases=false&searchguid=true`;
-  console.log('SureDone get-item URL (search with guid flag):', searchUrl);
-
-  try {
-    const response = await fetch(searchUrl, {
+    const response = await fetch(simpleSearchUrl, {
       method: 'GET',
       headers: {
         'X-Auth-User': SUREDONE_USER,
@@ -156,24 +123,60 @@ async function getSureDoneItem(sku) {
     if (response.ok) {
       const data = await response.json();
       
-      // Find exact match
+      // Find exact match (case insensitive)
       for (const key in data) {
         if (!isNaN(key) && data[key] && typeof data[key] === 'object') {
           const item = data[key];
-          if (item.guid === sku || item.sku === sku) {
-            console.log('Found exact match via search:', item.guid);
+          const itemGuid = (item.guid || '').toUpperCase();
+          const searchSku = sku.toUpperCase();
+          
+          if (itemGuid === searchSku) {
+            console.log('Found exact match via Method 2:', item.guid);
             return formatItem(item);
           }
         }
       }
       
-      console.log('No exact SKU match found. Search returned items with SKUs:', 
-        Object.keys(data).filter(k => !isNaN(k)).map(k => data[k]?.guid).slice(0, 10).join(', '));
+      // Log what we got
+      const skus = Object.keys(data)
+        .filter(k => !isNaN(k))
+        .map(k => data[k]?.guid)
+        .slice(0, 10);
+      console.log('Method 2 returned SKUs (first 10):', skus.join(', '));
     }
   } catch (err) {
-    console.log('Search endpoint failed:', err.message);
+    console.log('Method 2 failed:', err.message);
   }
 
+  // Method 3: Try with all lowercase
+  const lowerSku = sku.toLowerCase();
+  const lowerSearchUrl = `${SUREDONE_URL}/items/${encodeURIComponent(lowerSku)}`;
+  console.log('Method 3 - Lowercase SKU:', lowerSearchUrl);
+
+  try {
+    const response = await fetch(lowerSearchUrl, {
+      method: 'GET',
+      headers: {
+        'X-Auth-User': SUREDONE_USER,
+        'X-Auth-Token': SUREDONE_TOKEN,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Method 3 response keys:', Object.keys(data).slice(0, 5));
+      
+      if (data && data.guid) {
+        console.log('Found item via Method 3:', data.guid);
+        return formatItem(data);
+      }
+    }
+  } catch (err) {
+    console.log('Method 3 failed:', err.message);
+  }
+
+  console.log('All methods failed to find SKU:', sku);
   return null;
 }
 
