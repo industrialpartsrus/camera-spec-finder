@@ -579,38 +579,143 @@ function generatePrompt(brand, partNumber, detectedCategory = null) {
   if (!category) {
     const partLower = partNumber.toLowerCase();
     const brandLower = brand.toLowerCase();
+    const combined = `${brandLower} ${partLower}`;
     
-    // Motor detection patterns
-    if (partLower.match(/^[a-z]?\d{4}[a-z]?$/i) || // Baldor pattern: M3211T
-        brandLower.includes('baldor') || brandLower.includes('marathon') ||
-        brandLower.includes('weg') || brandLower.includes('leeson')) {
-      category = 'Electric Motors';
+    // =========================================================================
+    // POWER SUPPLY detection (check EARLY - common product type)
+    // =========================================================================
+    if (partLower.includes('psp') || partLower.includes('psu') || 
+        partLower.includes('power supply') || partLower.includes('ps-') ||
+        partLower.match(/\d+v\s*\d+a/i) || // voltage + amperage pattern
+        combined.includes('power') || combined.includes('supply') ||
+        brandLower.includes('mean well') || brandLower.includes('meanwell') ||
+        brandLower.includes('lambda') || brandLower.includes('cosel') ||
+        brandLower.includes('sola') || brandLower.includes('phoenix contact') ||
+        (brandLower.includes('automation direct') && partLower.match(/^ps[prl]/i))) {
+      category = 'Power Supplies';
     }
-    // PLC detection
-    else if (partLower.includes('plc') || partLower.includes('1756') || 
-             partLower.includes('1769') || partLower.includes('1746') ||
-             brandLower.includes('allen') || brandLower.includes('siemens s7')) {
-      category = 'PLCs';
+    // =========================================================================
+    // SERVO MOTOR detection
+    // =========================================================================
+    else if (partLower.includes('servo') || partLower.includes('sgm') ||
+             partLower.includes('hc-') || partLower.includes('ha-') ||
+             brandLower.includes('yaskawa') || brandLower.includes('fanuc') ||
+             brandLower.includes('mitsubishi') || brandLower.includes('omron')) {
+      // Check if it's a drive or motor
+      if (partLower.includes('drive') || partLower.includes('sgd') || 
+          partLower.includes('mr-j') || partLower.includes('cacr')) {
+        category = 'Servo Drives';
+      } else {
+        category = 'Servo Motors';
+      }
     }
-    // Sensor detection
-    else if (partLower.includes('prox') || partLower.includes('sensor') ||
-             brandLower.includes('turck') || brandLower.includes('sick') ||
-             brandLower.includes('banner') || brandLower.includes('keyence')) {
-      category = 'Proximity Sensors';
-    }
-    // Cylinder detection
-    else if (partLower.includes('cyl') || partLower.includes('ncd') ||
-             brandLower.includes('smc') || brandLower.includes('festo')) {
-      category = 'Pneumatic Cylinders';
-    }
-    // VFD detection
-    else if (partLower.includes('vfd') || partLower.includes('drive') ||
-             partLower.includes('powerflex') || partLower.includes('micromaster')) {
+    // =========================================================================
+    // VFD/AC DRIVE detection
+    // =========================================================================
+    else if (partLower.includes('vfd') || partLower.includes('inverter') ||
+             partLower.includes('powerflex') || partLower.includes('micromaster') ||
+             partLower.includes('altivar') || partLower.includes('af-') ||
+             (combined.includes('drive') && !combined.includes('servo'))) {
       category = 'VFDs';
     }
-    // Default
+    // =========================================================================
+    // PLC detection
+    // =========================================================================
+    else if (partLower.includes('plc') || partLower.includes('1756') || 
+             partLower.includes('1769') || partLower.includes('1746') ||
+             partLower.includes('1766') || partLower.includes('1762') ||
+             partLower.includes('6es7') || partLower.includes('6es5') ||
+             partLower.includes('click') || partLower.includes('do-') ||
+             (brandLower.includes('allen') && brandLower.includes('bradley')) ||
+             brandLower.includes('siemens s7') || brandLower.includes('automation direct')) {
+      category = 'PLCs';
+    }
+    // =========================================================================
+    // HMI detection
+    // =========================================================================
+    else if (partLower.includes('hmi') || partLower.includes('panelview') ||
+             partLower.includes('panel view') || partLower.includes('touchscreen') ||
+             partLower.includes('2711') || partLower.includes('c-more') ||
+             partLower.includes('proface') || partLower.includes('gp-')) {
+      category = 'HMIs';
+    }
+    // =========================================================================
+    // SENSOR detection
+    // =========================================================================
+    else if (partLower.includes('prox') || partLower.includes('sensor') ||
+             partLower.includes('photoelectric') || partLower.includes('induct') ||
+             brandLower.includes('turck') || brandLower.includes('sick') ||
+             brandLower.includes('banner') || brandLower.includes('keyence') ||
+             brandLower.includes('pepperl') || brandLower.includes('balluff')) {
+      if (partLower.includes('photo') || partLower.includes('optical') || 
+          partLower.includes('laser') || partLower.includes('light')) {
+        category = 'Photoelectric Sensors';
+      } else {
+        category = 'Proximity Sensors';
+      }
+    }
+    // =========================================================================
+    // PNEUMATIC CYLINDER detection
+    // =========================================================================
+    else if (partLower.includes('cyl') || partLower.includes('ncd') ||
+             partLower.includes('dsnu') || partLower.includes('dnc') ||
+             partLower.includes('advu') || partLower.includes('ncm') ||
+             brandLower.includes('smc') || brandLower.includes('festo') ||
+             brandLower.includes('bimba') || brandLower.includes('numatics')) {
+      category = 'Pneumatic Cylinders';
+    }
+    // =========================================================================
+    // PNEUMATIC VALVE detection
+    // =========================================================================
+    else if (partLower.includes('valve') || partLower.includes('sy-') ||
+             partLower.includes('vfs') || partLower.includes('mfh') ||
+             combined.includes('solenoid')) {
+      category = 'Pneumatic Valves';
+    }
+    // =========================================================================
+    // CIRCUIT BREAKER detection
+    // =========================================================================
+    else if (partLower.includes('breaker') || partLower.includes('qb') ||
+             partLower.includes('qo') || partLower.includes('hom') ||
+             partLower.includes('bab') || partLower.includes('ba-') ||
+             brandLower.includes('square d') || brandLower.includes('cutler') ||
+             brandLower.includes('eaton')) {
+      category = 'Circuit Breakers';
+    }
+    // =========================================================================
+    // CONTACTOR/RELAY detection
+    // =========================================================================
+    else if (partLower.includes('contactor') || partLower.includes('relay') ||
+             partLower.includes('100-c') || partLower.includes('dil') ||
+             partLower.includes('lc1') || partLower.includes('3rt')) {
+      category = 'Contactors';
+    }
+    // =========================================================================
+    // TRANSFORMER detection
+    // =========================================================================
+    else if (partLower.includes('transformer') || partLower.includes('xfmr') ||
+             partLower.includes('kva') || combined.includes('control transformer')) {
+      category = 'Transformers';
+    }
+    // =========================================================================
+    // ELECTRIC MOTOR detection (more specific patterns)
+    // =========================================================================
+    else if (partLower.match(/^[a-z]?\d{4}[a-z]?$/i) || // Baldor pattern: M3211T
+             partLower.match(/^[a-z]{2,3}\d{3,4}/i) || // General motor pattern
+             brandLower.includes('baldor') || brandLower.includes('marathon') ||
+             brandLower.includes('weg') || brandLower.includes('leeson') ||
+             brandLower.includes('teco') || brandLower.includes('lincoln') ||
+             brandLower.includes('dayton') || brandLower.includes('us motors') ||
+             combined.includes('motor') || combined.includes('hp ') ||
+             combined.includes('rpm') || combined.includes('tefc') ||
+             combined.includes('odp')) {
+      category = 'Electric Motors';
+    }
+    // =========================================================================
+    // DEFAULT - Ask AI to determine (use generic prompt)
+    // =========================================================================
     else {
-      category = 'Electric Motors'; // Default for now
+      category = null; // Will use generic prompt and let AI determine
     }
   }
 
