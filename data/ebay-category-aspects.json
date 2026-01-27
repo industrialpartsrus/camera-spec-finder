@@ -1,0 +1,351 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "generated": "2026-01-27",
+    "description": "eBay category aspects for Industrial Parts R Us top categories",
+    "apiEndpoint": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects"
+  },
+  "categories": {
+    "181708": {
+      "name": "PLCs & HMIs - Processors/Controllers",
+      "listingCount": 404,
+      "aspects": {
+        "required": [
+          {
+            "name": "Brand",
+            "mode": "FREE_TEXT",
+            "allowedValues": ["ABB", "Allen-Bradley", "AutomationDirect", "Beckhoff", "Emerson", "FANUC", "GE", "GE Fanuc", "Honeywell", "IDEC", "KEYENCE", "Mitsubishi", "Modicon", "Omron", "Panasonic", "Phoenix Contact", "Rockwell", "Schneider", "Schneider Electric", "Siemens", "Telemecanique", "Unitronics", "Yaskawa"],
+            "acceptsCustom": true
+          }
+        ],
+        "recommended": [
+          {
+            "name": "Model",
+            "mode": "FREE_TEXT",
+            "allowedValues": ["Allen-Bradley", "Allen-Bradley 1746-OA16", "Allen Bradley 1746-P3", "Allen Bradley 1746-P4", "Allen-Bradley 1756-OB32", "Allen-Bradley 1756-PA75", "Allen-Bradley 1794-TB32", "Simatic", "Simatic S5", "Simatic S7", "Simodrive"],
+            "acceptsCustom": true
+          },
+          {
+            "name": "Controller Platform",
+            "mode": "FREE_TEXT",
+            "allowedValues": ["CompactLogix", "ControlLogix", "FlexLogix", "Guard PLC", "MicroLogix1000", "MicroLogix1100", "MicroLogix1200", "MicroLogix1400", "MicroLogix1500", "PLC-2", "PLC-3", "PLC-5", "SLC 100/150", "SLC 500", "S5", "S7/200", "S7/300", "S7/400", "90-30", "90-70", "VersaMax", "Quantum", "Momentum", "DirectLogic 05", "DirectLogic 205", "DirectLogic 405"],
+            "acceptsCustom": true,
+            "autoDetect": {
+              "1756-": "ControlLogix",
+              "1769-": "CompactLogix",
+              "1746-": "SLC 500",
+              "1761-": "MicroLogix1000",
+              "1762-": "MicroLogix1200",
+              "1763-": "MicroLogix1100",
+              "1764-": "MicroLogix1500",
+              "1766-": "MicroLogix1400",
+              "1794-": "FLEX I/O",
+              "6ES7 2": "S7/200",
+              "6ES7 3": "S7/300",
+              "6ES7 4": "S7/400",
+              "IC693": "90-30",
+              "IC697": "90-70",
+              "IC200": "VersaMax"
+            }
+          },
+          {
+            "name": "MPN",
+            "mode": "FREE_TEXT",
+            "allowedValues": [],
+            "acceptsCustom": true
+          }
+        ],
+        "optional": [
+          {
+            "name": "Type",
+            "mode": "FREE_TEXT",
+            "allowedValues": ["CPLD (Complex Programmable Logic Devices)", "CPU (Central Processing Unit)", "Digital Signal Processor", "Microprocessor Board", "Microprocessor Controller", "PLC Board", "PLC Processor Module", "Processor IC"],
+            "acceptsCustom": true
+          },
+          {
+            "name": "Country of Origin",
+            "mode": "SELECTION_ONLY",
+            "allowedValues": ["China", "Germany", "Japan", "Mexico", "United States"],
+            "acceptsCustom": false
+          }
+        ]
+      }
+    },
+    "184027": {
+      "name": "Pneumatic Fittings",
+      "listingCount": 437,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=184027"
+    },
+    "26261": {
+      "name": "Industrial Controls",
+      "listingCount": 270,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=26261"
+    },
+    "57520": {
+      "name": "Sensors",
+      "listingCount": 256,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=57520"
+    },
+    "184148": {
+      "name": "Valves",
+      "listingCount": 184,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=184148"
+    },
+    "181732": {
+      "name": "Motors",
+      "listingCount": 141,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=181732"
+    },
+    "260823": {
+      "name": "Electrical/Fuses",
+      "listingCount": 130,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=260823"
+    },
+    "185134": {
+      "name": "Circuit Breakers",
+      "listingCount": 126,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=185134"
+    },
+    "78191": {
+      "name": "Servo Drives & Amplifiers",
+      "listingCount": 123,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=78191"
+    },
+    "36328": {
+      "name": "Test Equipment",
+      "listingCount": 115,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=36328"
+    },
+    "181714": {
+      "name": "I/O Modules",
+      "listingCount": 103,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=181714"
+    },
+    "65452": {
+      "name": "Gearboxes/Reducers",
+      "listingCount": 82,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=65452"
+    },
+    "65459": {
+      "name": "Linear Motion",
+      "listingCount": 66,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=65459"
+    },
+    "181709": {
+      "name": "HMIs & Operator Panels",
+      "listingCount": 52,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=181709"
+    },
+    "124603": {
+      "name": "Servo Motors",
+      "listingCount": 52,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=124603"
+    },
+    "65464": {
+      "name": "Safety Relays",
+      "listingCount": 50,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=65464"
+    },
+    "181750": {
+      "name": "Bearings",
+      "listingCount": 45,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=181750"
+    },
+    "109614": {
+      "name": "Light Towers/Stack Lights",
+      "listingCount": 44,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=109614"
+    },
+    "181925": {
+      "name": "Power Supplies",
+      "listingCount": 42,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=181925"
+    },
+    "78192": {
+      "name": "AC Drives/VFDs",
+      "listingCount": 18,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=78192"
+    },
+    "181682": {
+      "name": "Contactors",
+      "listingCount": 15,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=181682"
+    },
+    "42894": {
+      "name": "Variable Frequency Drives",
+      "listingCount": 9,
+      "aspects": {
+        "required": [],
+        "recommended": [],
+        "optional": []
+      },
+      "_fetchUrl": "https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects?categoryId=42894"
+    }
+  },
+  "brandAliases": {
+    "AB": "Allen-Bradley",
+    "A-B": "Allen-Bradley",
+    "Rockwell": "Allen-Bradley",
+    "Rockwell Automation": "Allen-Bradley",
+    "GE Fanuc": "GE Fanuc",
+    "Schneider": "Schneider Electric",
+    "Telemecanique": "Schneider Electric",
+    "Modicon": "Schneider Electric",
+    "Square D": "Schneider Electric"
+  },
+  "platformDetection": {
+    "Allen-Bradley": {
+      "1756-": "ControlLogix",
+      "1769-": "CompactLogix",
+      "1768-": "CompactLogix",
+      "1746-": "SLC 500",
+      "1747-": "SLC 500",
+      "1745-": "PLC-5",
+      "1771-": "PLC-5",
+      "1761-": "MicroLogix1000",
+      "1762-": "MicroLogix1200",
+      "1763-": "MicroLogix1100",
+      "1764-": "MicroLogix1500",
+      "1766-": "MicroLogix1400",
+      "1734-": "POINT I/O",
+      "1794-": "FLEX I/O",
+      "2080-": "Micro800",
+      "2085-": "Micro800",
+      "20-": "PowerFlex"
+    },
+    "Siemens": {
+      "6ES7 21": "S7/200",
+      "6ES7 22": "S7/200",
+      "6ES7 31": "S7/300",
+      "6ES7 32": "S7/300",
+      "6ES7 33": "S7/300",
+      "6ES7 34": "S7/300",
+      "6ES7 35": "S7/300",
+      "6ES7 41": "S7/400",
+      "6ES7 51": "S7/1500",
+      "6ES7 52": "S7/1500",
+      "6ED1": "LOGO!",
+      "6AV": "HMI Panel"
+    },
+    "GE": {
+      "IC693": "90-30",
+      "IC697": "90-70",
+      "IC200": "VersaMax",
+      "IC695": "RX3i"
+    },
+    "Omron": {
+      "CJ1": "CJ1",
+      "CJ2": "CJ2",
+      "CP1": "CP1",
+      "CS1": "CS1",
+      "NX1": "NX1",
+      "NJ": "NJ Series"
+    },
+    "Mitsubishi": {
+      "FX": "FX Series",
+      "Q": "Q Series",
+      "A": "A Series",
+      "L": "L Series"
+    }
+  }
+}
