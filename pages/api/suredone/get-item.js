@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
 /**
  * Get a single item from SureDone by SKU
- * Uses multiple methods to find the item
+ * Uses /search/items/{query} endpoint
  */
 async function getSureDoneItem(sku) {
   const SUREDONE_USER = process.env.SUREDONE_USER;
@@ -54,129 +54,51 @@ async function getSureDoneItem(sku) {
     throw new Error('SureDone credentials not configured');
   }
 
-  // Method 1: GET /items/{guid} - should return single item
-  const itemUrl = `${SUREDONE_URL}/items/${encodeURIComponent(sku)}`;
-  console.log('Method 1 - GET /items/{sku}:', itemUrl);
+  // Use /search/items/{query} endpoint with guid exact match
+  const searchQuery = `guid:=${sku}`;
+  const searchUrl = `${SUREDONE_URL}/search/items/${encodeURIComponent(searchQuery)}`;
+  console.log('SureDone search URL:', searchUrl);
 
   try {
-    const response = await fetch(itemUrl, {
+    const response = await fetch(searchUrl, {
       method: 'GET',
       headers: {
         'X-Auth-User': SUREDONE_USER,
         'X-Auth-Token': SUREDONE_TOKEN,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/x-www-form-urlencoded'
       }
     });
 
-    const responseText = await response.text();
-    console.log('Method 1 response status:', response.status);
-    console.log('Method 1 response preview:', responseText.substring(0, 200));
-
-    if (response.ok && responseText) {
-      try {
-        const data = JSON.parse(responseText);
-        
-        // Check if we got the item directly
-        if (data && data.guid && (data.guid === sku || data.guid.toUpperCase() === sku.toUpperCase())) {
-          console.log('Found item via Method 1:', data.guid);
-          return formatItem(data);
-        }
-        
-        // Check if nested under SKU key
-        if (data && data[sku]) {
-          console.log('Found item nested under SKU:', sku);
-          return formatItem(data[sku]);
-        }
-
-        // Check all keys
-        for (const key in data) {
-          if (data[key] && typeof data[key] === 'object' && data[key].guid) {
-            if (data[key].guid.toUpperCase() === sku.toUpperCase()) {
-              console.log('Found item in response key:', key);
-              return formatItem(data[key]);
-            }
-          }
-        }
-      } catch (parseErr) {
-        console.log('Method 1 JSON parse error:', parseErr.message);
-      }
-    }
-  } catch (err) {
-    console.log('Method 1 failed:', err.message);
-  }
-
-  // Method 2: GET /editor/items with just the SKU as the search term
-  // Sometimes simple search works better
-  const simpleSearchUrl = `${SUREDONE_URL}/editor/items?search=${encodeURIComponent(sku)}&limit=100`;
-  console.log('Method 2 - Simple search:', simpleSearchUrl);
-
-  try {
-    const response = await fetch(simpleSearchUrl, {
-      method: 'GET',
-      headers: {
-        'X-Auth-User': SUREDONE_USER,
-        'X-Auth-Token': SUREDONE_TOKEN,
-        'Content-Type': 'application/json'
-      }
-    });
+    console.log('Search response status:', response.status);
 
     if (response.ok) {
       const data = await response.json();
+      console.log('Search response keys:', Object.keys(data).slice(0, 10));
       
-      // Find exact match (case insensitive)
+      // Response format: { "1": {...item...}, "2": {...item...}, "type": "items", "all": "302" }
       for (const key in data) {
         if (!isNaN(key) && data[key] && typeof data[key] === 'object') {
           const item = data[key];
-          const itemGuid = (item.guid || '').toUpperCase();
-          const searchSku = sku.toUpperCase();
-          
-          if (itemGuid === searchSku) {
-            console.log('Found exact match via Method 2:', item.guid);
+          // Check for exact guid match (case insensitive)
+          if (item.guid && item.guid.toUpperCase() === sku.toUpperCase()) {
+            console.log('Found exact match:', item.guid);
             return formatItem(item);
           }
         }
       }
       
-      // Log what we got
-      const skus = Object.keys(data)
+      // Log what we got if no match
+      const guids = Object.keys(data)
         .filter(k => !isNaN(k))
         .map(k => data[k]?.guid)
-        .slice(0, 10);
-      console.log('Method 2 returned SKUs (first 10):', skus.join(', '));
+        .slice(0, 5);
+      console.log('No exact match. Response contained guids:', guids.join(', '));
     }
   } catch (err) {
-    console.log('Method 2 failed:', err.message);
+    console.log('Search endpoint failed:', err.message);
   }
 
-  // Method 3: Try with all lowercase
-  const lowerSku = sku.toLowerCase();
-  const lowerSearchUrl = `${SUREDONE_URL}/items/${encodeURIComponent(lowerSku)}`;
-  console.log('Method 3 - Lowercase SKU:', lowerSearchUrl);
-
-  try {
-    const response = await fetch(lowerSearchUrl, {
-      method: 'GET',
-      headers: {
-        'X-Auth-User': SUREDONE_USER,
-        'X-Auth-Token': SUREDONE_TOKEN,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Method 3 response keys:', Object.keys(data).slice(0, 5));
-      
-      if (data && data.guid) {
-        console.log('Found item via Method 3:', data.guid);
-        return formatItem(data);
-      }
-    }
-  } catch (err) {
-    console.log('Method 3 failed:', err.message);
-  }
-
-  console.log('All methods failed to find SKU:', sku);
+  console.log('Could not find SKU:', sku);
   return null;
 }
 
