@@ -11,9 +11,9 @@ export default async function handler(req, res) {
   const { brand, partNumber } = req.body;
 
   // Validate required inputs
-  if (!partNumber || partNumber.trim().length < 2) {
+  if (!partNumber || partNumber.trim().length < 3) {
     return res.status(400).json({ 
-      error: 'Part number is required (minimum 2 characters)',
+      error: 'Part number is required (minimum 3 characters)',
       found: false,
       matches: [],
       totalMatches: 0
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
 
 /**
  * Verify that a product actually matches the search criteria
- * This is important because SureDone's search can return loose matches
+ * STRICT matching - the part number must actually appear in the item's fields
  */
 function isActualMatch(item, searchBrand, searchPartNumber) {
   // Normalize all the item's part number fields for comparison
@@ -84,21 +84,55 @@ function isActualMatch(item, searchBrand, searchPartNumber) {
   const itemBrand = (item.brand || '').toUpperCase().trim();
   const itemManufacturer = (item.manufacturer || '').toUpperCase().trim();
 
-  // Check if part number matches any of the relevant fields
-  // We check for: exact match, starts with, or contains the search term
-  const partNumberMatches = 
-    itemModel === searchPartNumber ||
-    itemMpn === searchPartNumber ||
-    itemPartNumber === searchPartNumber ||
-    itemModel.includes(searchPartNumber) ||
-    itemMpn.includes(searchPartNumber) ||
-    itemPartNumber.includes(searchPartNumber) ||
-    searchPartNumber.includes(itemModel) ||
-    searchPartNumber.includes(itemMpn) ||
-    itemTitle.includes(searchPartNumber);
+  // FIRST CHECK: Reject items that have NO part number data at all
+  // If model, mpn, and partnumber are ALL empty, we can't verify a match
+  if (itemModel.length === 0 && itemMpn.length === 0 && itemPartNumber.length === 0) {
+    console.log(`Rejected: "${item.title}" (SKU: ${item.sku}) - no MPN/Model/PartNumber data to verify`);
+    return false;
+  }
+
+  // STRICT PART NUMBER MATCHING
+  // The search part number must be found IN the item's fields (not the other way around)
+  // This prevents matching when item has empty or short fields
+  
+  let partNumberMatches = false;
+  
+  // Check if ANY of the item's part number fields contain the search term
+  // OR if the search term contains the item's field (but only if item field is substantial - at least 5 chars)
+  
+  // Direct contains - search term appears in item field
+  if (itemModel.includes(searchPartNumber) || 
+      itemMpn.includes(searchPartNumber) || 
+      itemPartNumber.includes(searchPartNumber) ||
+      itemTitle.includes(searchPartNumber)) {
+    partNumberMatches = true;
+  }
+  
+  // Reverse contains - item field appears in search term
+  // BUT only if the item field is substantial (at least 5 characters)
+  // This handles cases like searching "CDQ2A40-75D-F9BVL-X838" matching item with model "CDQ2A40-75D"
+  if (!partNumberMatches) {
+    if (itemModel.length >= 5 && searchPartNumber.includes(itemModel)) {
+      partNumberMatches = true;
+    } else if (itemMpn.length >= 5 && searchPartNumber.includes(itemMpn)) {
+      partNumberMatches = true;
+    } else if (itemPartNumber.length >= 5 && searchPartNumber.includes(itemPartNumber)) {
+      partNumberMatches = true;
+    }
+  }
+  
+  // Exact match on any field
+  if (!partNumberMatches) {
+    if (itemModel === searchPartNumber || 
+        itemMpn === searchPartNumber || 
+        itemPartNumber === searchPartNumber) {
+      partNumberMatches = true;
+    }
+  }
 
   // If no part number match, reject this result
   if (!partNumberMatches) {
+    console.log(`Rejected: "${item.title}" - part number mismatch. Model: "${itemModel}", MPN: "${itemMpn}"`);
     return false;
   }
 
@@ -109,14 +143,16 @@ function isActualMatch(item, searchBrand, searchPartNumber) {
       itemManufacturer === searchBrand ||
       itemBrand.includes(searchBrand) ||
       itemManufacturer.includes(searchBrand) ||
-      searchBrand.includes(itemBrand) ||
-      searchBrand.includes(itemManufacturer);
+      (itemBrand.length >= 2 && searchBrand.includes(itemBrand)) ||
+      (itemManufacturer.length >= 2 && searchBrand.includes(itemManufacturer));
     
     if (!brandMatches) {
+      console.log(`Rejected: "${item.title}" - brand mismatch. Item brand: "${itemBrand}", Search brand: "${searchBrand}"`);
       return false;
     }
   }
 
+  console.log(`Accepted: "${item.title}" - matches search criteria`);
   return true;
 }
 

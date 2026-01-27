@@ -2,21 +2,42 @@
 // React component to display existing inventory matches
 // Add this to your pro.js page
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function InventoryCheckAlert({ brand, partNumber, onSelectExisting, onCreateNew }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(false);
+  
+  // Track what we last searched for to avoid duplicate searches
+  const lastSearchRef = useRef('');
 
-  // Check inventory whenever brand or partNumber changes
+  // DEBOUNCED search - waits 800ms after user stops typing
   useEffect(() => {
-    if (partNumber && partNumber.length >= 3) {
-      checkInventory();
-    } else {
+    // Don't search if part number is too short
+    if (!partNumber || partNumber.trim().length < 5) {
       setResult(null);
+      setError(null);
+      return;
     }
+
+    // Create a search key to track what we're searching
+    const searchKey = `${brand || ''}-${partNumber}`.toUpperCase();
+    
+    // Don't search if we already searched for this exact term
+    if (searchKey === lastSearchRef.current) {
+      return;
+    }
+
+    // Set up debounce timer - wait 800ms after last keystroke
+    const debounceTimer = setTimeout(() => {
+      lastSearchRef.current = searchKey;
+      checkInventory();
+    }, 800);
+
+    // Clear timer if user keeps typing
+    return () => clearTimeout(debounceTimer);
   }, [brand, partNumber]);
 
   const checkInventory = async () => {
@@ -34,6 +55,10 @@ export default function InventoryCheckAlert({ brand, partNumber, onSelectExistin
       
       if (response.ok) {
         setResult(data);
+        // Auto-expand if matches found
+        if (data.found && data.totalMatches > 0) {
+          setExpanded(true);
+        }
       } else {
         setError(data.error || 'Failed to check inventory');
       }
@@ -70,7 +95,7 @@ export default function InventoryCheckAlert({ brand, partNumber, onSelectExistin
       )}
 
       {/* Results - Matches Found */}
-      {result && result.found && (
+      {result && result.found && !loading && (
         <div style={styles.alertBox}>
           <div style={styles.alertHeader}>
             <span style={styles.alertIcon}>🔔</span>
@@ -117,7 +142,7 @@ export default function InventoryCheckAlert({ brand, partNumber, onSelectExistin
       )}
 
       {/* Results - No Matches */}
-      {result && !result.found && (
+      {result && !result.found && !loading && (
         <div style={styles.clearBox}>
           <span style={styles.clearIcon}>✅</span>
           <strong>No existing inventory found</strong>
