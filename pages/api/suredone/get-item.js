@@ -95,8 +95,8 @@ async function getSureDoneItem(sku) {
   }
 
   // Fallback to search with exact match
-  // Use quotes around SKU for exact matching
-  const searchQuery = `guid:"${sku}" OR sku:"${sku}"`;
+  // Use := for exact matching in SureDone
+  const searchQuery = `guid:=${sku} OR sku:=${sku}`;
   const searchUrl = `${SUREDONE_URL}/editor/items?search=${encodeURIComponent(searchQuery)}`;
   
   console.log('SureDone get-item URL (search fallback):', searchUrl);
