@@ -11,27 +11,38 @@ export default async function handler(req, res) {
   const { brand, partNumber } = req.body;
 
   // Validate required inputs
-  if (!partNumber) {
+  if (!partNumber || partNumber.trim().length < 2) {
     return res.status(400).json({ 
-      error: 'Part number is required',
+      error: 'Part number is required (minimum 2 characters)',
       found: false,
       matches: [],
       totalMatches: 0
     });
   }
 
+  const cleanPartNumber = partNumber.trim().toUpperCase();
+  const cleanBrand = brand ? brand.trim().toUpperCase() : '';
+
   try {
     // Search SureDone for matching products
-    const matches = await searchSureDone(brand, partNumber);
+    const allResults = await searchSureDone(cleanBrand, cleanPartNumber);
     
+    // IMPORTANT: Filter results client-side to ensure they actually match
+    // SureDone's search can be loose, so we verify matches ourselves
+    const verifiedMatches = allResults.filter(item => {
+      return isActualMatch(item, cleanBrand, cleanPartNumber);
+    });
+
     // Filter to only items with stock > 0
-    const inStockMatches = matches.filter(item => {
+    const inStockMatches = verifiedMatches.filter(item => {
       const stock = parseInt(item.stock) || 0;
       return stock > 0;
     });
 
     // Format the response
     const formattedMatches = inStockMatches.map(item => formatProductMatch(item));
+
+    console.log(`Search for "${cleanBrand} ${cleanPartNumber}": ${allResults.length} raw results, ${verifiedMatches.length} verified, ${inStockMatches.length} in stock`);
 
     return res.status(200).json({
       found: formattedMatches.length > 0,
@@ -40,6 +51,11 @@ export default async function handler(req, res) {
       searchedFor: {
         brand: brand || '(any)',
         partNumber: partNumber
+      },
+      debug: {
+        rawResults: allResults.length,
+        verifiedMatches: verifiedMatches.length,
+        inStockMatches: inStockMatches.length
       }
     });
 
@@ -56,8 +72,57 @@ export default async function handler(req, res) {
 }
 
 /**
+ * Verify that a product actually matches the search criteria
+ * This is important because SureDone's search can return loose matches
+ */
+function isActualMatch(item, searchBrand, searchPartNumber) {
+  // Normalize all the item's part number fields for comparison
+  const itemModel = (item.model || '').toUpperCase().trim();
+  const itemMpn = (item.mpn || '').toUpperCase().trim();
+  const itemPartNumber = (item.partnumber || '').toUpperCase().trim();
+  const itemTitle = (item.title || '').toUpperCase().trim();
+  const itemBrand = (item.brand || '').toUpperCase().trim();
+  const itemManufacturer = (item.manufacturer || '').toUpperCase().trim();
+
+  // Check if part number matches any of the relevant fields
+  // We check for: exact match, starts with, or contains the search term
+  const partNumberMatches = 
+    itemModel === searchPartNumber ||
+    itemMpn === searchPartNumber ||
+    itemPartNumber === searchPartNumber ||
+    itemModel.includes(searchPartNumber) ||
+    itemMpn.includes(searchPartNumber) ||
+    itemPartNumber.includes(searchPartNumber) ||
+    searchPartNumber.includes(itemModel) ||
+    searchPartNumber.includes(itemMpn) ||
+    itemTitle.includes(searchPartNumber);
+
+  // If no part number match, reject this result
+  if (!partNumberMatches) {
+    return false;
+  }
+
+  // If brand was specified, verify it matches too
+  if (searchBrand && searchBrand.length > 0) {
+    const brandMatches = 
+      itemBrand === searchBrand ||
+      itemManufacturer === searchBrand ||
+      itemBrand.includes(searchBrand) ||
+      itemManufacturer.includes(searchBrand) ||
+      searchBrand.includes(itemBrand) ||
+      searchBrand.includes(itemManufacturer);
+    
+    if (!brandMatches) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Search SureDone for products matching brand and part number
- * Searches across model, mpn, and partnumber fields
+ * Uses a simple search approach that's more reliable
  */
 async function searchSureDone(brand, partNumber) {
   const SUREDONE_USER = process.env.SUREDONE_USER;
@@ -68,23 +133,10 @@ async function searchSureDone(brand, partNumber) {
     throw new Error('SureDone credentials not configured');
   }
 
-  // Build search query
-  // We search multiple fields because part numbers can be in model, mpn, or partnumber
-  let searchQuery = '';
-  
-  // Determine which brand field to search (brand or manufacturer)
-  const brandSearch = brand ? `(brand:${brand} OR manufacturer:${brand})` : '';
-  
-  // Search part number across all relevant fields
-  // Using OR to catch the part number in any field
-  const partSearch = `(model:${partNumber} OR mpn:${partNumber} OR partnumber:${partNumber})`;
-  
-  // Combine brand and part number search
-  if (brandSearch) {
-    searchQuery = `${brandSearch} AND ${partSearch}`;
-  } else {
-    searchQuery = partSearch;
-  }
+  // Use a simpler search query - just search by the part number
+  // We'll filter by brand client-side for more reliable results
+  // SureDone search syntax: field:value
+  const searchQuery = `mpn:${partNumber}`;
 
   console.log('SureDone search query:', searchQuery);
 
@@ -108,7 +160,7 @@ async function searchSureDone(brand, partNumber) {
 
   // SureDone returns products as numbered keys, not an array
   // Convert to array of products
-  const products = [];
+  let products = [];
   for (const key in data) {
     // Skip non-numeric keys (like 'result', 'errors', etc.)
     if (!isNaN(key) && data[key] && typeof data[key] === 'object') {
@@ -116,38 +168,41 @@ async function searchSureDone(brand, partNumber) {
     }
   }
 
-  console.log(`Found ${products.length} products in SureDone`);
+  console.log(`MPN search found ${products.length} products`);
 
-  // If exact match didn't find enough results, try partial match
-  // This helps with cases like SMC cylinders where CDQ2A40-100D should match CDQ2A40-100D-F7BVL-X838
-  if (products.length === 0 && partNumber.length > 5) {
-    console.log('No exact matches, trying partial search...');
-    const partialProducts = await searchSureDonePartial(brand, partNumber);
-    return partialProducts;
+  // If MPN search didn't find anything, try model field
+  if (products.length === 0) {
+    console.log('No MPN matches, trying model field...');
+    const modelProducts = await searchByField('model', partNumber);
+    products = modelProducts;
+  }
+
+  // If still no results, try partnumber field
+  if (products.length === 0) {
+    console.log('No model matches, trying partnumber field...');
+    const partNumProducts = await searchByField('partnumber', partNumber);
+    products = partNumProducts;
+  }
+
+  // If still no results and part number is long enough, try title search
+  if (products.length === 0 && partNumber.length >= 5) {
+    console.log('No field matches, trying title search...');
+    const titleProducts = await searchByField('title', `*${partNumber}*`);
+    products = titleProducts;
   }
 
   return products;
 }
 
 /**
- * Partial search for cases where part numbers have extensions
- * Example: CDQ2A40-100D should find CDQ2A40-100D-F7BVL-X838
+ * Helper function to search SureDone by a specific field
  */
-async function searchSureDonePartial(brand, partNumber) {
+async function searchByField(field, value) {
   const SUREDONE_USER = process.env.SUREDONE_USER;
   const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
   const SUREDONE_URL = process.env.SUREDONE_URL || 'https://app.suredone.com/v1';
 
-  // For partial matching, we'll search the title which often contains the full part number
-  // SureDone's search uses "contains" logic for text fields
-  let searchQuery = `title:*${partNumber}*`;
-  
-  if (brand) {
-    searchQuery = `(brand:${brand} OR manufacturer:${brand}) AND ${searchQuery}`;
-  }
-
-  console.log('SureDone partial search query:', searchQuery);
-
+  const searchQuery = `${field}:${value}`;
   const url = `${SUREDONE_URL}/editor/items?search=${encodeURIComponent(searchQuery)}`;
   
   const response = await fetch(url, {
@@ -160,19 +215,20 @@ async function searchSureDonePartial(brand, partNumber) {
   });
 
   if (!response.ok) {
-    throw new Error(`SureDone API error: ${response.status} ${response.statusText}`);
+    console.error(`Search by ${field} failed: ${response.status}`);
+    return [];
   }
 
   const data = await response.json();
-
   const products = [];
+  
   for (const key in data) {
     if (!isNaN(key) && data[key] && typeof data[key] === 'object') {
       products.push(data[key]);
     }
   }
 
-  console.log(`Found ${products.length} products in partial search`);
+  console.log(`${field} search found ${products.length} products`);
   return products;
 }
 
