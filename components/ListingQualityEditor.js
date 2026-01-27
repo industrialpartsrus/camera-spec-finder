@@ -367,7 +367,67 @@ export default function ListingQualityEditor({ categoryAspects = null }) {
   const [filledFields, setFilledFields] = useState({});
   const [autoDetections, setAutoDetections] = useState({});
   const [loading, setLoading] = useState(false);
+  const [skuLoading, setSkuLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [skuData, setSkuData] = useState(null);
+
+  // Lookup SKU from SureDone
+  const lookupSku = useCallback(async (sku) => {
+    if (!sku || sku.length < 3) return;
+    
+    setSkuLoading(true);
+    setError(null);
+    
+    try {
+      // Use the existing check-inventory API with SKU search
+      const response = await fetch('/api/suredone/get-item?sku=' + encodeURIComponent(sku));
+      const data = await response.json();
+      
+      if (data.success && data.item) {
+        const item = data.item;
+        setSkuData(item);
+        
+        // Auto-fill fields from SureDone data
+        const newListing = {
+          ...listing,
+          sku: sku,
+          title: item.title || '',
+          mpn: item.mpn || item.model || '',
+          brand: item.brand || item.manufacturer || '',
+          categoryId: item.ebaycatid || '',
+          controllerPlatform: item.controllerplatform || '',
+          type: item.type || item.usertype || ''
+        };
+        
+        setListing(newListing);
+        
+        // Update filled fields
+        const newFilledFields = {};
+        if (item.brand || item.manufacturer) newFilledFields['Brand'] = item.brand || item.manufacturer;
+        if (item.mpn || item.model) newFilledFields['MPN'] = item.mpn || item.model;
+        if (item.model) newFilledFields['Model'] = item.model;
+        if (item.controllerplatform) newFilledFields['Controller Platform'] = item.controllerplatform;
+        if (item.type || item.usertype) newFilledFields['Type'] = item.type || item.usertype;
+        
+        setFilledFields(newFilledFields);
+        
+        // Fetch category aspects if we have a category
+        if (item.ebaycatid) {
+          fetchAspects(item.ebaycatid);
+        }
+        
+        setAutoDetections({ ...autoDetections, 'SKU Loaded': true });
+      } else {
+        setError('SKU not found in SureDone');
+        setSkuData(null);
+      }
+    } catch (err) {
+      setError('Error looking up SKU: ' + err.message);
+      setSkuData(null);
+    }
+    
+    setSkuLoading(false);
+  }, [listing, autoDetections]);
 
   // Fetch category aspects when categoryId changes
   const fetchAspects = useCallback(async (categoryId) => {
@@ -626,6 +686,14 @@ export default function ListingQualityEditor({ categoryAspects = null }) {
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             style={styles.button}
+            onClick={() => lookupSku(listing.sku)}
+            disabled={!listing.sku || skuLoading}
+          >
+            {skuLoading ? 'Loading...' : '🔍 Lookup SKU'}
+          </button>
+          
+          <button
+            style={styles.button}
             onClick={() => fetchAspects(listing.categoryId)}
             disabled={!listing.categoryId || loading}
           >
@@ -639,11 +707,25 @@ export default function ListingQualityEditor({ categoryAspects = null }) {
               setFilledFields({});
               setAspects(null);
               setAutoDetections({});
+              setSkuData(null);
             }}
           >
             Clear
           </button>
         </div>
+        
+        {/* SKU Data Preview */}
+        {skuData && (
+          <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#dbeafe', borderRadius: '8px', border: '1px solid #3b82f6' }}>
+            <div style={{ fontWeight: '600', marginBottom: '10px', color: '#1e40af' }}>✅ Loaded from SureDone</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', fontSize: '14px' }}>
+              <div><strong>Title:</strong> {skuData.title?.substring(0, 40)}...</div>
+              <div><strong>Stock:</strong> {skuData.stock || 0}</div>
+              <div><strong>Price:</strong> ${skuData.price || '0.00'}</div>
+              <div><strong>Condition:</strong> {skuData.condition || 'N/A'}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && (
