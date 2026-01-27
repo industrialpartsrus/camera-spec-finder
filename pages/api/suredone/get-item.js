@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
 /**
  * Get a single item from SureDone by SKU
- * Uses direct item endpoint for exact match
+ * Uses the /bulk/items GET endpoint which is more reliable
  */
 async function getSureDoneItem(sku) {
   const SUREDONE_USER = process.env.SUREDONE_USER;
@@ -54,14 +54,97 @@ async function getSureDoneItem(sku) {
     throw new Error('SureDone credentials not configured');
   }
 
-  // Try direct item lookup first (most reliable)
-  // SureDone supports /editor/items/{sku} for direct access
-  const directUrl = `${SUREDONE_URL}/editor/items/${encodeURIComponent(sku)}`;
-  
-  console.log('SureDone get-item URL (direct):', directUrl);
+  // Method 1: Try the /items/{guid} endpoint (singular)
+  const itemUrl = `${SUREDONE_URL}/items/${encodeURIComponent(sku)}`;
+  console.log('SureDone get-item URL (items endpoint):', itemUrl);
 
   try {
-    const response = await fetch(directUrl, {
+    const response = await fetch(itemUrl, {
+      method: 'GET',
+      headers: {
+        'X-Auth-User': SUREDONE_USER,
+        'X-Auth-Token': SUREDONE_TOKEN,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Items endpoint response keys:', Object.keys(data));
+      
+      // Check if we got the item directly
+      if (data && data.guid && (data.guid === sku || data.sku === sku)) {
+        console.log('Found item via /items/ endpoint:', data.guid);
+        return formatItem(data);
+      }
+      
+      // Check if it's nested under the sku
+      if (data && data[sku]) {
+        console.log('Found item nested under SKU key:', sku);
+        return formatItem(data[sku]);
+      }
+
+      // Check all keys for match
+      for (const key in data) {
+        if (data[key] && typeof data[key] === 'object') {
+          if (data[key].guid === sku || data[key].sku === sku) {
+            console.log('Found item in response:', key);
+            return formatItem(data[key]);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.log('Items endpoint failed:', err.message);
+  }
+
+  // Method 2: Try POST to /bulk/items/get with the SKU
+  const bulkUrl = `${SUREDONE_URL}/bulk/items/get`;
+  console.log('SureDone get-item URL (bulk endpoint):', bulkUrl);
+
+  try {
+    const response = await fetch(bulkUrl, {
+      method: 'POST',
+      headers: {
+        'X-Auth-User': SUREDONE_USER,
+        'X-Auth-Token': SUREDONE_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        items: [sku]
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Bulk endpoint response keys:', Object.keys(data));
+      
+      // Check if item is in response
+      if (data && data[sku]) {
+        console.log('Found item via bulk endpoint:', sku);
+        return formatItem(data[sku]);
+      }
+      
+      // Check numbered keys
+      for (const key in data) {
+        if (data[key] && typeof data[key] === 'object') {
+          if (data[key].guid === sku || data[key].sku === sku) {
+            console.log('Found item in bulk response:', data[key].guid);
+            return formatItem(data[key]);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.log('Bulk endpoint failed:', err.message);
+  }
+
+  // Method 3: Last resort - search with wildcard disabled
+  const searchUrl = `${SUREDONE_URL}/editor/items?search=${encodeURIComponent(sku)}&searchaliases=false&searchguid=true`;
+  console.log('SureDone get-item URL (search with guid flag):', searchUrl);
+
+  try {
+    const response = await fetch(searchUrl, {
       method: 'GET',
       headers: {
         'X-Auth-User': SUREDONE_USER,
@@ -73,65 +156,23 @@ async function getSureDoneItem(sku) {
     if (response.ok) {
       const data = await response.json();
       
-      // Direct endpoint returns the item directly or with guid as key
-      if (data && data.guid) {
-        console.log('Found item via direct lookup:', data.sku || data.guid);
-        return formatItem(data);
-      }
-      
-      // Sometimes it returns as { "guid": { ...item... } }
+      // Find exact match
       for (const key in data) {
-        if (data[key] && typeof data[key] === 'object' && data[key].guid) {
-          // Verify this is the exact SKU we want
-          if (data[key].sku === sku || data[key].guid === sku) {
-            console.log('Found item via direct lookup (nested):', data[key].sku);
-            return formatItem(data[key]);
+        if (!isNaN(key) && data[key] && typeof data[key] === 'object') {
+          const item = data[key];
+          if (item.guid === sku || item.sku === sku) {
+            console.log('Found exact match via search:', item.guid);
+            return formatItem(item);
           }
         }
       }
+      
+      console.log('No exact SKU match found. Search returned items with SKUs:', 
+        Object.keys(data).filter(k => !isNaN(k)).map(k => data[k]?.guid).slice(0, 10).join(', '));
     }
   } catch (err) {
-    console.log('Direct lookup failed, trying search:', err.message);
+    console.log('Search endpoint failed:', err.message);
   }
-
-  // Fallback to search with exact match
-  // In SureDone, SKU is stored as 'guid' - search only by guid
-  const searchQuery = `guid:=${sku}`;
-  const searchUrl = `${SUREDONE_URL}/editor/items?search=${encodeURIComponent(searchQuery)}`;
-  
-  console.log('SureDone get-item URL (search fallback):', searchUrl);
-
-  const response = await fetch(searchUrl, {
-    method: 'GET',
-    headers: {
-      'X-Auth-User': SUREDONE_USER,
-      'X-Auth-Token': SUREDONE_TOKEN,
-      'Content-Type': 'application/json'
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`SureDone API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-
-  // SureDone returns products as numbered keys
-  // Find the item that EXACTLY matches our SKU
-  for (const key in data) {
-    if (!isNaN(key) && data[key] && typeof data[key] === 'object') {
-      const item = data[key];
-      // Verify exact match on sku or guid
-      if (item.sku === sku || item.guid === sku) {
-        console.log('Found exact match via search:', item.sku);
-        return formatItem(item);
-      }
-    }
-  }
-
-  // If still no exact match, log what we got
-  console.log('No exact SKU match found. Search returned items with SKUs:', 
-    Object.keys(data).filter(k => !isNaN(k)).map(k => data[k]?.sku).join(', '));
 
   return null;
 }
