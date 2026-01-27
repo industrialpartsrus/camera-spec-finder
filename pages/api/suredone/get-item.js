@@ -43,6 +43,7 @@ export default async function handler(req, res) {
 
 /**
  * Get a single item from SureDone by SKU
+ * Uses direct item endpoint for exact match
  */
 async function getSureDoneItem(sku) {
   const SUREDONE_USER = process.env.SUREDONE_USER;
@@ -53,13 +54,54 @@ async function getSureDoneItem(sku) {
     throw new Error('SureDone credentials not configured');
   }
 
-  // Search for exact SKU match
-  const searchQuery = `sku:=${sku}`;
-  const url = `${SUREDONE_URL}/editor/items?search=${encodeURIComponent(searchQuery)}`;
+  // Try direct item lookup first (most reliable)
+  // SureDone supports /editor/items/{sku} for direct access
+  const directUrl = `${SUREDONE_URL}/editor/items/${encodeURIComponent(sku)}`;
   
-  console.log('SureDone get-item URL:', url);
+  console.log('SureDone get-item URL (direct):', directUrl);
 
-  const response = await fetch(url, {
+  try {
+    const response = await fetch(directUrl, {
+      method: 'GET',
+      headers: {
+        'X-Auth-User': SUREDONE_USER,
+        'X-Auth-Token': SUREDONE_TOKEN,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Direct endpoint returns the item directly or with guid as key
+      if (data && data.guid) {
+        console.log('Found item via direct lookup:', data.sku || data.guid);
+        return formatItem(data);
+      }
+      
+      // Sometimes it returns as { "guid": { ...item... } }
+      for (const key in data) {
+        if (data[key] && typeof data[key] === 'object' && data[key].guid) {
+          // Verify this is the exact SKU we want
+          if (data[key].sku === sku || data[key].guid === sku) {
+            console.log('Found item via direct lookup (nested):', data[key].sku);
+            return formatItem(data[key]);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.log('Direct lookup failed, trying search:', err.message);
+  }
+
+  // Fallback to search with exact match
+  // Use quotes around SKU for exact matching
+  const searchQuery = `guid:"${sku}" OR sku:"${sku}"`;
+  const searchUrl = `${SUREDONE_URL}/editor/items?search=${encodeURIComponent(searchQuery)}`;
+  
+  console.log('SureDone get-item URL (search fallback):', searchUrl);
+
+  const response = await fetch(searchUrl, {
     method: 'GET',
     headers: {
       'X-Auth-User': SUREDONE_USER,
@@ -75,12 +117,21 @@ async function getSureDoneItem(sku) {
   const data = await response.json();
 
   // SureDone returns products as numbered keys
-  // Find the first product in the response
+  // Find the item that EXACTLY matches our SKU
   for (const key in data) {
     if (!isNaN(key) && data[key] && typeof data[key] === 'object') {
-      return formatItem(data[key]);
+      const item = data[key];
+      // Verify exact match on sku or guid
+      if (item.sku === sku || item.guid === sku) {
+        console.log('Found exact match via search:', item.sku);
+        return formatItem(item);
+      }
     }
   }
+
+  // If still no exact match, log what we got
+  console.log('No exact SKU match found. Search returned items with SKUs:', 
+    Object.keys(data).filter(k => !isNaN(k)).map(k => data[k]?.sku).join(', '));
 
   return null;
 }
