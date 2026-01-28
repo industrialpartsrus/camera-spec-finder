@@ -74,10 +74,14 @@ const PLATFORM_DETECTION = {
   }
 };
 
-// Brand detection from part number prefixes
+// Updated BRAND_DETECTION patterns for ListingQualityEditor.js
+// Replace the existing BRAND_DETECTION object with this expanded version
+
 const BRAND_DETECTION = {
+  // Allen-Bradley / Rockwell
   "1756": "Allen-Bradley",
   "1769": "Allen-Bradley",
+  "1768": "Allen-Bradley",
   "1746": "Allen-Bradley",
   "1747": "Allen-Bradley",
   "1761": "Allen-Bradley",
@@ -88,25 +92,253 @@ const BRAND_DETECTION = {
   "1794": "Allen-Bradley",
   "1734": "Allen-Bradley",
   "2080": "Allen-Bradley",
+  "2085": "Allen-Bradley",
   "20-": "Allen-Bradley",
   "22-": "Allen-Bradley",
+  "25-": "Allen-Bradley",
+  "150-": "Allen-Bradley",
+  "1492": "Allen-Bradley",
+  "700-": "Allen-Bradley",
+  "800": "Allen-Bradley",
+  "855": "Allen-Bradley",
+  "MPL-": "Allen-Bradley",
+  "MPM-": "Allen-Bradley",
+  "TL-": "Allen-Bradley",
+  "VPL-": "Allen-Bradley",
+  
+  // Siemens
   "6ES": "Siemens",
   "6ED": "Siemens",
   "6AV": "Siemens",
   "6SL": "Siemens",
   "6SE": "Siemens",
-  "IC69": "GE",
-  "IC20": "GE",
+  "6EP": "Siemens",
+  "6GK": "Siemens",
+  "3RV": "Siemens",
+  "3RT": "Siemens",
+  "3RU": "Siemens",
+  "5SX": "Siemens",
+  "5SY": "Siemens",
+  
+  // SMC Pneumatics
+  "CDQ": "SMC",
+  "CD85": "SMC",
+  "CQ2": "SMC",
+  "CM2": "SMC",
+  "CG1": "SMC",
+  "CDG": "SMC",
+  "MGQL": "SMC",
+  "MKB": "SMC",
+  "MHS": "SMC",
+  "CDRB": "SMC",
+  "CRB": "SMC",
+  "CDLA": "SMC",
+  "MDNB": "SMC",
+  "MNB": "SMC",
+  "SY": "SMC",
+  "VQ": "SMC",
+  "VQZ": "SMC",
+  "AM": "SMC",
+  "AF": "SMC",
+  "AW": "SMC",
+  "AR": "SMC",
+  "AC": "SMC",
+  
+  // Festo
+  "MFH": "Festo",
+  "DSNU": "Festo",
+  "DNC": "Festo",
+  "ADN": "Festo",
+  "ADVU": "Festo",
+  "DGC": "Festo",
+  "DGSL": "Festo",
+  "CPE": "Festo",
+  "VUVG": "Festo",
+  "VTUG": "Festo",
+  "LFR": "Festo",
+  "MS": "Festo",
+  
+  // Parker
+  "P1D": "Parker",
+  "P1A": "Parker",
+  "OSP-P": "Parker",
+  "OSPP": "Parker",
+  
+  // Numatics
+  "L22": "Numatics",
+  "L12": "Numatics",
+  "L01": "Numatics",
+  
+  // GE Fanuc
+  "IC69": "GE Fanuc",
+  "IC20": "GE Fanuc",
+  
+  // FANUC
   "A06B": "FANUC",
   "A02B": "FANUC",
   "A03B": "FANUC",
+  "A16B": "FANUC",
+  "A20B": "FANUC",
+  
+  // Omron
   "CJ1": "Omron",
   "CJ2": "Omron",
   "CP1": "Omron",
+  "CS1": "Omron",
+  "NX1": "Omron",
+  "E2E": "Omron",
+  "E3Z": "Omron",
+  "E3X": "Omron",
+  "MY": "Omron",
+  "G2R": "Omron",
+  "G3NA": "Omron",
+  
+  // Yaskawa
   "SGDV": "Yaskawa",
   "SGDM": "Yaskawa",
-  "CIMR": "Yaskawa"
+  "SGDS": "Yaskawa",
+  "SGMG": "Yaskawa",
+  "SGMJ": "Yaskawa",
+  "SGMS": "Yaskawa",
+  "CIMR": "Yaskawa",
+  
+  // Mitsubishi
+  "FX": "Mitsubishi",
+  "QJ": "Mitsubishi",
+  "AJ": "Mitsubishi",
+  "A1S": "Mitsubishi",
+  "Q0": "Mitsubishi",
+  "HF-": "Mitsubishi",
+  "MR-": "Mitsubishi",
+  "FR-": "Mitsubishi",
+  
+  // ABB
+  "3HAC": "ABB",
+  "3HAB": "ABB",
+  "ACS": "ABB",
+  "ACS5": "ABB",
+  "ACS8": "ABB",
+  "PS5": "ABB",
+  
+  // Schneider / Telemecanique
+  "LC1": "Schneider Electric",
+  "LC2": "Schneider Electric",
+  "LR": "Schneider Electric",
+  "XB": "Schneider Electric",
+  "ATV": "Schneider Electric",
+  "TM": "Schneider Electric",
+  "140": "Schneider Electric",
+  
+  // Automation Direct
+  "D2-": "Automation Direct",
+  "D4-": "Automation Direct",
+  "DL": "Automation Direct",
+  "GS": "Automation Direct",
+  
+  // Keyence
+  "PJ-": "Keyence",
+  "LV-": "Keyence",
+  "FS-": "Keyence",
+  "LR-": "Keyence",
+  "IV-": "Keyence",
+  "CV-": "Keyence",
+  "SZ-": "Keyence",
+  "GL-": "Keyence",
+  
+  // Banner
+  "Q45": "Banner",
+  "QS": "Banner",
+  "S18": "Banner",
+  "SM3": "Banner",
+  "PD45": "Banner",
+  
+  // IFM
+  "IG": "IFM",
+  "IE": "IFM",
+  "O5": "IFM",
+  "OG": "IFM",
+  "PN": "IFM",
+  
+  // Turck
+  "BI": "Turck",
+  "NI": "Turck",
+  
+  // Balluff
+  "BES": "Balluff",
+  "BOS": "Balluff",
+  "BTL": "Balluff",
+  
+  // Phoenix Contact
+  "PLC-": "Phoenix Contact",
+  "QUINT": "Phoenix Contact",
+  "TRIO": "Phoenix Contact",
+  "STEP": "Phoenix Contact",
+  
+  // WAGO
+  "750-": "WAGO",
+  "753-": "WAGO",
+  "787-": "WAGO",
+  
+  // Oriental Motor
+  "BLM": "Oriental Motor",
+  "ARM": "Oriental Motor",
+  "5GU": "Oriental Motor",
+  "5RK": "Oriental Motor",
+  "PK": "Oriental Motor",
+  "CRK": "Oriental Motor",
+  "AZ": "Oriental Motor",
+  "CH250": "Oriental Motor",
+  
+  // THK
+  "KR": "THK",
+  "SHS": "THK",
+  "HSR": "THK",
+  "LM": "THK",
+  "SSR": "THK",
+  
+  // Baldor
+  "VS1": "Baldor",
+  "VE1": "Baldor",
+  
+  // Sola / Emerson
+  "SDN": "Sola",
+  "SDP": "Sola",
+  
+  // Hydac
+  "EDS": "Hydac",
+  "HDA": "Hydac",
+  "VM": "Hydac",
+  
+  // Sun Hydraulics
+  "CW": "Sun Hydraulics",
+  "RPEC": "Sun Hydraulics",
+  "DTDA": "Sun Hydraulics",
+  
+  // Chromalox
+  "1603": "Chromalox",
+  "4003": "Chromalox",
+  
+  // Fuji Electric
+  "EG": "Fuji Electric",
+  "SC-": "Fuji Electric",
+  
+  // Cooper Bussmann
+  "LPJ": "Cooper Bussmann",
+  "FRS": "Cooper Bussmann",
+  "JJS": "Cooper Bussmann",
+  
+  // Werma
+  "697": "Werma",
+  "640": "Werma",
+  
+  // Toshiba
+  "EX10": "Toshiba"
 };
+
+// Export for use in other files if needed
+if (typeof module !== 'undefined') {
+  module.exports = { BRAND_DETECTION };
+}
 
 // Styles
 const styles = {
