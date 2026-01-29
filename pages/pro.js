@@ -418,23 +418,25 @@ function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpe
         { key: 'title', label: 'Title', currentKey: 'title' },
         { key: 'brand', label: 'Brand', currentKey: 'brand' },
         { key: 'mpn', label: 'MPN', currentKey: 'partNumber' },
-        { key: 'model', label: 'Model', currentKey: 'model' }
+        { key: 'model', label: 'Model', currentKey: 'model' },
+        { key: 'usertype', label: 'Category', currentKey: 'productCategory' }
       ]
     },
     {
       title: 'Categories',
       fields: [
-        { key: 'ebaycatid', label: 'eBay Category ID', currentKey: 'ebayCategoryId' },
+        { key: 'ebaycatid', label: 'eBay Cat ID', currentKey: 'ebayCategoryId' },
         { key: 'ebaystoreid', label: 'Store Cat 1', currentKey: 'ebayStoreCategoryId' },
         { key: 'ebaystoreid2', label: 'Store Cat 2', currentKey: 'ebayStoreCategoryId2' }
       ]
     },
     {
-      title: 'Pricing',
+      title: 'Pricing & Stock',
       fields: [
         { key: 'price', label: 'Price', currentKey: 'price' },
         { key: 'stock', label: 'Stock', currentKey: 'quantity' },
-        { key: 'condition', label: 'Condition', currentKey: 'condition' }
+        { key: 'condition', label: 'Condition', currentKey: 'condition' },
+        { key: 'shelf', label: 'Shelf', currentKey: 'shelf' }
       ]
     },
     {
@@ -443,8 +445,20 @@ function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpe
         { key: 'boxlength', label: 'Length', currentKey: 'boxLength' },
         { key: 'boxwidth', label: 'Width', currentKey: 'boxWidth' },
         { key: 'boxheight', label: 'Height', currentKey: 'boxHeight' },
-        { key: 'weight', label: 'Weight', currentKey: 'weight' },
-        { key: 'shelf', label: 'Shelf', currentKey: 'shelf' }
+        { key: 'weight', label: 'Weight', currentKey: 'weight' }
+      ]
+    },
+    {
+      title: 'Specifications',
+      fields: [
+        { key: 'voltage', label: 'Voltage', currentKey: 'specifications.voltage' },
+        { key: 'amperage', label: 'Amperage', currentKey: 'specifications.amperage' },
+        { key: 'horsepower', label: 'HP', currentKey: 'specifications.horsepower' },
+        { key: 'phase', label: 'Phase', currentKey: 'specifications.phase' },
+        { key: 'hz', label: 'Hz', currentKey: 'specifications.hz' },
+        { key: 'rpm', label: 'RPM', currentKey: 'specifications.rpm' },
+        { key: 'kw', label: 'kW', currentKey: 'specifications.kw' },
+        { key: 'ratio', label: 'Ratio', currentKey: 'specifications.ratio' }
       ]
     }
   ];
@@ -485,8 +499,20 @@ function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpe
             </div>
             {group.fields.map(field => {
               const existingVal = existingData[field.key] || '';
-              const currentVal = currentData?.[field.currentKey] || '';
+              // Handle nested paths like 'specifications.voltage'
+              let currentVal = '';
+              if (field.currentKey.includes('.')) {
+                const parts = field.currentKey.split('.');
+                currentVal = currentData?.[parts[0]]?.[parts[1]] || '';
+              } else {
+                currentVal = currentData?.[field.currentKey] || '';
+              }
               const isDifferent = existingVal.toString().toLowerCase() !== currentVal.toString().toLowerCase();
+              
+              // Skip empty fields in Specifications section
+              if (group.title === 'Specifications' && !existingVal && !currentVal) {
+                return null;
+              }
               
               return (
                 <div 
@@ -681,32 +707,46 @@ export default function ProListingBuilder() {
       const conditionMap = {
         'New': 'new_in_box',
         'New Other': 'new_open_box',
+        'New other (see details)': 'new_open_box',
         'Manufacturer Refurbished': 'refurbished',
+        'Seller refurbished': 'refurbished',
         'Used': 'used_good',
-        'For Parts or Not Working': 'for_parts'
+        'For Parts or Not Working': 'for_parts',
+        'For parts or not working': 'for_parts'
       };
       const mappedCondition = conditionMap[existingData.condition] || 'used_good';
 
-      // Build specs object from SureDone fields
+      // Build specs object from ALL SureDone spec fields
       const specs = {};
-      const specFields = ['voltage', 'inputvoltage', 'outputvoltage', 'current', 'horsepower', 
-                         'kw', 'rpm', 'nm', 'controllerplatform', 'bore', 'stroke', 'portsize', 
-                         'phase', 'frequency'];
+      const specFields = [
+        // Electrical
+        'voltage', 'inputvoltage', 'outputvoltage', 'current', 'amperage',
+        'inputamperage', 'outputamperage', 'phase', 'hz', 'frequency',
+        // Motor
+        'horsepower', 'rpm', 'kw', 'nm', 'torque', 'frame',
+        // Pneumatic/Hydraulic
+        'psi', 'maxpressure', 'portsize', 'bore', 'borediameter', 'stroke', 'strokelength',
+        // Control/Automation
+        'controllerplatform', 'communications', 'processor', 'series', 'revision',
+        // Other
+        'coilvoltage', 'enclosuretype', 'sensingrange', 'outputtype', 'ratio',
+        'flowrate', 'capacity', 'kva', 'watts'
+      ];
       specFields.forEach(key => {
-        if (existingData[key]) {
+        if (existingData[key] && existingData[key].toString().trim() !== '') {
           specs[key] = existingData[key];
         }
       });
 
       const docRef = await addDoc(collection(db, 'products'), {
-        brand: existingData.brand || '',
-        partNumber: existingData.mpn || existingData.model || '',
+        brand: existingData.brand || existingData.manufacturer || '',
+        partNumber: existingData.mpn || existingData.partnumber || existingData.model || '',
         model: existingData.model || existingData.mpn || '',
         status: 'complete',
         createdBy: userName || 'Unknown',
         createdAt: serverTimestamp(),
         title: existingData.title || '',
-        productCategory: existingData.usertype || '',
+        productCategory: existingData.usertype || existingData.type || '',
         shortDescription: existingData.shortdescription || '',
         description: existingData.longdescription || '',
         specifications: specs,
@@ -719,8 +759,8 @@ export default function ProListingBuilder() {
         boxLength: existingData.boxlength || '',
         boxWidth: existingData.boxwidth || '',
         boxHeight: existingData.boxheight || '',
-        weight: existingData.weight || '',
-        qualityFlag: 'NEEDS_REVIEW',
+        weight: existingData.weight || existingData.boxweight || '',
+        qualityFlag: 'EDITING',
         ebayCategoryId: existingData.ebaycatid || '',
         ebayStoreCategoryId: existingData.ebaystoreid || '',
         ebayStoreCategoryId2: existingData.ebaystoreid2 || '',
@@ -735,8 +775,29 @@ export default function ProListingBuilder() {
       setExistingListingData(existingData);
       setShowComparePanel(true);
       
+      // Clear the brand/part fields after loading
+      setBrandName('');
+      setPartNumber('');
+      
     } catch (error) {
       console.error('Error loading existing listing:', error);
+      alert('Error loading listing: ' + error.message);
+    }
+  };
+
+  // NEW: Load existing listing by SKU (for InventoryCheckAlert)
+  const loadExistingBySku = async (sku) => {
+    try {
+      const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku)}`);
+      const data = await response.json();
+      
+      if (data.success && data.item) {
+        await loadExistingListing(data.item);
+      } else {
+        alert('Could not load listing: ' + (data.error || 'Item not found'));
+      }
+    } catch (error) {
+      console.error('Error loading by SKU:', error);
       alert('Error loading listing: ' + error.message);
     }
   };
@@ -744,7 +805,20 @@ export default function ProListingBuilder() {
   // NEW: Handle using a value from comparison panel
   const useExistingValue = async (fieldKey, value) => {
     if (!selectedItem) return;
-    await updateField(selectedItem, fieldKey, value);
+    
+    // Handle nested paths like 'specifications.voltage'
+    if (fieldKey.includes('.')) {
+      const parts = fieldKey.split('.');
+      if (parts[0] === 'specifications') {
+        const item = queue.find(q => q.id === selectedItem);
+        if (item) {
+          const newSpecs = { ...item.specifications, [parts[1]]: value };
+          await updateDoc(doc(db, 'products', selectedItem), { specifications: newSpecs });
+        }
+      }
+    } else {
+      await updateField(selectedItem, fieldKey, value);
+    }
   };
 
   // NEW: Open comparison panel
@@ -1014,10 +1088,12 @@ export default function ProListingBuilder() {
               brand={brandName}
               partNumber={partNumber}
               onSelectExisting={(match) => {
-                console.log('User selected existing item:', match);
-                alert(`Existing item found!\n\nSKU: ${match.sku}\nShelf: ${match.shelf}\nCondition: ${match.condition}\nStock: ${match.stock}\n\nYou can view this listing in SureDone.`);
+                // Load the existing listing directly into the editor
+                console.log('Loading existing item:', match);
+                loadExistingBySku(match.sku);
               }}
               onCreateNew={() => {
+                // User chose to create new despite duplicates
                 console.log('User chose to create new listing anyway');
                 addToQueue();
               }}
