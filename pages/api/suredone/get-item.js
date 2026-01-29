@@ -1,5 +1,6 @@
 // pages/api/suredone/get-item.js
 // Fetches a single item from SureDone by SKU
+// Updated: Returns ALL fields for editing
 
 export default async function handler(req, res) {
   // Allow GET requests
@@ -104,6 +105,7 @@ async function getSureDoneItem(sku) {
 
 /**
  * Format SureDone item for our response
+ * Returns ALL fields needed for editing existing listings
  */
 function formatItem(item) {
   // Count images
@@ -115,11 +117,11 @@ function formatItem(item) {
   }
 
   return {
-    // Core identification
+    // ========== Core Identification ==========
     sku: item.sku || item.guid || '',
     guid: item.guid || '',
     
-    // Product info
+    // ========== Product Info ==========
     title: item.title || '',
     brand: item.brand || '',
     manufacturer: item.manufacturer || '',
@@ -129,36 +131,104 @@ function formatItem(item) {
     usertype: item.usertype || '',
     type: item.type || '',
     
-    // Category info
+    // ========== Categories ==========
     ebaycatid: item.ebaycatid || '',
     ebaystoreid: item.ebaystoreid || '',
+    ebaystoreid2: item.ebaystoreid2 || '',  // ADDED!
     bigcommercecategories: item.bigcommercecategories || '',
+    bigcommercebrandid: item.bigcommercebrandid || '',
     
-    // Custom fields (item specifics)
-    controllerplatform: item.controllerplatform || '',
-    voltage: item.voltage || '',
-    current: item.current || '',
-    
-    // Inventory info
+    // ========== Inventory & Pricing ==========
     condition: item.condition || '',
     conditiondescription: item.conditiondescription || '',
     stock: item.stock || '0',
     price: item.price || '0.00',
     shelf: item.shelf || '',
     
-    // Images
+    // ========== Shipping & Dimensions ==========  // ADDED!
+    boxlength: item.boxlength || '',
+    boxwidth: item.boxwidth || '',
+    boxheight: item.boxheight || '',
+    boxweight: item.boxweight || '',
+    weight: item.weight || '',
+    ebayshippingprofileid: item.ebayshippingprofileid || '',
+    ebayreturnprofileid: item.ebayreturnprofileid || '',
+    ebaypaymentprofileid: item.ebaypaymentprofileid || '',
+    
+    // ========== Electrical Specs ==========  // ADDED!
+    voltage: item.voltage || '',
+    inputvoltage: item.inputvoltage || '',
+    outputvoltage: item.outputvoltage || '',
+    amperage: item.amperage || '',
+    inputamperage: item.inputamperage || '',
+    outputamperage: item.outputamperage || '',
+    current: item.current || '',
+    phase: item.phase || '',
+    hz: item.hz || '',
+    frequency: item.frequency || '',
+    
+    // ========== Motor Specs ==========  // ADDED!
+    horsepower: item.horsepower || '',
+    rpm: item.rpm || '',
+    kw: item.kw || '',
+    nm: item.nm || '',
+    torque: item.torque || '',
+    frame: item.frame || '',
+    
+    // ========== Pneumatic/Hydraulic Specs ==========  // ADDED!
+    psi: item.psi || '',
+    maxpressure: item.maxpressure || '',
+    portsize: item.portsize || '',
+    bore: item.bore || '',
+    borediameter: item.borediameter || '',
+    stroke: item.stroke || '',
+    strokelength: item.strokelength || '',
+    
+    // ========== Control/Automation Specs ==========  // ADDED!
+    controllerplatform: item.controllerplatform || '',
+    communications: item.communications || '',
+    processor: item.processor || '',
+    series: item.series || '',
+    revision: item.revision || '',
+    version: item.version || '',
+    
+    // ========== Other Specs ==========  // ADDED!
+    coilvoltage: item.coilvoltage || '',
+    enclosuretype: item.enclosuretype || '',
+    sensingrange: item.sensingrange || '',
+    outputtype: item.outputtype || '',
+    ratio: item.ratio || '',
+    flowrate: item.flowrate || '',
+    capacity: item.capacity || '',
+    kva: item.kva || '',
+    watts: item.watts || '',
+    
+    // ========== Images ==========
     media1: item.media1 || '',
+    media2: item.media2 || '',
+    media3: item.media3 || '',
+    media4: item.media4 || '',
+    media5: item.media5 || '',
+    media6: item.media6 || '',
+    media7: item.media7 || '',
+    media8: item.media8 || '',
+    media9: item.media9 || '',
+    media10: item.media10 || '',
     thumbnail: item.media1 || null,
     imageCount: imageCount,
     
-    // Description
+    // ========== Descriptions ==========
     longdescription: item.longdescription || '',
+    shortdescription: item.shortdescription || '',
+    notes: item.notes || '',
     
-    // Metadata
+    // ========== Metadata ==========
     dateutc: item.dateutc || '',
+    upc: item.upc || '',
     
-    // Channel status
+    // ========== Channel Status ==========
     ebayid: item.ebayid || '',
-    bigcommerceid: item.bigcommerceid || ''
+    bigcommerceid: item.bigcommerceid || '',
+    bigcommerceproductid: item.bigcommerceproductid || ''
   };
 }
