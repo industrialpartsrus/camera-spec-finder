@@ -1,9 +1,8 @@
 // pages/pro.js
-// Pro Listing Builder with SKU Lookup and Comparison Features
-// Updated: January 2025
+// Pro Listing Builder with all features
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, RefreshCw, ChevronDown, ChevronUp, ExternalLink, ArrowRight, Check } from 'lucide-react';
+import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import InventoryCheckAlert from '../components/InventoryCheckAlert';
@@ -185,6 +184,15 @@ const EBAY_STORE_CATEGORIES = [
   { id: '18373834', name: '  └ TRANSDUCERS', level: 2 },
   { id: '5634089015', name: '  └ TRANSMITTERS', level: 2 },
   
+  // Lighting Ballasts
+  { id: '20030375015', name: 'LIGHTING BALLASTS', level: 1 },
+  
+  // Machinery
+  { id: '5384029015', name: 'MACHINERY', level: 1 },
+  
+  // Material Handling
+  { id: '2348909015', name: 'MATERIAL HANDLING', level: 1 },
+  
   // Motion Control
   { id: '6686262015', name: 'MOTION CONTROL', level: 1 },
   { id: '1802953015', name: '  └ ENCODERS', level: 2 },
@@ -225,6 +233,131 @@ const EBAY_STORE_CATEGORIES = [
   { id: '6689966015', name: '  └ HYDRAULIC PUMP', level: 2 },
   { id: '6689970015', name: '  └ METERING PUMP', level: 2 },
   { id: '6689967015', name: '  └ VACUUM PUMP', level: 2 },
+  
+  // Quality & Test
+  { id: '6686263015', name: 'QUALITY & TEST', level: 1 },
+  
+  // Regenerative Blowers
+  { id: '18206302015', name: 'REGENERATIVE BLOWERS', level: 1 },
+  
+  // Robotics
+  { id: '5384030015', name: 'ROBOTICS', level: 1 },
+  
+  // Search by Brand
+  { id: '5933544015', name: 'SEARCH BY BRAND', level: 1 },
+  { id: '5933571015', name: '  └ ABB', level: 2 },
+  { id: '5933639015', name: '  └ ACME', level: 2 },
+  { id: '5933572015', name: '  └ ADEPT TECH', level: 2 },
+  { id: '5933557015', name: '  └ ALLEN BRADLEY', level: 2 },
+  { id: '6690346015', name: '  └ ALPHA', level: 2 },
+  { id: '6706056015', name: '  └ ARO', level: 2 },
+  { id: '6690590015', name: '  └ ARROW', level: 2 },
+  { id: '5933573015', name: '  └ ASCO', level: 2 },
+  { id: '6675026015', name: '  └ ATLAS COPCO', level: 2 },
+  { id: '6690334015', name: '  └ ATO', level: 2 },
+  { id: '5933586015', name: '  └ AUTOMATION DIRECT', level: 2 },
+  { id: '6690335015', name: '  └ BALDOR', level: 2 },
+  { id: '5933595015', name: '  └ BALLUFF', level: 2 },
+  { id: '5933560015', name: '  └ BANNER ENGINEERING', level: 2 },
+  { id: '6690371015', name: '  └ BARKSDALE', level: 2 },
+  { id: '6690342015', name: '  └ BAYSIDE', level: 2 },
+  { id: '5933583015', name: '  └ BEI', level: 2 },
+  { id: '5933591015', name: '  └ BIMBA', level: 2 },
+  { id: '6690337015', name: '  └ BISON', level: 2 },
+  { id: '6690336015', name: '  └ BODINE', level: 2 },
+  { id: '6690445015', name: '  └ BOSCH', level: 2 },
+  { id: '6690344015', name: '  └ BOSTON GEAR', level: 2 },
+  { id: '6690582015', name: '  └ BRAD HARRISON', level: 2 },
+  { id: '6695680015', name: '  └ BUSSMAN', level: 2 },
+  { id: '6690461015', name: '  └ CKD', level: 2 },
+  { id: '5933568015', name: '  └ CONTROL TECHNIQUES', level: 2 },
+  { id: '5933563015', name: '  └ CUTLER HAMMER', level: 2 },
+  { id: '6690485015', name: '  └ DAIKIN', level: 2 },
+  { id: '6690121015', name: '  └ DAYTON', level: 2 },
+  { id: '6690341015', name: '  └ DODGE', level: 2 },
+  { id: '6690484015', name: '  └ DYNAQUIP', level: 2 },
+  { id: '5933593015', name: '  └ EAGLE SIGNAL', level: 2 },
+  { id: '5933596015', name: '  └ EFECTOR', level: 2 },
+  { id: '5933567015', name: '  └ EMERSON', level: 2 },
+  { id: '6690094015', name: '  └ ENERPAC', level: 2 },
+  { id: '5933569015', name: '  └ FANUC', level: 2 },
+  { id: '6690589015', name: '  └ FEDERAL SIGNAL', level: 2 },
+  { id: '6695705015', name: '  └ FERRAZ SHAWMUT', level: 2 },
+  { id: '5933575015', name: '  └ FESTO', level: 2 },
+  { id: '5933564015', name: '  └ FUJI', level: 2 },
+  { id: '5933599015', name: '  └ GE', level: 2 },
+  { id: '6690367015', name: '  └ GIDDINGS & LEWIS', level: 2 },
+  { id: '6695677015', name: '  └ GOULD', level: 2 },
+  { id: '6690116015', name: '  └ GRACO', level: 2 },
+  { id: '6695679015', name: '  └ HEIDENHAIN', level: 2 },
+  { id: '6671553015', name: '  └ HOFFMAN', level: 2 },
+  { id: '5933602015', name: '  └ HONEYWELL', level: 2 },
+  { id: '6690347015', name: '  └ HORTON', level: 2 },
+  { id: '6690437015', name: '  └ HYDAC', level: 2 },
+  { id: '6695678015', name: '  └ IAI', level: 2 },
+  { id: '5933600015', name: '  └ IDEC', level: 2 },
+  { id: '5933603015', name: '  └ INGERSOLL RAND', level: 2 },
+  { id: '5933601015', name: '  └ JOHNSON CONTROLS', level: 2 },
+  { id: '6695864015', name: '  └ JOKAB SAFETY', level: 2 },
+  { id: '5933559015', name: '  └ KEYENCE', level: 2 },
+  { id: '6690338015', name: '  └ LEESON', level: 2 },
+  { id: '6695888015', name: '  └ LIEBERT', level: 2 },
+  { id: '7989168015', name: '  └ LITTELFUSE', level: 2 },
+  { id: '6689963015', name: '  └ MAC VALVE', level: 2 },
+  { id: '5933580015', name: '  └ MILLER', level: 2 },
+  { id: '5933585015', name: '  └ MITSUBISHI', level: 2 },
+  { id: '5933582015', name: '  └ MODICON', level: 2 },
+  { id: '5933590015', name: '  └ MOOG', level: 2 },
+  { id: '6690370015', name: '  └ MOTION INDUSTRIES', level: 2 },
+  { id: '5933570015', name: '  └ MOTOMAN', level: 2 },
+  { id: '5933597015', name: '  └ MTS', level: 2 },
+  { id: '6688143015', name: '  └ NATIONAL INSTRUMENTS', level: 2 },
+  { id: '8615563015', name: '  └ NEMIC LAMBDA', level: 2 },
+  { id: '6690343015', name: '  └ NEUGART', level: 2 },
+  { id: '5933581015', name: '  └ NORDSON', level: 2 },
+  { id: '6690460015', name: '  └ NORGREN', level: 2 },
+  { id: '6690459015', name: '  └ NUMATICS', level: 2 },
+  { id: '5933558015', name: '  └ OMRON', level: 2 },
+  { id: '6718027015', name: '  └ ORIENTAL MOTOR CO.', level: 2 },
+  { id: '5933565015', name: '  └ PACIFIC SCIENTIFIC', level: 2 },
+  { id: '5933566015', name: '  └ PANASONIC', level: 2 },
+  { id: '5933577015', name: '  └ PARKER', level: 2 },
+  { id: '6690588015', name: '  └ PATLITE', level: 2 },
+  { id: '6717974015', name: '  └ PEPPERL+FUCHS', level: 2 },
+  { id: '6688145015', name: '  └ PHD', level: 2 },
+  { id: '5933592015', name: '  └ PHOENIX CONTACT', level: 2 },
+  { id: '5933578015', name: '  └ PILZ', level: 2 },
+  { id: '5933579015', name: '  └ PINNACLE', level: 2 },
+  { id: '9100281015', name: '  └ PROFACE', level: 2 },
+  { id: '6688144015', name: '  └ RED LION', level: 2 },
+  { id: '6690340015', name: '  └ RELIANCE', level: 2 },
+  { id: '5933589015', name: '  └ REXROTH', level: 2 },
+  { id: '6689964015', name: '  └ ROSS VALVE', level: 2 },
+  { id: '5933584015', name: '  └ SANYO DENKI', level: 2 },
+  { id: '6706057015', name: '  └ SCHMERSAL', level: 2 },
+  { id: '6690345015', name: '  └ SEW EURODRIVE', level: 2 },
+  { id: '5933594015', name: '  └ SICK', level: 2 },
+  { id: '5933561015', name: '  └ SIEMENS', level: 2 },
+  { id: '8530044015', name: '  └ SKF', level: 2 },
+  { id: '6690446015', name: '  └ SKINNER', level: 2 },
+  { id: '5933574015', name: '  └ SMC', level: 2 },
+  { id: '5933638015', name: '  └ SOLA', level: 2 },
+  { id: '6695902015', name: '  └ SONY', level: 2 },
+  { id: '6690456015', name: '  └ SPEEDAIR', level: 2 },
+  { id: '6690368015', name: '  └ SPRECHER SCHUH', level: 2 },
+  { id: '5933562015', name: '  └ SQUARE D', level: 2 },
+  { id: '5933588015', name: '  └ STI', level: 2 },
+  { id: '5933587015', name: '  └ SUNX', level: 2 },
+  { id: '5933598015', name: '  └ TELEMECANIQUE', level: 2 },
+  { id: '6690369015', name: '  └ THOMSON INDUSTRIES', level: 2 },
+  { id: '7989166015', name: '  └ TIMKEN', level: 2 },
+  { id: '6690385015', name: '  └ TOL-O-MATIC', level: 2 },
+  { id: '6690366015', name: '  └ TURCK', level: 2 },
+  { id: '6695908015', name: '  └ UTICOR', level: 2 },
+  { id: '5933576015', name: '  └ VICKERS', level: 2 },
+  { id: '6686271015', name: '  └ YASKAWA', level: 2 },
+  { id: '6692842015', name: '  └ YOKOGAWA', level: 2 },
+  { id: '6690339015', name: '  └ ZANDER', level: 2 },
   
   // Sensing Devices
   { id: '6686267015', name: 'SENSING DEVICES', level: 1 },
@@ -292,261 +425,6 @@ const SPEC_LABELS = {
   efficiency: 'Efficiency', duty_cycle: 'Duty Cycle'
 };
 
-// ============================================
-// SKU LOOKUP COMPONENT (INLINE)
-// ============================================
-function SkuLookup({ onLoadListing, onCompareClick }) {
-  const [sku, setSku] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
-
-  const searchSku = async () => {
-    if (!sku.trim()) return;
-    
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    
-    try {
-      const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku.trim())}`);
-      const data = await response.json();
-      
-      if (data.success && data.item) {
-        setResult(data.item);
-      } else {
-        setError('SKU not found in SureDone');
-      }
-    } catch (err) {
-      setError(`Error: ${err.message}`);
-    }
-    
-    setLoading(false);
-  };
-
-  const handleLoadIntoEditor = () => {
-    if (result && onLoadListing) {
-      onLoadListing(result);
-      setSku('');
-      setResult(null);
-    }
-  };
-
-  return (
-    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-3 mb-3">
-      <h3 className="font-semibold text-amber-900 mb-2 flex items-center gap-2 text-sm">
-        <Search className="w-4 h-4" />
-        Edit Existing Listing
-      </h3>
-      
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={sku}
-          onChange={(e) => setSku(e.target.value.toUpperCase())}
-          onKeyPress={(e) => e.key === 'Enter' && searchSku()}
-          placeholder="Enter SKU"
-          className="flex-1 px-2 py-1.5 border border-amber-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-        />
-        <button
-          onClick={searchSku}
-          disabled={loading || !sku.trim()}
-          className="px-3 py-1.5 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 flex items-center gap-1 text-sm"
-        >
-          {loading ? <Loader className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
-        </button>
-      </div>
-
-      {error && (
-        <div className="mt-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
-          {error}
-        </div>
-      )}
-
-      {result && (
-        <div className="mt-2 bg-white border border-amber-200 rounded p-2">
-          <div className="flex justify-between items-start mb-1">
-            <div>
-              <span className="font-bold text-amber-900 text-sm">{result.sku || result.guid}</span>
-              <span className="ml-2 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
-                Stock: {result.stock || 0}
-              </span>
-            </div>
-            <span className="text-sm font-bold text-green-600">${result.price}</span>
-          </div>
-          
-          <p className="text-xs text-gray-700 mb-2 line-clamp-1">{result.title}</p>
-          
-          <div className="grid grid-cols-2 gap-1 text-xs text-gray-600 mb-2">
-            <div><strong>Brand:</strong> {result.brand || 'N/A'}</div>
-            <div><strong>MPN:</strong> {result.mpn || result.model || 'N/A'}</div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={handleLoadIntoEditor}
-              className="flex-1 px-2 py-1.5 bg-amber-600 text-white rounded hover:bg-amber-700 text-xs font-medium"
-            >
-              Load into Editor
-            </button>
-            {onCompareClick && (
-              <button
-                onClick={() => onCompareClick(result.sku || result.guid, result)}
-                className="px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
-                title="Compare side-by-side"
-              >
-                <ExternalLink className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================
-// COMPARISON PANEL COMPONENT (INLINE)
-// ============================================
-function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpen }) {
-  if (!isOpen || !existingData) return null;
-
-  const fieldGroups = [
-    {
-      title: 'Basic Info',
-      fields: [
-        { key: 'title', label: 'Title', currentKey: 'title' },
-        { key: 'brand', label: 'Brand', currentKey: 'brand' },
-        { key: 'mpn', label: 'MPN', currentKey: 'partNumber' },
-        { key: 'model', label: 'Model', currentKey: 'model' }
-      ]
-    },
-    {
-      title: 'Categories',
-      fields: [
-        { key: 'ebaycatid', label: 'eBay Category ID', currentKey: 'ebayCategoryId' },
-        { key: 'ebaystoreid', label: 'Store Cat 1', currentKey: 'ebayStoreCategoryId' },
-        { key: 'ebaystoreid2', label: 'Store Cat 2', currentKey: 'ebayStoreCategoryId2' }
-      ]
-    },
-    {
-      title: 'Pricing',
-      fields: [
-        { key: 'price', label: 'Price', currentKey: 'price' },
-        { key: 'stock', label: 'Stock', currentKey: 'quantity' },
-        { key: 'condition', label: 'Condition', currentKey: 'condition' }
-      ]
-    },
-    {
-      title: 'Shipping',
-      fields: [
-        { key: 'boxlength', label: 'Length', currentKey: 'boxLength' },
-        { key: 'boxwidth', label: 'Width', currentKey: 'boxWidth' },
-        { key: 'boxheight', label: 'Height', currentKey: 'boxHeight' },
-        { key: 'weight', label: 'Weight', currentKey: 'weight' },
-        { key: 'shelf', label: 'Shelf', currentKey: 'shelf' }
-      ]
-    }
-  ];
-
-  return (
-    <div className="w-80 bg-white border-l shadow-lg overflow-hidden flex flex-col h-full">
-      {/* Header */}
-      <div className="p-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-        <div className="flex justify-between items-center">
-          <div>
-            <h3 className="font-bold text-sm">Existing Listing</h3>
-            <p className="text-xs text-blue-100">{existingData.sku || existingData.guid}</p>
-          </div>
-          <button onClick={onClose} className="p-1 hover:bg-blue-500 rounded">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="px-3 py-2 bg-gray-50 border-b text-xs flex items-center gap-3">
-        <span className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-yellow-300 rounded"></div>
-          Different
-        </span>
-        <span className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-green-300 rounded"></div>
-          Same
-        </span>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {fieldGroups.map(group => (
-          <div key={group.title}>
-            <div className="px-3 py-1.5 bg-gray-100 font-semibold text-xs text-gray-700 border-b">
-              {group.title}
-            </div>
-            {group.fields.map(field => {
-              const existingVal = existingData[field.key] || '';
-              const currentVal = currentData?.[field.currentKey] || '';
-              const isDifferent = existingVal.toString().toLowerCase() !== currentVal.toString().toLowerCase();
-              
-              return (
-                <div 
-                  key={field.key} 
-                  className={`px-3 py-2 border-b border-gray-100 ${isDifferent ? 'bg-yellow-50' : ''}`}
-                >
-                  <div className="flex justify-between items-start">
-                    <span className="text-xs text-gray-600">{field.label}</span>
-                    {isDifferent && existingVal && (
-                      <button
-                        onClick={() => onUseValue(field.currentKey, existingVal)}
-                        className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-0.5"
-                        title="Use existing value"
-                      >
-                        Use <ArrowRight className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 mt-1">
-                    <div className="text-xs">
-                      <span className="text-gray-400 text-[10px]">Existing:</span>
-                      <div className="font-medium truncate">{existingVal || <em className="text-gray-400">empty</em>}</div>
-                    </div>
-                    <div className="text-xs">
-                      <span className="text-gray-400 text-[10px]">Current:</span>
-                      <div className="font-medium truncate">{currentVal || <em className="text-gray-400">empty</em>}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
-      {/* Footer */}
-      <div className="p-3 border-t bg-gray-50">
-        <button
-          onClick={() => {
-            // Use all existing values
-            fieldGroups.forEach(group => {
-              group.fields.forEach(field => {
-                const val = existingData[field.key];
-                if (val) onUseValue(field.currentKey, val);
-              });
-            });
-          }}
-          className="w-full px-3 py-2 bg-blue-600 text-white rounded text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-700"
-        >
-          <Check className="w-4 h-4" />
-          Keep All Existing
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ============================================
-// MAIN COMPONENT
-// ============================================
 export default function ProListingBuilder() {
   const [queue, setQueue] = useState([]);
   const [brandName, setBrandName] = useState('');
@@ -558,10 +436,6 @@ export default function ProListingBuilder() {
   const [isSending, setIsSending] = useState(false);
   const [showSpecs, setShowSpecs] = useState(true);
   const fileInputRef = useRef(null);
-  
-  // NEW: State for SKU comparison
-  const [showComparePanel, setShowComparePanel] = useState(false);
-  const [existingListingData, setExistingListingData] = useState(null);
 
   // Real-time Firebase sync
   useEffect(() => {
@@ -674,85 +548,6 @@ export default function ProListingBuilder() {
 
   const addToQueue = () => addToQueueWithValues(brandName, partNumber);
 
-  // NEW: Load existing listing from SureDone into the editor
-  const loadExistingListing = async (existingData) => {
-    try {
-      // Map SureDone condition back to our condition values
-      const conditionMap = {
-        'New': 'new_in_box',
-        'New Other': 'new_open_box',
-        'Manufacturer Refurbished': 'refurbished',
-        'Used': 'used_good',
-        'For Parts or Not Working': 'for_parts'
-      };
-      const mappedCondition = conditionMap[existingData.condition] || 'used_good';
-
-      // Build specs object from SureDone fields
-      const specs = {};
-      const specFields = ['voltage', 'inputvoltage', 'outputvoltage', 'current', 'horsepower', 
-                         'kw', 'rpm', 'nm', 'controllerplatform', 'bore', 'stroke', 'portsize', 
-                         'phase', 'frequency'];
-      specFields.forEach(key => {
-        if (existingData[key]) {
-          specs[key] = existingData[key];
-        }
-      });
-
-      const docRef = await addDoc(collection(db, 'products'), {
-        brand: existingData.brand || '',
-        partNumber: existingData.mpn || existingData.model || '',
-        model: existingData.model || existingData.mpn || '',
-        status: 'complete',
-        createdBy: userName || 'Unknown',
-        createdAt: serverTimestamp(),
-        title: existingData.title || '',
-        productCategory: existingData.usertype || '',
-        shortDescription: existingData.shortdescription || '',
-        description: existingData.longdescription || '',
-        specifications: specs,
-        rawSpecifications: [],
-        condition: mappedCondition,
-        conditionNotes: CONDITION_NOTES[mappedCondition] || '',
-        price: existingData.price || '',
-        quantity: existingData.stock || '1',
-        shelf: existingData.shelf || '',
-        boxLength: existingData.boxlength || '',
-        boxWidth: existingData.boxwidth || '',
-        boxHeight: existingData.boxheight || '',
-        weight: existingData.weight || '',
-        qualityFlag: 'NEEDS_REVIEW',
-        ebayCategoryId: existingData.ebaycatid || '',
-        ebayStoreCategoryId: existingData.ebaystoreid || '',
-        ebayStoreCategoryId2: existingData.ebaystoreid2 || '',
-        bigcommerceCategoryId: existingData.bigcommercecategories || '',
-        ebayShippingProfileId: existingData.ebayshippingprofileid || '69077991015',
-        // Mark as editing existing
-        isEditingExisting: true,
-        originalSku: existingData.sku || existingData.guid
-      });
-      
-      setSelectedItem(docRef.id);
-      setExistingListingData(existingData);
-      setShowComparePanel(true);
-      
-    } catch (error) {
-      console.error('Error loading existing listing:', error);
-      alert('Error loading listing: ' + error.message);
-    }
-  };
-
-  // NEW: Handle using a value from comparison panel
-  const useExistingValue = async (fieldKey, value) => {
-    if (!selectedItem) return;
-    await updateField(selectedItem, fieldKey, value);
-  };
-
-  // NEW: Open comparison panel
-  const openComparePanel = (sku, data) => {
-    setExistingListingData(data);
-    setShowComparePanel(true);
-  };
-
   const processItemById = async (itemId, brandOverride, partOverride) => {
     let item = queue.find(q => q.id === itemId);
     if (!item && brandOverride && partOverride) {
@@ -822,11 +617,7 @@ export default function ProListingBuilder() {
   const deleteItem = async (itemId) => {
     try {
       await deleteDoc(doc(db, 'products', itemId));
-      if (selectedItem === itemId) {
-        setSelectedItem(null);
-        setShowComparePanel(false);
-        setExistingListingData(null);
-      }
+      if (selectedItem === itemId) setSelectedItem(null);
     } catch (error) { console.error('Error deleting item:', error); }
   };
 
@@ -840,85 +631,44 @@ export default function ProListingBuilder() {
       const conditionOption = CONDITION_OPTIONS.find(c => c.value === item.condition);
       const keywords = generateKeywords(item);
       
-      // Check if updating existing or creating new
-      if (item.isEditingExisting && item.originalSku) {
-        // UPDATE existing listing in SureDone
-        const updateData = {
-          guid: item.originalSku,
-          title: item.title,
-          longdescription: item.description || '',
-          price: item.price || '0.00',
-          stock: item.quantity || '1',
-          brand: item.brand,
-          mpn: item.partNumber,
-          model: item.model || item.partNumber,
-          condition: conditionOption?.label || 'Used - Good',
-          ...(item.boxLength && { boxlength: item.boxLength }),
-          ...(item.boxWidth && { boxwidth: item.boxWidth }),
-          ...(item.boxHeight && { boxheight: item.boxHeight }),
-          ...(item.weight && { weight: item.weight }),
-          ...(item.shelf && { shelf: item.shelf }),
-          ebaycatid: item.ebayCategoryId || '',
-          ebaystoreid: item.ebayStoreCategoryId || '',
-          ebaystoreid2: item.ebayStoreCategoryId2 || '',
-          ebayshippingprofileid: item.ebayShippingProfileId || '69077991015'
-        };
-        
-        console.log('Updating existing listing:', updateData);
-        
-        const response = await fetch('/api/suredone/update-item', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updateData)
-        });
+      const productData = {
+        title: item.title,
+        description: item.description || '',
+        shortDescription: item.shortDescription || '',
+        price: item.price || '0.00',
+        stock: item.quantity || '1',
+        brand: item.brand,
+        partNumber: item.partNumber,
+        model: item.model || item.partNumber,
+        productCategory: item.productCategory || '',
+        condition: conditionOption?.label || 'Used - Good',
+        conditionNotes: item.conditionNotes || '',
+        specifications: item.specifications || {},
+        rawSpecifications: item.rawSpecifications || [],
+        metaKeywords: keywords,
+        ...(item.boxLength && { boxLength: item.boxLength }),
+        ...(item.boxWidth && { boxWidth: item.boxWidth }),
+        ...(item.boxHeight && { boxHeight: item.boxHeight }),
+        ...(item.weight && { weight: item.weight }),
+        ...(item.shelf && { shelfLocation: item.shelf }),
+        ebayCategoryId: item.ebayCategoryId || '',
+        ebayStoreCategoryId: item.ebayStoreCategoryId || '',
+        ebayStoreCategoryId2: item.ebayStoreCategoryId2 || '',
+        bigcommerceCategoryId: item.bigcommerceCategoryId || '',
+        ebayShippingProfileId: item.ebayShippingProfileId || '69077991015'
+      };
+      
+      console.log('Sending to SureDone:', productData);
+      
+      const response = await fetch('/api/suredone-create-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product: productData })
+      });
 
-        const responseData = await response.json();
-        if (!response.ok || !responseData.success) {
-          throw new Error(responseData.error || 'Failed to update listing');
-        }
-        alert(`✅ Successfully updated in SureDone!\n\nSKU: ${item.originalSku}\n\n${item.title}`);
-        
-      } else {
-        // CREATE new listing
-        const productData = {
-          title: item.title,
-          description: item.description || '',
-          shortDescription: item.shortDescription || '',
-          price: item.price || '0.00',
-          stock: item.quantity || '1',
-          brand: item.brand,
-          partNumber: item.partNumber,
-          model: item.model || item.partNumber,
-          productCategory: item.productCategory || '',
-          condition: conditionOption?.label || 'Used - Good',
-          conditionNotes: item.conditionNotes || '',
-          specifications: item.specifications || {},
-          rawSpecifications: item.rawSpecifications || [],
-          metaKeywords: keywords,
-          ...(item.boxLength && { boxLength: item.boxLength }),
-          ...(item.boxWidth && { boxWidth: item.boxWidth }),
-          ...(item.boxHeight && { boxHeight: item.boxHeight }),
-          ...(item.weight && { weight: item.weight }),
-          ...(item.shelf && { shelfLocation: item.shelf }),
-          ebayCategoryId: item.ebayCategoryId || '',
-          ebayStoreCategoryId: item.ebayStoreCategoryId || '',
-          ebayStoreCategoryId2: item.ebayStoreCategoryId2 || '',
-          bigcommerceCategoryId: item.bigcommerceCategoryId || '',
-          ebayShippingProfileId: item.ebayShippingProfileId || '69077991015'
-        };
-        
-        console.log('Creating new listing:', productData);
-        
-        const response = await fetch('/api/suredone-create-listing', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product: productData })
-        });
-
-        const responseData = await response.json();
-        if (!response.ok) throw new Error(responseData.error || 'Failed to create listing');
-        alert(`✅ Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
-      }
+      const responseData = await response.json();
+      if (!response.ok) throw new Error(responseData.error || 'Failed to create listing');
+      alert(`✅ Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
     } catch (error) {
       console.error('SureDone error:', error);
       alert(`❌ Error: ${error.message}`);
@@ -967,20 +717,6 @@ export default function ProListingBuilder() {
               <span className="text-green-600 ml-2">● Live Sync</span>
             </p>
           </div>
-          {/* Toggle Compare Panel Button */}
-          {selected?.isEditingExisting && (
-            <button
-              onClick={() => setShowComparePanel(!showComparePanel)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                showComparePanel 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <ExternalLink className="w-4 h-4" />
-              {showComparePanel ? 'Hide Comparison' : 'Show Comparison'}
-            </button>
-          )}
         </div>
         <div className="flex gap-2 flex-wrap">
           <div className="px-3 py-2 bg-blue-50 rounded-lg text-sm">Total: <span className="font-bold text-blue-800">{stats.total}</span></div>
@@ -993,7 +729,6 @@ export default function ProListingBuilder() {
       <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-140px)]">
         {/* Sidebar */}
         <div className="w-full lg:w-80 bg-white border-b lg:border-r lg:border-b-0 overflow-y-auto max-h-[40vh] lg:max-h-none">
-          {/* Add New Item Section */}
           <div className="p-4 border-b">
             <h2 className="font-semibold mb-3">Add Item</h2>
             <div className="flex gap-2 mb-2">
@@ -1009,15 +744,17 @@ export default function ProListingBuilder() {
             <input type="text" placeholder="Brand" value={brandName} onChange={e => setBrandName(e.target.value)} className="w-full px-3 py-2 border rounded-lg mb-2 text-sm" />
             <input type="text" placeholder="Part Number" value={partNumber} onChange={e => setPartNumber(e.target.value)} onKeyPress={e => e.key === 'Enter' && addToQueue()} className="w-full px-3 py-2 border rounded-lg mb-2 text-sm" />
             
-            {/* Inventory Check Alert */}
+            {/* Inventory Check Alert - Shows if part already exists in stock */}
             <InventoryCheckAlert 
               brand={brandName}
               partNumber={partNumber}
               onSelectExisting={(match) => {
+                // When user wants to update an existing listing
                 console.log('User selected existing item:', match);
                 alert(`Existing item found!\n\nSKU: ${match.sku}\nShelf: ${match.shelf}\nCondition: ${match.condition}\nStock: ${match.stock}\n\nYou can view this listing in SureDone.`);
               }}
               onCreateNew={() => {
+                // User chose to create new despite duplicates
                 console.log('User chose to create new listing anyway');
                 addToQueue();
               }}
@@ -1027,26 +764,10 @@ export default function ProListingBuilder() {
               <Plus className="w-4 h-4 inline mr-1" /> Add
             </button>
           </div>
-
-          {/* NEW: SKU Lookup Section */}
-          <div className="p-4 border-b">
-            <SkuLookup 
-              onLoadListing={loadExistingListing}
-              onCompareClick={openComparePanel}
-            />
-          </div>
-
-          {/* Queue */}
           <div className="p-2">
             <h3 className="text-sm font-semibold text-gray-600 mb-2 px-2">Queue ({queue.length})</h3>
             {queue.map(item => (
-              <div key={item.id} onClick={() => {
-                setSelectedItem(item.id);
-                // If this item has existing data, show comparison
-                if (item.isEditingExisting && existingListingData) {
-                  setShowComparePanel(true);
-                }
-              }} className={`p-3 mb-2 rounded-lg border cursor-pointer transition ${selectedItem === item.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}>
+              <div key={item.id} onClick={() => setSelectedItem(item.id)} className={`p-3 mb-2 rounded-lg border cursor-pointer transition ${selectedItem === item.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -1054,9 +775,6 @@ export default function ProListingBuilder() {
                       {item.status === 'complete' && <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />}
                       {item.status === 'error' && <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />}
                       <span className="text-sm font-semibold text-gray-800 truncate">{item.brand}</span>
-                      {item.isEditingExisting && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">EDIT</span>
-                      )}
                     </div>
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
                     {item.productCategory && <p className="text-xs text-blue-600 mt-1">{item.productCategory}</p>}
@@ -1081,11 +799,6 @@ export default function ProListingBuilder() {
                     <span className={`text-sm px-2 py-1 rounded ${selected.status === 'complete' ? 'bg-green-100 text-green-700' : selected.status === 'error' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                       {selected.status}
                     </span>
-                    {selected.isEditingExisting && (
-                      <span className="text-sm px-2 py-1 rounded bg-amber-100 text-amber-700">
-                        Editing: {selected.originalSku}
-                      </span>
-                    )}
                     {selected.qualityFlag && (
                       <span className={`text-sm px-2 py-1 rounded ${selected.qualityFlag === 'STRONG' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                         {selected.qualityFlag}
@@ -1119,7 +832,7 @@ export default function ProListingBuilder() {
                     </div>
                   </div>
 
-                  {/* eBay Product Category */}
+                  {/* eBay Product Category - Display Only with Re-detect */}
                   <div>
                     <label className="block text-sm font-semibold mb-2">eBay Product Category</label>
                     <div className="flex gap-2">
@@ -1133,10 +846,12 @@ export default function ProListingBuilder() {
                       <button 
                         onClick={() => processItem(selected.id)} 
                         className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm flex items-center gap-1"
+                        title="Re-detect category"
                       >
                         <RefreshCw className="w-4 h-4" /> Re-detect
                       </button>
                     </div>
+                    {/* Display full eBay Category Path */}
                     {selected.productCategory && EBAY_MARKETPLACE_CATEGORIES[selected.productCategory] && (
                       <p className="text-xs text-green-700 mt-2 p-2 bg-green-50 rounded border border-green-200">
                         📦 <strong>Full Path:</strong> {EBAY_MARKETPLACE_CATEGORIES[selected.productCategory].path}
@@ -1144,6 +859,7 @@ export default function ProListingBuilder() {
                         <span className="text-gray-500">Category ID: {EBAY_MARKETPLACE_CATEGORIES[selected.productCategory].id}</span>
                       </p>
                     )}
+                    {/* Manual override dropdown - hidden by default, shown on click */}
                     <details className="mt-2">
                       <summary className="text-xs text-blue-600 cursor-pointer hover:underline">Override category manually</summary>
                       <select 
@@ -1274,8 +990,7 @@ export default function ProListingBuilder() {
                   {/* Send Button */}
                   <button onClick={() => sendToSureDone(selected.id)} disabled={isSending || !selected.title || !selected.price}
                     className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    {isSending ? <><Loader className="w-5 h-5 animate-spin" /> Sending...</> : 
-                      selected.isEditingExisting ? '📝 Update in SureDone' : '🚀 Send to SureDone'}
+                    {isSending ? <><Loader className="w-5 h-5 animate-spin" /> Sending...</> : '🚀 Send to SureDone'}
                   </button>
                 </div>
               )}
@@ -1302,22 +1017,10 @@ export default function ProListingBuilder() {
               <div className="text-center">
                 <Search className="w-20 h-20 mx-auto mb-4 opacity-30" />
                 <p className="text-xl">Select an item to view details</p>
-                <p className="text-sm mt-2">Or use "Edit Existing Listing" to load from SureDone</p>
               </div>
             </div>
           )}
         </div>
-
-        {/* Comparison Panel (Desktop) */}
-        {showComparePanel && existingListingData && (
-          <ComparisonPanel
-            existingData={existingListingData}
-            currentData={selected}
-            onUseValue={useExistingValue}
-            onClose={() => setShowComparePanel(false)}
-            isOpen={showComparePanel}
-          />
-        )}
       </div>
     </div>
   );
