@@ -436,6 +436,142 @@ const CONDITION_NOTES = {
   'for_parts': 'Item sold as-is for parts or repair. Not tested or may not be fully functional. No warranty provided.'
 };
 
+// Country of Origin options - eBay accepted values
+// Sorted with most common industrial equipment manufacturing countries first
+const COUNTRIES = [
+  // Most common for industrial equipment (prioritized at top)
+  'China', 'Germany', 'Japan', 'United States', 'Taiwan', 'South Korea', 'Italy', 
+  'France', 'United Kingdom', 'Switzerland', 'Sweden', 'Canada', 'Mexico', 'India',
+  'Malaysia', 'Thailand', 'Vietnam', 'Poland', 'Czech Republic', 'Austria', 'Denmark',
+  'Finland', 'Netherlands', 'Belgium', 'Spain', 'Brazil', 'Singapore', 'Indonesia',
+  'Philippines', 'Turkey', 'Israel', 'Australia', 'Ireland', 'Hungary', 'Romania',
+  'Slovakia', 'Slovenia', 'Portugal', 'Norway', 'New Zealand', 'South Africa',
+  // Rest alphabetically
+  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Argentina', 'Armenia',
+  'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belize',
+  'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brunei',
+  'Bulgaria', 'Burkina Faso', 'Cambodia', 'Cameroon', 'Chile', 'Colombia', 'Costa Rica',
+  'Croatia', 'Cuba', 'Cyprus', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador',
+  'Estonia', 'Ethiopia', 'Fiji', 'Georgia', 'Ghana', 'Greece', 'Guatemala', 'Haiti',
+  'Honduras', 'Hong Kong', 'Iceland', 'Iran', 'Iraq', 'Jamaica', 'Jordan', 'Kazakhstan',
+  'Kenya', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Libya', 'Liechtenstein',
+  'Lithuania', 'Luxembourg', 'Macau', 'Madagascar', 'Malawi', 'Maldives', 'Mali', 'Malta',
+  'Mauritius', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique',
+  'Myanmar', 'Namibia', 'Nepal', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea',
+  'North Macedonia', 'Oman', 'Pakistan', 'Panama', 'Papua New Guinea', 'Paraguay',
+  'Peru', 'Puerto Rico', 'Qatar', 'Russia', 'Rwanda', 'Saudi Arabia', 'Senegal',
+  'Serbia', 'Sierra Leone', 'Sri Lanka', 'Sudan', 'Suriname', 'Swaziland', 'Syria',
+  'Tajikistan', 'Tanzania', 'Togo', 'Trinidad and Tobago', 'Tunisia', 'Turkmenistan',
+  'Uganda', 'Ukraine', 'United Arab Emirates', 'Uruguay', 'Uzbekistan', 'Venezuela',
+  'Yemen', 'Zambia', 'Zimbabwe',
+  // Special values
+  'Unknown', 'Regional'
+];
+
+// Country Autocomplete Component
+const CountryAutocomplete = ({ value, onChange }) => {
+  const [inputValue, setInputValue] = React.useState(value || '');
+  const [showSuggestions, setShowSuggestions] = React.useState(false);
+  const [filteredCountries, setFilteredCountries] = React.useState([]);
+  const wrapperRef = React.useRef(null);
+
+  // Update input when value prop changes
+  React.useEffect(() => {
+    setInputValue(value || '');
+  }, [value]);
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputValue(val);
+    
+    if (val.length > 0) {
+      const filtered = COUNTRIES.filter(country => 
+        country.toLowerCase().includes(val.toLowerCase())
+      ).slice(0, 10); // Limit to 10 suggestions
+      setFilteredCountries(filtered);
+      setShowSuggestions(true);
+    } else {
+      // Show top countries when empty
+      setFilteredCountries(COUNTRIES.slice(0, 10));
+      setShowSuggestions(true);
+    }
+  };
+
+  const handleSelect = (country) => {
+    setInputValue(country);
+    onChange(country);
+    setShowSuggestions(false);
+  };
+
+  const handleFocus = () => {
+    if (inputValue.length === 0) {
+      setFilteredCountries(COUNTRIES.slice(0, 10));
+    } else {
+      const filtered = COUNTRIES.filter(country => 
+        country.toLowerCase().includes(inputValue.toLowerCase())
+      ).slice(0, 10);
+      setFilteredCountries(filtered);
+    }
+    setShowSuggestions(true);
+  };
+
+  const handleBlur = () => {
+    // Delay to allow click on suggestion
+    setTimeout(() => {
+      // If input doesn't match a country, try to find closest match
+      if (inputValue && !COUNTRIES.includes(inputValue)) {
+        const match = COUNTRIES.find(c => 
+          c.toLowerCase() === inputValue.toLowerCase()
+        );
+        if (match) {
+          setInputValue(match);
+          onChange(match);
+        }
+      }
+    }, 200);
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <input
+        type="text"
+        value={inputValue}
+        onChange={handleInputChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        placeholder="Type to search countries..."
+        className="w-full px-3 py-2 border rounded-lg"
+      />
+      {showSuggestions && filteredCountries.length > 0 && (
+        <ul className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {filteredCountries.map((country, index) => (
+            <li
+              key={country}
+              onClick={() => handleSelect(country)}
+              className={`px-3 py-2 cursor-pointer hover:bg-blue-50 ${
+                index === 0 ? 'rounded-t-lg' : ''
+              } ${index === filteredCountries.length - 1 ? 'rounded-b-lg' : ''}`}
+            >
+              {country}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 // Shipping profiles
 const SHIPPING_PROFILES = [
   { id: '69077991015', name: 'Small Package Shipping' },
@@ -926,7 +1062,10 @@ function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpe
     { key: 'application', label: 'Application' },
     { key: 'features', label: 'Features' },
     { key: 'serialnumber', label: 'Serial Number' },
-    { key: 'datecode', label: 'Date Code' }
+    { key: 'datecode', label: 'Date Code' },
+    { key: 'countryoforigin', label: 'Country of Origin' },
+    { key: 'countryregionofmanufacture', label: 'Country/Region of Manufacture' },
+    { key: 'series', label: 'Series' }
   ];
 
   // Filter to only specs that have values in existing data
@@ -1578,6 +1717,7 @@ export default function ProListingBuilder() {
           ...(item.boxHeight && { boxheight: item.boxHeight }),
           ...(item.weight && { weight: item.weight }),
           ...(item.shelf && { shelf: item.shelf }),
+          ...(item.countryOfOrigin && { countryoforigin: item.countryOfOrigin }),
           ebaycatid: item.ebayCategoryId || '',
           ebaystoreid: item.ebayStoreCategoryId || '',
           ebaystoreid2: item.ebayStoreCategoryId2 || '',
@@ -1620,6 +1760,7 @@ export default function ProListingBuilder() {
           ...(item.boxHeight && { boxHeight: item.boxHeight }),
           ...(item.weight && { weight: item.weight }),
           ...(item.shelf && { shelfLocation: item.shelf }),
+          ...(item.countryOfOrigin && { countryOfOrigin: item.countryOfOrigin }),
           ebayCategoryId: item.ebayCategoryId || '',
           ebayStoreCategoryId: item.ebayStoreCategoryId || '',
           ebayStoreCategoryId2: item.ebayStoreCategoryId2 || '',
@@ -1959,6 +2100,18 @@ export default function ProListingBuilder() {
                       {CONDITION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
                     <p className="text-xs text-gray-600 mt-2 p-2 bg-gray-50 rounded">{selected.conditionNotes}</p>
+                  </div>
+
+                  {/* Country of Origin - Autocomplete */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Country of Origin</label>
+                    <CountryAutocomplete 
+                      value={selected.countryOfOrigin || selected.specifications?.countryoforigin || ''} 
+                      onChange={(value) => {
+                        updateField(selected.id, 'countryOfOrigin', value);
+                        updateSpecification(selected.id, 'countryoforigin', value);
+                      }}
+                    />
                   </div>
 
                   {/* Shipping Profile */}
