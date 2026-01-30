@@ -1635,14 +1635,16 @@ export default function ProListingBuilder() {
       await updateDoc(doc(db, 'products', itemId), {
         status: 'complete',
         title: product.title || `${item.brand} ${item.partNumber}`,
-        productCategory: product.productCategory || data._metadata?.detectedCategory || '',
+        productCategory: product.productType || data._metadata?.detectedCategory || '',
+        usertype: product.productType || data._metadata?.productType || '',
         shortDescription: product.shortDescription || '',
         description: product.description || '',
         specifications: product.specifications || {},
         rawSpecifications: product.rawSpecifications || [],
         qualityFlag: product.qualityFlag || 'NEEDS_REVIEW',
-        ebayCategoryId: product.ebayCategoryId || data._metadata?.detectedCategoryId || '',
-        ebayStoreCategoryId: product.ebayStoreCategoryId || '',
+        ebayCategoryId: data._metadata?.detectedCategoryId || product.ebayCategoryId || '',
+        ebayStoreCategoryId: data._metadata?.ebayStoreCategoryId || product.ebayStoreCategoryId || '',
+        ebayStoreCategoryId2: data._metadata?.ebayStoreCategoryId2 || '23399313015', // Default to ALL PRODUCTS
         bigcommerceCategoryId: product.bigcommerceCategoryId || '',
         ebayAspects: ebayAspects
       });
@@ -1712,6 +1714,7 @@ export default function ProListingBuilder() {
           mpn: item.partNumber,
           model: item.model || item.partNumber,
           condition: conditionOption?.label || 'Used - Good',
+          usertype: item.usertype || item.productCategory || '',
           ...(item.boxLength && { boxlength: item.boxLength }),
           ...(item.boxWidth && { boxwidth: item.boxWidth }),
           ...(item.boxHeight && { boxheight: item.boxHeight }),
@@ -1750,6 +1753,7 @@ export default function ProListingBuilder() {
           partNumber: item.partNumber,
           model: item.model || item.partNumber,
           productCategory: item.productCategory || '',
+          usertype: item.usertype || item.productCategory || '',
           condition: conditionOption?.label || 'Used - Good',
           conditionNotes: item.conditionNotes || '',
           specifications: item.specifications || {},
