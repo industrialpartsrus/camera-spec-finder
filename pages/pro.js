@@ -8,18 +8,9 @@ import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import InventoryCheckAlert from '../components/InventoryCheckAlert';
 
-// Product category options (internal categories)
-const CATEGORY_OPTIONS = [
-  'Electric Motors', 'Servo Motors', 'Servo Drives', 'VFDs', 'PLCs', 'HMIs',
-  'Power Supplies', 'I/O Modules',
-  'Proximity Sensors', 'Photoelectric Sensors', 'Light Curtains', 'Laser Sensors',
-  'Pressure Sensors', 'Temperature Sensors',
-  'Pneumatic Cylinders', 'Pneumatic Valves', 'Pneumatic Grippers',
-  'Hydraulic Pumps', 'Hydraulic Valves', 'Hydraulic Cylinders',
-  'Circuit Breakers', 'Contactors', 'Safety Relays', 'Control Relays',
-  'Bearings', 'Linear Bearings', 'Encoders', 'Gearboxes', 'Transformers',
-  'Industrial Gateways', 'Network Modules'
-];
+// Product category options - dynamically built from EBAY_CATEGORY_ID_TO_NAME
+// (defined after EBAY_CATEGORY_ID_TO_NAME is declared)
+let CATEGORY_OPTIONS = [];
 
 // eBay MARKETPLACE Categories (main eBay listing categories - for display)
 const EBAY_MARKETPLACE_CATEGORIES = {
@@ -367,6 +358,61 @@ const EBAY_CATEGORY_ID_TO_NAME = {
   '258304': 'Welding Wires',
   '260835': 'Wire & Cable Connectors',
   '259005': 'Work Tables',
+};
+
+// Initialize CATEGORY_OPTIONS from eBay category names (sorted alphabetically)
+CATEGORY_OPTIONS = [...new Set(Object.values(EBAY_CATEGORY_ID_TO_NAME))].sort();
+
+// Map eBay Store Category names to likely eBay Product Category IDs
+// This helps infer the eBay Product Category when ebaycatid is empty
+const STORE_TO_PRODUCT_CATEGORY = {
+  // Automation Control
+  'PLC': '181708',  // PLC Processors
+  'HMI': '181709',  // HMI & Open Interface Panels
+  'I/O BOARDS': '181714',  // PLC Input & Output Modules
+  'POWER SUPPLY': '42017',  // Power Supplies
+  // Motors
+  'SERVO MOTORS': '124603',  // Servo Motors
+  'SERVO DRIVES': '78191',  // Servo Drives & Amplifiers
+  'STEPPER MOTORS': '9723',  // Stepper Motors
+  'STEPPER DRIVES': '71394',  // Stepper Controls & Drives
+  'AC MOTORS': '181732',  // General Purpose Motors
+  'DC MOTORS': '181731',  // Definite Purpose Motors
+  'GEARMOTORS': '65452',  // Gearmotors
+  // Speed Controls
+  'AC DRIVE': '78192',  // Variable Frequency Drives
+  'VFD': '78192',  // Variable Frequency Drives
+  'DC DRIVE': '78190',  // General Purpose DC Drives
+  // Power Transmission
+  'GEAR REDUCERS': '181772',  // Gearboxes & Speed Reducers
+  'GEARBOXES': '181772',  // Gearboxes & Speed Reducers
+  'POWER TRANSMISSION': '181772',  // Default to Gearboxes
+  // Sensors
+  'PROXIMITY SENSORS': '65459',  // Proximity Sensors
+  'PHOTOELECTRIC SENSORS': '181786',  // Fiber Optic Sensors (or use 65459)
+  'PRESSURE SENSORS': '65456',  // Pressure Sensors
+  'TEMPERATURE SENSORS': '65460',  // Temperature & Humidity Sensors
+  // Electrical
+  'CIRCUIT BREAKERS': '185134',  // Circuit Breakers
+  'TRANSFORMERS': '260829',  // Industrial Control & General Purpose Transformers
+  'CONTACTORS': '181680',  // IEC & NEMA Contactors
+  'RELAYS': '36328',  // General Purpose Relays
+  // Pneumatics
+  'PNEUMATIC CYLINDERS': '184027',  // Hydraulic & Pneumatic Cylinders
+  'PNEUMATIC VALVES': '260291',  // Solenoid Valves & Coils
+  'AIR PREPARATION': '183993',  // Filter Regulator Lubricators
+  // Hydraulics
+  'HYDRAULIC PUMPS': '11773',  // Hydraulic Pumps
+  'HYDRAULIC VALVES': '259687',  // Valves
+  'HYDRAULIC CYLINDERS': '184027',  // Hydraulic & Pneumatic Cylinders
+  // Bearings
+  'BALL': '181750',  // Ball & Roller Bearings
+  'LINEAR': '181741',  // Linear Bearings & Bushings
+  'PILLOW BLOCK': '181753',  // Mounted Bearings & Housings
+  'FLANGE BEARINGS': '181753',  // Mounted Bearings & Housings
+  // Pumps
+  'PUMPS': '46547',  // Other Pumps
+  'CENTRIFUGAL PUMP': '124635',  // Centrifugal Pumps
 };
 
 // Condition options
@@ -724,53 +770,165 @@ function SkuLookup({ onLoadListing, onCompareClick }) {
 function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpen }) {
   if (!isOpen || !existingData) return null;
 
-  // All possible spec field keys with labels - dynamically build from what exists
+  // All possible spec field keys with labels - comprehensive list from SureDone headers
   const ALL_SPEC_FIELDS = [
-    // Electrical
+    // Electrical - Voltage
     { key: 'voltage', label: 'Voltage' },
     { key: 'inputvoltage', label: 'Input Voltage' },
     { key: 'outputvoltage', label: 'Output Voltage' },
+    { key: 'voltagerating', label: 'Voltage Rating' },
+    { key: 'voltagecompatibility', label: 'Voltage Compatibility' },
+    { key: 'actualvoltageratingac', label: 'Actual Voltage Rating AC' },
+    { key: 'actualvoltageratingdc', label: 'Actual Voltage Rating DC' },
+    { key: 'nominalvoltageratingac', label: 'Nominal Voltage Rating AC' },
+    { key: 'nominalratedinputvoltage', label: 'Nominal Rated Input Voltage' },
+    { key: 'actualratedinputvoltage', label: 'Actual Rated Input Voltage' },
+    { key: 'dcvoltagerange', label: 'DC Voltage Range' },
+    { key: 'supplyvoltage', label: 'Supply Voltage' },
+    { key: 'coilvoltage', label: 'Coil Voltage' },
+    // Electrical - Current/Amperage
     { key: 'amperage', label: 'Amperage' },
     { key: 'inputamperage', label: 'Input Amperage' },
     { key: 'outputamperage', label: 'Output Amperage' },
+    { key: 'amperagerange', label: 'Amperage Range' },
     { key: 'current', label: 'Current' },
+    { key: 'currentrating', label: 'Current Rating' },
+    { key: 'nominalcurrentrating', label: 'Nominal Current Rating' },
+    { key: 'currenttype', label: 'Current Type' },
+    { key: 'maxinputcurrent', label: 'Max Input Current' },
+    { key: 'fullloadamps', label: 'Full Load Amps' },
+    { key: 'stallcurrent', label: 'Stall Current' },
+    { key: 'maximumamperage', label: 'Maximum Amperage' },
+    // Electrical - Phase/Frequency
     { key: 'phase', label: 'Phase' },
+    { key: 'numberofphases', label: 'Number of Phases' },
+    { key: 'powerphase', label: 'Power Phase' },
     { key: 'hz', label: 'Hz' },
     { key: 'frequency', label: 'Frequency' },
+    { key: 'powerfrequency', label: 'Power Frequency' },
+    { key: 'outputhz', label: 'Output Hz' },
+    // Electrical - Power
+    { key: 'watts', label: 'Watts' },
+    { key: 'watt', label: 'Watt' },
+    { key: 'maxwattage', label: 'Max Wattage' },
+    { key: 'kw', label: 'kW' },
+    { key: 'kva', label: 'kVA' },
+    { key: 'powerrating', label: 'Power Rating' },
+    { key: 'ratedpower', label: 'Rated Power' },
+    { key: 'nominalpowerrating', label: 'Nominal Power Rating' },
+    { key: 'outputpower', label: 'Output Power' },
     // Motor
     { key: 'horsepower', label: 'Horsepower' },
+    { key: 'ratedloadhp', label: 'Rated Load HP' },
+    { key: 'spindlehorsepower', label: 'Spindle Horsepower' },
     { key: 'rpm', label: 'RPM' },
-    { key: 'kw', label: 'kW' },
-    { key: 'nm', label: 'Nm (Torque)' },
+    { key: 'baserpm', label: 'Base RPM' },
+    { key: 'noloadrpm', label: 'No Load RPM' },
+    { key: 'highestspindlespeedrpm', label: 'Highest Spindle Speed RPM' },
     { key: 'torque', label: 'Torque' },
+    { key: 'stalltorque', label: 'Stall Torque' },
+    { key: 'ratedfullloadtorque', label: 'Rated Full Load Torque' },
+    { key: 'contstalltorqueinlb', label: 'Cont. Stall Torque (in-lb)' },
+    { key: 'nm', label: 'Nm' },
     { key: 'frame', label: 'Frame' },
-    // Pneumatic/Hydraulic
+    { key: 'motortype', label: 'Motor Type' },
+    { key: 'enclosuretype', label: 'Enclosure Type' },
+    { key: 'insulationclass', label: 'Insulation Class' },
+    { key: 'nemadesignletter', label: 'NEMA Design Letter' },
+    { key: 'fullstepangle', label: 'Full Step Angle' },
+    { key: 'dcstatorwindingtype', label: 'DC Stator Winding Type' },
+    { key: 'reversiblenonreversible', label: 'Reversible' },
+    // Gearbox/Drive
+    { key: 'ratio', label: 'Ratio' },
+    { key: 'gearratio', label: 'Gear Ratio' },
+    // Pneumatic/Hydraulic - Pressure
     { key: 'psi', label: 'PSI' },
+    { key: 'maxpsi', label: 'Max PSI' },
+    { key: 'maxbar', label: 'Max Bar' },
+    { key: 'maxmpa', label: 'Max MPa' },
+    { key: 'mpa', label: 'MPa' },
+    { key: 'pressure', label: 'Pressure' },
     { key: 'maxpressure', label: 'Max Pressure' },
+    { key: 'maximumpressure', label: 'Maximum Pressure' },
+    { key: 'ratedpressure', label: 'Rated Pressure' },
+    { key: 'maxoperatingpressure', label: 'Max Operating Pressure' },
+    { key: 'maxfluidpressure', label: 'Max Fluid Pressure' },
+    // Pneumatic/Hydraulic - Size/Flow
     { key: 'portsize', label: 'Port Size' },
+    { key: 'portdiameter', label: 'Port Diameter' },
     { key: 'bore', label: 'Bore' },
     { key: 'borediameter', label: 'Bore Diameter' },
     { key: 'stroke', label: 'Stroke' },
     { key: 'strokelength', label: 'Stroke Length' },
     { key: 'flowrate', label: 'Flow Rate' },
+    { key: 'gpm', label: 'GPM' },
+    { key: 'maximumairflow', label: 'Maximum Airflow' },
+    { key: 'cylinderaction', label: 'Cylinder Action' },
+    { key: 'cylindertype', label: 'Cylinder Type' },
+    { key: 'hydraulicpumptype', label: 'Hydraulic Pump Type' },
+    { key: 'pumpaction', label: 'Pump Action' },
+    { key: 'reservoircapacity', label: 'Reservoir Capacity' },
+    { key: 'actuation', label: 'Actuation' },
+    { key: 'actuatortype', label: 'Actuator Type' },
+    { key: 'numberofways', label: 'Number of Ways' },
     // Control/Automation
-    { key: 'controllerplatform', label: 'Platform' },
-    { key: 'communications', label: 'Communications' },
+    { key: 'controllerplatform', label: 'Controller Platform' },
     { key: 'processor', label: 'Processor' },
+    { key: 'communications', label: 'Communications' },
+    { key: 'communicationstandard', label: 'Communication Standard' },
     { key: 'series', label: 'Series' },
     { key: 'revision', label: 'Revision' },
     { key: 'version', label: 'Version' },
-    // Gearbox/Reducer
-    { key: 'ratio', label: 'Ratio' },
-    { key: 'gearratio', label: 'Gear Ratio' },
-    // Other
-    { key: 'coilvoltage', label: 'Coil Voltage' },
-    { key: 'enclosuretype', label: 'Enclosure Type' },
+    { key: 'firmwarerevision', label: 'Firmware Revision' },
+    { key: 'fwrevision', label: 'FW Revision' },
+    { key: 'rev', label: 'Rev' },
+    { key: 'controltype', label: 'Control Type' },
+    { key: 'controlinput', label: 'Control Input' },
+    { key: 'analoginput', label: 'Analog Input' },
+    { key: 'analogdigital', label: 'Analog/Digital' },
+    { key: 'interfacetype', label: 'Interface Type' },
+    { key: 'connectiontype', label: 'Connection Type' },
+    { key: 'connectionsize', label: 'Connection Size' },
+    // Sensor
     { key: 'sensingrange', label: 'Sensing Range' },
+    { key: 'operatingdistance', label: 'Operating Distance' },
+    { key: 'sensortype', label: 'Sensor Type' },
+    { key: 'sensingtechnology', label: 'Sensing Technology' },
     { key: 'outputtype', label: 'Output Type' },
+    { key: 'outputvdc', label: 'Output VDC' },
+    { key: 'responsetime', label: 'Response Time' },
+    { key: 'minobjsize', label: 'Min Object Size' },
+    { key: 'beamgap', label: 'Beam Gap' },
+    { key: 'guardedarea', label: 'Guarded Area' },
+    // Switch/Relay
+    { key: 'numberofpoles', label: 'Number of Poles' },
+    { key: 'numberofcircuits', label: 'Number of Circuits' },
+    { key: 'contactmaterial', label: 'Contact Material' },
+    { key: 'switchaction', label: 'Switch Action' },
+    { key: 'actiontype', label: 'Action Type' },
+    { key: 'trippingtype', label: 'Tripping Type' },
+    // Mechanical
+    { key: 'shaftdiameter', label: 'Shaft Diameter' },
+    { key: 'rotation', label: 'Rotation' },
     { key: 'capacity', label: 'Capacity' },
-    { key: 'kva', label: 'kVA' },
-    { key: 'watts', label: 'Watts' }
+    { key: 'load', label: 'Load' },
+    { key: 'loadcapacitylbs', label: 'Load Capacity (lbs)' },
+    { key: 'displacement', label: 'Displacement' },
+    { key: 'thread', label: 'Thread' },
+    { key: 'npt', label: 'NPT' },
+    { key: 'pipesize', label: 'Pipe Size' },
+    { key: 'mountingtype', label: 'Mounting Type' },
+    { key: 'mountingstyle', label: 'Mounting Style' },
+    // Material/Construction
+    { key: 'material', label: 'Material' },
+    { key: 'construction', label: 'Construction' },
+    { key: 'bodytype', label: 'Body Type' },
+    { key: 'bodymaterial', label: 'Body Material' },
+    // Other
+    { key: 'application', label: 'Application' },
+    { key: 'features', label: 'Features' },
+    { key: 'serialnumber', label: 'Serial Number' },
+    { key: 'datecode', label: 'Date Code' }
   ];
 
   // Filter to only specs that have values in existing data
@@ -826,9 +984,9 @@ function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpe
   ];
 
   return (
-    <div className="w-80 bg-white border-l shadow-lg overflow-hidden flex flex-col h-full">
+    <div className="w-80 bg-white border-l shadow-lg flex flex-col max-h-[calc(100vh-140px)]">
       {/* Header */}
-      <div className="p-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+      <div className="p-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white flex-shrink-0">
         <div className="flex justify-between items-center">
           <div>
             <h3 className="font-bold text-sm">Existing Listing</h3>
@@ -841,7 +999,7 @@ function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpe
       </div>
 
       {/* Legend */}
-      <div className="px-3 py-2 bg-gray-50 border-b text-xs flex items-center gap-3">
+      <div className="px-3 py-2 bg-gray-50 border-b text-xs flex items-center gap-3 flex-shrink-0">
         <span className="flex items-center gap-1">
           <div className="w-2 h-2 bg-yellow-300 rounded"></div>
           Different
@@ -852,8 +1010,8 @@ function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpe
         </span>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Content - scrollable */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         {fieldGroups.map(group => (
           <div key={group.title}>
             <div className="px-3 py-1.5 bg-gray-100 font-semibold text-xs text-gray-700 border-b">
@@ -910,8 +1068,8 @@ function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpe
         ))}
       </div>
 
-      {/* Footer */}
-      <div className="p-3 border-t bg-gray-50">
+      {/* Footer - always visible */}
+      <div className="p-3 border-t bg-gray-50 flex-shrink-0">
         <button
           onClick={() => {
             // Use all existing values
@@ -1081,21 +1239,81 @@ export default function ProListingBuilder() {
       // Build specs object from ALL SureDone spec fields
       const specs = {};
       const specFields = [
-        // Electrical
-        'voltage', 'inputvoltage', 'outputvoltage', 'current', 'amperage',
-        'inputamperage', 'outputamperage', 'phase', 'hz', 'frequency',
+        // Electrical - Voltage
+        'voltage', 'inputvoltage', 'outputvoltage', 'voltagerating', 'voltagecompatibility',
+        'actualvoltageratingac', 'actualvoltageratingdc', 'nominalvoltageratingac',
+        'nominalratedinputvoltage', 'actualratedinputvoltage', 'dcvoltagerange',
+        'supplyvoltage', 'coilvoltage',
+        // Electrical - Current/Amperage
+        'amperage', 'inputamperage', 'outputamperage', 'amperagerange', 'current',
+        'currentrating', 'nominalcurrentrating', 'currenttype', 'maxinputcurrent',
+        'fullloadamps', 'stallcurrent', 'maximumamperage',
+        // Electrical - Phase/Frequency
+        'phase', 'numberofphases', 'powerphase', 'hz', 'frequency', 'powerfrequency', 'outputhz',
+        // Electrical - Power
+        'watts', 'watt', 'maxwattage', 'kw', 'kva', 'powerrating', 'ratedpower',
+        'nominalpowerrating', 'outputpower',
         // Motor
-        'horsepower', 'rpm', 'kw', 'nm', 'torque', 'frame',
-        // Pneumatic/Hydraulic
-        'psi', 'maxpressure', 'portsize', 'bore', 'borediameter', 'stroke', 'strokelength',
-        'flowrate',
-        // Control/Automation
-        'controllerplatform', 'communications', 'processor', 'series', 'revision', 'version',
-        // Gearbox/Reducer
+        'horsepower', 'ratedloadhp', 'spindlehorsepower', 'rpm', 'baserpm', 'noloadrpm',
+        'highestspindlespeedrpm', 'torque', 'stalltorque', 'ratedfullloadtorque',
+        'contstalltorqueinlb', 'nm', 'frame', 'motortype', 'enclosuretype',
+        'insulationclass', 'nemadesignletter', 'fullstepangle', 'dcstatorwindingtype',
+        'reversiblenonreversible',
+        // Gearbox/Drive
         'ratio', 'gearratio',
+        // Pneumatic/Hydraulic - Pressure
+        'psi', 'maxpsi', 'maxbar', 'maxmpa', 'mpa', 'pressure', 'maxpressure',
+        'maximumpressure', 'ratedpressure', 'maxoperatingpressure', 'maxfluidpressure',
+        // Pneumatic/Hydraulic - Size/Flow
+        'portsize', 'portdiameter', 'bore', 'borediameter', 'stroke', 'strokelength',
+        'flowrate', 'gpm', 'maximumairflow', 'cylinderaction', 'cylindertype',
+        'hydraulicpumptype', 'pumpaction', 'reservoircapacity', 'actuation',
+        'actuatortype', 'numberofways',
+        // Control/Automation
+        'controllerplatform', 'processor', 'communications', 'communicationstandard',
+        'series', 'revision', 'version', 'firmwarerevision', 'fwrevision', 'rev',
+        'controltype', 'controlinput', 'analoginput', 'analogdigital',
+        'interfacetype', 'connectiontype', 'connectionsize',
+        // Sensor
+        'sensingrange', 'operatingdistance', 'sensortype', 'sensingtechnology',
+        'outputtype', 'outputvdc', 'responsetime', 'minobjsize', 'beamgap', 'guardedarea',
+        // Switch/Relay
+        'numberofpoles', 'numberofcircuits', 'contactmaterial', 'switchaction',
+        'actiontype', 'trippingtype', 'resetactuatortype',
+        // Mechanical
+        'shaftdiameter', 'shaftinput', 'rotation', 'dynamicloadrating', 'load',
+        'capacity', 'liftcapacity', 'loadcapacitylbs', 'capacitymaxweight',
+        'liftheight', 'maximummastliftheight', 'loweredmastliftheight', 'platformheight',
+        'overalllength', 'displacement', 'pipesize', 'npt', 'thread',
+        'terminationtype', 'mountingtype', 'mountingstyle', 'mount', 'compatiblemountingtype',
+        // Material/Construction
+        'material', 'construction', 'constuction', 'body', 'bodytype', 'bodymaterial',
+        'bladematerial', 'ventilationtype',
+        // Equipment/Machine
+        'equipmenttype', 'equipmentmake', 'toolmodel', 'make', 'robottype',
+        'roboticscontrolstype', 'payload', 'axis', 'cycles', 'increment', 'resolver',
+        'tablelength', 'tablewidth', 'xaxistravelbed', 'yaxistravelbed', 'zaxistravelbed',
+        'suitablefor', 'compatibleequipmenttype',
+        // Transformer
+        'primaryinput', 'primaryvoltageratingac', 'primarycurrentrating',
+        'secondaryoutput', 'secondaryvoltageratingac', 'secondarycurrentrating',
+        'turnsratio', 'minimumoperatingfrequency', 'maximumoperatingfrequency',
+        'conversionfunction', 'currentconversion',
+        // Fan/Blower
+        'fanblowertype', 'axialfanbearingtype',
         // Other
-        'coilvoltage', 'enclosuretype', 'sensingrange', 'outputtype',
-        'capacity', 'kva', 'watts'
+        'application', 'features', 'unittype', 'parttype', 'outlets', 'outlettype',
+        'numberofoutlets', 'cable', 'screensize', 'tension', 'pulsesperrevolution',
+        'switchingfrequency', 'dischargeopening', 'numberofrods', 'suitablemedia',
+        'bundlelisting', 'rmin', 'shape', 'angle',
+        // Date/Reference
+        'serialnumber', 'datecode', 'mfgdate', 'modelyear', 'replaces',
+        // Equipment-specific
+        'forklifttype', 'tiretype', 'hours', 'attachmentmodel', 'fueltype',
+        'powersource', 'tonnage', 'refrigerant', 'emptyweight', 'bussinput',
+        'centrifugalpumptype', 'countryoforigin', 'countryregionofmanufacture',
+        'modifieditem', 'indicatortype', 'measuredparameters', 'gpu',
+        'graphicsprocessingtype', 'chipsetgpumodel', 'connectivity'
       ];
       
       specFields.forEach(key => {
@@ -1103,6 +1321,50 @@ export default function ProListingBuilder() {
           specs[key] = existingData[key];
         }
       });
+
+      // Determine product category - prefer eBay category name if we have an eBay cat ID
+      let productCategory = '';
+      let detectedEbayCatId = existingData.ebaycatid || '';
+      
+      // DEBUG: Log what we received from SureDone
+      console.log('=== CATEGORY DETECTION DEBUG ===');
+      console.log('ebaycatid from SureDone:', existingData.ebaycatid);
+      console.log('ebaystoreid from SureDone:', existingData.ebaystoreid);
+      console.log('ebaystoreid2 from SureDone:', existingData.ebaystoreid2);
+      console.log('usertype from SureDone:', existingData.usertype);
+      console.log('EBAY_CATEGORY_ID_TO_NAME lookup for', detectedEbayCatId, ':', EBAY_CATEGORY_ID_TO_NAME[detectedEbayCatId]);
+      
+      if (detectedEbayCatId && EBAY_CATEGORY_ID_TO_NAME[detectedEbayCatId]) {
+        // Best case: we have a valid eBay category ID
+        productCategory = EBAY_CATEGORY_ID_TO_NAME[detectedEbayCatId];
+        console.log('Using eBay category from ebaycatid:', productCategory);
+      } else {
+        console.log('ebaycatid not found or not in lookup, trying store category...');
+        // Try to infer from eBay Store Category
+        const storeCategory = existingData.ebaystoreid || '';
+        const storeCat = EBAY_STORE_CATEGORIES.find(c => c.id === storeCategory);
+        console.log('Store category found:', storeCat);
+        if (storeCat) {
+          // Clean up store category name (remove └ prefix and trim)
+          const cleanStoreName = storeCat.name.replace(/^\s*└\s*/, '').trim().toUpperCase();
+          console.log('Clean store name:', cleanStoreName);
+          if (STORE_TO_PRODUCT_CATEGORY[cleanStoreName]) {
+            detectedEbayCatId = STORE_TO_PRODUCT_CATEGORY[cleanStoreName];
+            productCategory = EBAY_CATEGORY_ID_TO_NAME[detectedEbayCatId] || cleanStoreName;
+            console.log('Inferred eBay category from store:', productCategory);
+          }
+        }
+        // Fall back to usertype only if we still don't have a category
+        if (!productCategory && existingData.usertype && existingData.usertype.trim()) {
+          productCategory = existingData.usertype;
+          console.log('Falling back to usertype:', productCategory);
+        } else if (!productCategory && existingData.type && existingData.type.trim()) {
+          productCategory = existingData.type;
+          console.log('Falling back to type:', productCategory);
+        }
+      }
+      console.log('Final productCategory:', productCategory);
+      console.log('Final detectedEbayCatId:', detectedEbayCatId);
 
       const docRef = await addDoc(collection(db, 'products'), {
         brand: existingData.brand || existingData.manufacturer || '',
@@ -1112,7 +1374,7 @@ export default function ProListingBuilder() {
         createdBy: userName || 'Unknown',
         createdAt: serverTimestamp(),
         title: existingData.title || '',
-        productCategory: existingData.usertype || existingData.type || '',
+        productCategory: productCategory,
         shortDescription: existingData.shortdescription || '',
         description: existingData.longdescription || '',
         specifications: specs,
@@ -1127,7 +1389,7 @@ export default function ProListingBuilder() {
         boxHeight: existingData.boxheight || '',
         weight: existingData.weight || existingData.boxweight || '',
         qualityFlag: 'EDITING',
-        ebayCategoryId: existingData.ebaycatid || '',
+        ebayCategoryId: detectedEbayCatId || existingData.ebaycatid || '',
         ebayStoreCategoryId: existingData.ebaystoreid || '',
         ebayStoreCategoryId2: existingData.ebaystoreid2 || '',
         bigcommerceCategoryId: existingData.bigcommercecategories || '',
