@@ -22,83 +22,311 @@ const BRAND_IDS = {
 };
 
 // BigCommerce multi-category mappings: Shop All + Parent + Leaf
+// Maps AI-detected product types to BigCommerce category IDs
 const BIGCOMMERCE_CATEGORY_MAP = {
+  // Motors
   'Electric Motors': ['23', '26', '30'],
+  'Electric Motor': ['23', '26', '30'],
+  'AC Motor': ['23', '26', '30'],
+  'DC Motor': ['23', '26', '30'],
+  'Induction Motor': ['23', '26', '30'],
   'Servo Motors': ['23', '19', '54'],
+  'Servo Motor': ['23', '19', '54'],
+  'AC Servo Motor': ['23', '19', '54'],
+  'DC Servo Motor': ['23', '19', '54'],
+  'Stepper Motor': ['23', '26', '30'],
+  'Gearmotor': ['23', '26', '30'],
+  'Gear Motor': ['23', '26', '30'],
+  
+  // Drives
   'Servo Drives': ['23', '19', '32'],
+  'Servo Drive': ['23', '19', '32'],
+  'Servo Amplifier': ['23', '19', '32'],
   'VFDs': ['23', '33', '34'],
+  'VFD': ['23', '33', '34'],
+  'Variable Frequency Drive': ['23', '33', '34'],
+  'AC Drive': ['23', '33', '34'],
+  'DC Drive': ['23', '33'],
+  'Stepper Drive': ['23', '19', '32'],
+  'Inverter': ['23', '33', '34'],
+  
+  // PLCs & Automation
   'PLCs': ['23', '18', '24'],
+  'PLC': ['23', '18', '24'],
+  'PLC Processor': ['23', '18', '24'],
+  'PLC CPU': ['23', '18', '24'],
+  'PLC Chassis': ['23', '18', '24'],
+  'PLC Power Supply': ['23', '18', '28'],
   'HMIs': ['23', '18', '27'],
+  'HMI': ['23', '18', '27'],
+  'Touch Panel': ['23', '18', '27'],
+  'Operator Interface': ['23', '18', '27'],
+  'Touch Screen': ['23', '18', '27'],
   'Power Supplies': ['23', '18', '28'],
+  'Power Supply': ['23', '18', '28'],
   'I/O Modules': ['23', '18', '61'],
+  'I/O Module': ['23', '18', '61'],
+  'PLC I/O Module': ['23', '18', '61'],
+  'Input Module': ['23', '18', '61'],
+  'Output Module': ['23', '18', '61'],
+  'Communication Module': ['23', '18', '61'],
+  'Network Module': ['23', '18', '61'],
+  
+  // Sensors
   'Proximity Sensors': ['23', '22', '41'],
+  'Proximity Sensor': ['23', '22', '41'],
+  'Inductive Proximity Sensor': ['23', '22', '41'],
+  'Capacitive Proximity Sensor': ['23', '22', '41'],
   'Photoelectric Sensors': ['23', '22', '42'],
+  'Photoelectric Sensor': ['23', '22', '42'],
+  'Photo Sensor': ['23', '22', '42'],
+  'Fiber Optic Sensor': ['23', '22', '42'],
   'Light Curtains': ['23', '22', '71'],
+  'Light Curtain': ['23', '22', '71'],
+  'Safety Light Curtain': ['23', '22', '71'],
   'Laser Sensors': ['23', '22', '41'],
+  'Laser Sensor': ['23', '22', '41'],
   'Pressure Sensors': ['23', '22', '116'],
+  'Pressure Sensor': ['23', '22', '116'],
+  'Pressure Transducer': ['23', '22', '116'],
   'Temperature Sensors': ['23', '22', '65'],
+  'Temperature Sensor': ['23', '22', '65'],
+  'Thermocouple': ['23', '22', '65'],
+  'RTD': ['23', '22', '65'],
   'Ultrasonic Sensors': ['23', '22', '115'],
-  'Pneumatic Cylinders': ['23', '46', '47'],
-  'Pneumatic Valves': ['23', '46', '68'],
-  'Pneumatic Grippers': ['23', '46', '117'],
-  'Hydraulic Pumps': ['23', '84', '94'],
-  'Hydraulic Valves': ['23', '84', '91'],
-  'Hydraulic Cylinders': ['23', '84', '107'],
-  'Circuit Breakers': ['23', '20', '44'],
-  'Contactors': ['23', '49', '50'],
-  'Safety Relays': ['23', '49', '96'],
-  'Control Relays': ['23', '49', '51'],
-  'Bearings': ['23', '26', '43'],
-  'Linear Bearings': ['23', '26', '70'],
+  'Ultrasonic Sensor': ['23', '22', '115'],
+  'Level Sensor': ['23', '22', '115'],
+  'Flow Sensor': ['23', '22'],
+  'Color Sensor': ['23', '22'],
+  'Vision Sensor': ['23', '22'],
+  'Current Sensor': ['23', '22'],
+  'Load Cell': ['23', '22'],
+  'Barcode Scanner': ['23', '22'],
+  'Barcode Scanners': ['23', '22'],
+  'Barcode Reader': ['23', '22'],
+  'RFID Reader': ['23', '22'],
+  
+  // Encoders
   'Encoders': ['23', '19', '81'],
-  'Gearboxes': ['23', '26', '36'],
+  'Encoder': ['23', '19', '81'],
+  'Rotary Encoder': ['23', '19', '81'],
+  'Incremental Encoder': ['23', '19', '81'],
+  'Absolute Encoder': ['23', '19', '81'],
+  'Linear Encoder': ['23', '19', '81'],
+  
+  // Pneumatics
+  'Pneumatic Cylinders': ['23', '46', '47'],
+  'Pneumatic Cylinder': ['23', '46', '47'],
+  'Air Cylinder': ['23', '46', '47'],
+  'Compact Cylinder': ['23', '46', '47'],
+  'Pneumatic Valves': ['23', '46', '68'],
+  'Pneumatic Valve': ['23', '46', '68'],
+  'Solenoid Valve': ['23', '46', '68'],
+  'Air Valve': ['23', '46', '68'],
+  'Pneumatic Grippers': ['23', '46', '117'],
+  'Pneumatic Gripper': ['23', '46', '117'],
+  'Gripper': ['23', '46', '117'],
+  'Pneumatic Actuator': ['23', '46'],
+  'Air Regulator': ['23', '46'],
+  'FRL': ['23', '46'],
+  'FRL Unit': ['23', '46'],
+  
+  // Hydraulics
+  'Hydraulic Pumps': ['23', '84', '94'],
+  'Hydraulic Pump': ['23', '84', '94'],
+  'Hydraulic Valves': ['23', '84', '91'],
+  'Hydraulic Valve': ['23', '84', '91'],
+  'Hydraulic Cylinders': ['23', '84', '107'],
+  'Hydraulic Cylinder': ['23', '84', '107'],
+  'Hydraulic Motor': ['23', '84'],
+  'Hydraulic Accumulator': ['23', '84'],
+  
+  // Electrical
+  'Circuit Breakers': ['23', '20', '44'],
+  'Circuit Breaker': ['23', '20', '44'],
+  'MCCB': ['23', '20', '44'],
+  'MCB': ['23', '20', '44'],
+  'Disconnect': ['23', '20'],
+  'Disconnect Switch': ['23', '20'],
+  'Fuse': ['23', '20'],
+  'Fuse Holder': ['23', '20'],
+  'Transformer': ['23', '20', '37'],
   'Transformers': ['23', '20', '37'],
+  'Enclosure': ['23', '20'],
+  'Electrical Enclosure': ['23', '20'],
+  
+  // Contactors & Relays
+  'Contactors': ['23', '49', '50'],
+  'Contactor': ['23', '49', '50'],
+  'Motor Starter': ['23', '49', '50'],
+  'Soft Starter': ['23', '49', '50'],
+  'Overload Relay': ['23', '49', '50'],
+  'Safety Relays': ['23', '49', '96'],
+  'Safety Relay': ['23', '49', '96'],
+  'Safety Controller': ['23', '49', '96'],
+  'Control Relays': ['23', '49', '51'],
+  'Control Relay': ['23', '49', '51'],
+  'Relay': ['23', '49', '51'],
+  'Solid State Relay': ['23', '49', '51'],
+  'SSR': ['23', '49', '51'],
+  
+  // Bearings
+  'Bearings': ['23', '26', '43'],
+  'Bearing': ['23', '26', '43'],
+  'Ball Bearing': ['23', '26', '43'],
+  'Roller Bearing': ['23', '26', '43'],
+  'Linear Bearings': ['23', '26', '70'],
+  'Linear Bearing': ['23', '26', '70'],
+  'Pillow Block': ['23', '26', '43'],
+  
+  // Power Transmission
+  'Gearboxes': ['23', '26', '36'],
+  'Gearbox': ['23', '26', '36'],
+  'Gear Reducer': ['23', '26', '36'],
+  'Speed Reducer': ['23', '26', '36'],
+  'Ball Screw': ['23', '26'],
+  'Linear Actuator': ['23', '26'],
+  'Linear Guide': ['23', '26'],
+  'Linear Rail': ['23', '26'],
+  'Belt': ['23', '26'],
+  'Pulley': ['23', '26'],
+  'Sprocket': ['23', '26'],
+  'Chain': ['23', '26'],
+  'Brake': ['23', '26'],
+  'Clutch': ['23', '26'],
+  
+  // Switches & Controls
+  'Limit Switch': ['23', '49'],
+  'Push Button': ['23', '49'],
+  'Selector Switch': ['23', '49'],
+  'E-Stop': ['23', '49'],
+  'Emergency Stop': ['23', '49'],
+  'Pilot Light': ['23', '49'],
+  'Stack Light': ['23', '49'],
+  'Tower Light': ['23', '49'],
+  'Joystick': ['23', '49'],
+  
+  // Timers & Counters
+  'Timer': ['23', '49'],
+  'Counter': ['23', '49'],
+  'Temperature Controller': ['23', '49'],
+  'PID Controller': ['23', '49'],
+  'Panel Meter': ['23', '49'],
+  
+  // Default
   'Industrial Gateways': ['23', '18'],
-  'Network Modules': ['23', '18', '61'],
   'Unknown': ['23']
 };
 
 // -----------------------------------------------------------------------------
-// USERTYPE GENERATION: AI-generated descriptive product type
+// USERTYPE GENERATION: Use AI-provided productType directly when available
+// Falls back to category mapping only if not provided
 // -----------------------------------------------------------------------------
-function generateUserType(productCategory, specifications = {}) {
+function generateUserType(productCategory, specifications = {}, aiProductType = null) {
+  // If AI provided a specific product type, use it directly
+  if (aiProductType && aiProductType !== 'Industrial Equipment') {
+    console.log('Using AI-provided productType:', aiProductType);
+    return aiProductType;
+  }
+  
+  // Also check if specifications has a 'type' field from AI
+  if (specifications.type && specifications.type !== 'Industrial Equipment') {
+    console.log('Using specifications.type:', specifications.type);
+    return specifications.type;
+  }
+  
+  // Fallback to category mapping
   const categoryTypeMap = {
     'Electric Motors': specifications.enclosure_type || specifications.enclosuretype
       ? `${specifications.enclosure_type || specifications.enclosuretype} Electric Motor`
       : 'General Purpose Motor',
-    'Servo Motors': 'Industrial Servo Motor',
-    'Servo Drives': 'Industrial Servo Drive',
+    'Servo Motors': 'AC Servo Motor',
+    'AC Servo Motor': 'AC Servo Motor',
+    'Servo Motor': 'AC Servo Motor',
+    'Servo Drives': 'Servo Drive',
+    'Servo Drive': 'Servo Drive',
     'VFDs': 'Variable Frequency Drive',
-    'PLCs': 'Programmable Logic Controller',
-    'HMIs': 'Human Machine Interface',
+    'VFD': 'Variable Frequency Drive',
+    'Variable Frequency Drive': 'Variable Frequency Drive',
+    'PLCs': 'PLC Processor',
+    'PLC': 'PLC Processor',
+    'PLC Processor': 'PLC Processor',
+    'HMIs': 'HMI Touch Panel',
+    'HMI': 'HMI Touch Panel',
     'Power Supplies': 'Industrial Power Supply',
-    'I/O Modules': 'Industrial I/O Module',
-    'Proximity Sensors': 'Industrial Proximity Sensor',
+    'Power Supply': 'Industrial Power Supply',
+    'I/O Modules': 'PLC I/O Module',
+    'I/O Module': 'PLC I/O Module',
+    'PLC I/O Module': 'PLC I/O Module',
+    'Proximity Sensors': 'Proximity Sensor',
+    'Proximity Sensor': 'Proximity Sensor',
+    'Inductive Proximity Sensor': 'Inductive Proximity Sensor',
     'Photoelectric Sensors': 'Photoelectric Sensor',
+    'Photoelectric Sensor': 'Photoelectric Sensor',
     'Light Curtains': 'Safety Light Curtain',
-    'Laser Sensors': 'Industrial Laser Sensor',
-    'Pressure Sensors': 'Industrial Pressure Sensor',
-    'Temperature Sensors': 'Industrial Temperature Sensor',
-    'Pneumatic Cylinders': 'Pneumatic Air Cylinder',
-    'Pneumatic Valves': 'Pneumatic Control Valve',
-    'Pneumatic Grippers': 'Pneumatic Gripper',
-    'Hydraulic Pumps': 'Hydraulic Pump',
-    'Hydraulic Valves': 'Hydraulic Control Valve',
-    'Hydraulic Cylinders': 'Hydraulic Cylinder',
-    'Circuit Breakers': 'Industrial Circuit Breaker',
-    'Contactors': 'Motor Contactor',
-    'Safety Relays': 'Safety Relay Module',
-    'Control Relays': 'Industrial Control Relay',
-    'Bearings': 'Industrial Bearing',
-    'Linear Bearings': 'Linear Motion Bearing',
+    'Light Curtain': 'Safety Light Curtain',
+    'Laser Sensors': 'Laser Sensor',
+    'Laser Sensor': 'Laser Sensor',
+    'Pressure Sensors': 'Pressure Sensor',
+    'Pressure Sensor': 'Pressure Sensor',
+    'Temperature Sensors': 'Temperature Sensor',
+    'Temperature Sensor': 'Temperature Sensor',
+    'Barcode Scanner': 'Barcode Scanner',
+    'Barcode Scanners': 'Barcode Scanner',
+    'Barcode Reader': 'Barcode Scanner',
+    'Encoder': 'Rotary Encoder',
     'Encoders': 'Rotary Encoder',
-    'Gearboxes': 'Industrial Gearbox',
-    'Transformers': 'Industrial Transformer',
-    'Industrial Gateways': 'Industrial Communication Gateway',
-    'Network Modules': 'Industrial Network Module'
+    'Rotary Encoder': 'Rotary Encoder',
+    'Pneumatic Cylinders': 'Pneumatic Cylinder',
+    'Pneumatic Cylinder': 'Pneumatic Cylinder',
+    'Pneumatic Valves': 'Pneumatic Valve',
+    'Pneumatic Valve': 'Pneumatic Valve',
+    'Solenoid Valve': 'Solenoid Valve',
+    'Pneumatic Grippers': 'Pneumatic Gripper',
+    'Pneumatic Gripper': 'Pneumatic Gripper',
+    'Hydraulic Pumps': 'Hydraulic Pump',
+    'Hydraulic Pump': 'Hydraulic Pump',
+    'Hydraulic Valves': 'Hydraulic Valve',
+    'Hydraulic Valve': 'Hydraulic Valve',
+    'Hydraulic Cylinders': 'Hydraulic Cylinder',
+    'Hydraulic Cylinder': 'Hydraulic Cylinder',
+    'Circuit Breakers': 'Circuit Breaker',
+    'Circuit Breaker': 'Circuit Breaker',
+    'Contactors': 'Contactor',
+    'Contactor': 'Contactor',
+    'Safety Relays': 'Safety Relay',
+    'Safety Relay': 'Safety Relay',
+    'Control Relays': 'Control Relay',
+    'Control Relay': 'Control Relay',
+    'Relay': 'Control Relay',
+    'Bearings': 'Industrial Bearing',
+    'Bearing': 'Industrial Bearing',
+    'Ball Bearing': 'Ball Bearing',
+    'Linear Bearings': 'Linear Bearing',
+    'Linear Bearing': 'Linear Bearing',
+    'Gearboxes': 'Gearbox',
+    'Gearbox': 'Gearbox',
+    'Gear Reducer': 'Gear Reducer',
+    'Transformers': 'Transformer',
+    'Transformer': 'Transformer',
+    'Industrial Gateways': 'Industrial Gateway',
+    'Network Modules': 'Network Module',
+    'Network Module': 'Network Module',
+    'Communication Module': 'Communication Module',
+    'Timer': 'Timer',
+    'Counter': 'Counter',
+    'Temperature Controller': 'Temperature Controller',
+    'Panel Meter': 'Panel Meter',
+    'Limit Switch': 'Limit Switch',
+    'Push Button': 'Push Button',
+    'Safety Controller': 'Safety Controller',
+    'Stepper Motor': 'Stepper Motor',
+    'Stepper Drive': 'Stepper Drive',
+    'DC Drive': 'DC Drive',
+    'AC Drive': 'Variable Frequency Drive'
   };
 
-  return categoryTypeMap[productCategory] || 'Industrial Equipment';
+  return categoryTypeMap[productCategory] || productCategory || 'Industrial Equipment';
 }
 
 // -----------------------------------------------------------------------------
@@ -428,10 +656,13 @@ export default async function handler(req, res) {
     const bigcommerceCategoriesStr = bigcommerceCategories.join('*');
 
     // === GENERATE USERTYPE ===
-    const userType = generateUserType(categoryKey, product.specifications || {});
+    // Pass AI's usertype if available (comes from product.usertype or product.specifications.type)
+    const aiProductType = product.usertype || product.specifications?.type || null;
+    const userType = generateUserType(categoryKey, product.specifications || {}, aiProductType);
 
     console.log('=== FIELD FORMATTING ===');
     console.log('Product Category:', categoryKey, '→ Lookup:', categoryLookup);
+    console.log('AI Product Type:', aiProductType);
     console.log('Brand:', product.brand, '→', brandFormatted);
     console.log('MPN:', product.partNumber, '→', mpnFormatted);
     console.log('BigCommerce Brand ID:', bigcommerceBrandId);

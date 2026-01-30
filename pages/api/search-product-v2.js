@@ -956,10 +956,13 @@ export default async function handler(req, res) {
           ? `http://${req.headers.host}` 
           : `https://${req.headers.host}`;
         
-        const aspectsResponse = await fetch(`${baseUrl}/api/ebay/get-category-aspects?categoryId=${ebayCategoryId}`);
+        // Note: The endpoint is /api/ebay-category-aspects (NOT /api/ebay/get-category-aspects)
+        const aspectsResponse = await fetch(`${baseUrl}/api/ebay-category-aspects?categoryId=${ebayCategoryId}`);
         if (aspectsResponse.ok) {
           ebayAspects = await aspectsResponse.json();
           console.log('eBay Aspects Loaded:', ebayAspects?.totalAspects || 0, 'aspects');
+        } else {
+          console.log('eBay Aspects API returned:', aspectsResponse.status);
         }
       } catch (error) {
         console.log('Failed to fetch eBay aspects:', error.message);
