@@ -198,6 +198,7 @@ function formatItem(item) {
     sensingrange: item.sensingrange || '',
     outputtype: item.outputtype || '',
     ratio: item.ratio || '',
+    gearratio: item.gearratio || '',
     flowrate: item.flowrate || '',
     capacity: item.capacity || '',
     kva: item.kva || '',
@@ -229,16 +230,6 @@ function formatItem(item) {
     // ========== Channel Status ==========
     ebayid: item.ebayid || '',
     bigcommerceid: item.bigcommerceid || '',
-    bigcommerceproductid: item.bigcommerceproductid || '',
-    
-    // ========== DEBUG: Raw spec values from SureDone ==========
-    _debug_specs: {
-      voltage: item.voltage,
-      amperage: item.amperage,
-      horsepower: item.horsepower,
-      phase: item.phase,
-      hz: item.hz,
-      rpm: item.rpm
-    }
+    bigcommerceproductid: item.bigcommerceproductid || ''
   };
 }
