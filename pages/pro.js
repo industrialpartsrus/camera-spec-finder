@@ -8,44 +8,14 @@ import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import InventoryCheckAlert from '../components/InventoryCheckAlert';
 
-// Product category options - dynamically built from EBAY_CATEGORY_ID_TO_NAME
-// (defined after EBAY_CATEGORY_ID_TO_NAME is declared)
+// Product category options - will be built from EBAY_CATEGORY_ID_TO_NAME
 let CATEGORY_OPTIONS = [];
-
-// eBay MARKETPLACE Categories (main eBay listing categories - for display)
-const EBAY_MARKETPLACE_CATEGORIES = {
-  'Electric Motors': { id: '181732', path: 'Business & Industrial > Electric Motors' },
-  'Servo Motors': { id: '181732', path: 'Business & Industrial > Electric Motors' },
-  'Servo Drives': { id: '181737', path: 'Business & Industrial > Drives & Starters' },
-  'VFDs': { id: '181737', path: 'Business & Industrial > Drives & Starters' },
-  'PLCs': { id: '181739', path: 'Business & Industrial > PLCs & HMIs' },
-  'HMIs': { id: '181739', path: 'Business & Industrial > PLCs & HMIs' },
-  'Power Supplies': { id: '181738', path: 'Business & Industrial > Power Supplies' },
-  'I/O Modules': { id: '181739', path: 'Business & Industrial > PLCs & HMIs' },
-  'Proximity Sensors': { id: '181744', path: 'Business & Industrial > Sensors' },
-  'Photoelectric Sensors': { id: '181744', path: 'Business & Industrial > Sensors' },
-  'Light Curtains': { id: '181744', path: 'Business & Industrial > Sensors' },
-  'Laser Sensors': { id: '181744', path: 'Business & Industrial > Sensors' },
-  'Pressure Sensors': { id: '181744', path: 'Business & Industrial > Sensors' },
-  'Temperature Sensors': { id: '181744', path: 'Business & Industrial > Sensors' },
-  'Pneumatic Cylinders': { id: '181738', path: 'Business & Industrial > Pneumatics' },
-  'Pneumatic Valves': { id: '181738', path: 'Business & Industrial > Pneumatics' },
-  'Pneumatic Grippers': { id: '181738', path: 'Business & Industrial > Pneumatics' },
-  'Hydraulic Pumps': { id: '181738', path: 'Business & Industrial > Hydraulics' },
-  'Hydraulic Valves': { id: '181738', path: 'Business & Industrial > Hydraulics' },
-  'Hydraulic Cylinders': { id: '181738', path: 'Business & Industrial > Hydraulics' },
-  'Circuit Breakers': { id: '181738', path: 'Business & Industrial > Circuit Breakers' },
-  'Contactors': { id: '181738', path: 'Business & Industrial > Motor Starters' },
-  'Safety Relays': { id: '181739', path: 'Business & Industrial > Safety Equipment' },
-  'Control Relays': { id: '181738', path: 'Business & Industrial > Relays' },
-  'Bearings': { id: '181745', path: 'Business & Industrial > Bearings' },
-  'Linear Bearings': { id: '181745', path: 'Business & Industrial > Bearings' },
-  'Encoders': { id: '181737', path: 'Business & Industrial > Encoders' },
-  'Gearboxes': { id: '181732', path: 'Business & Industrial > Gearboxes' },
-  'Transformers': { id: '181738', path: 'Business & Industrial > Transformers' },
-  'Industrial Gateways': { id: '181739', path: 'Business & Industrial > Automation' },
-  'Network Modules': { id: '181739', path: 'Business & Industrial > Automation' }
-};
+// CATEGORY_DROPDOWN_OPTIONS will be built after EBAY_CATEGORY_ID_TO_NAME is defined
+let CATEGORY_DROPDOWN_OPTIONS = [];
+// EBAY_CATEGORY_TAXONOMY - will be built from EBAY_CATEGORY_ID_TO_NAME
+let EBAY_CATEGORY_TAXONOMY = {};
+// eBay MARKETPLACE Categories - will be built from EBAY_CATEGORY_ID_TO_NAME
+let EBAY_MARKETPLACE_CATEGORIES = {};
 
 // eBay Category ID to Name Lookup (309 categories from your active listings)
 const EBAY_CATEGORY_ID_TO_NAME = {
@@ -362,6 +332,34 @@ const EBAY_CATEGORY_ID_TO_NAME = {
 
 // Initialize CATEGORY_OPTIONS from eBay category names (sorted alphabetically)
 CATEGORY_OPTIONS = [...new Set(Object.values(EBAY_CATEGORY_ID_TO_NAME))].sort();
+
+// Build EBAY_CATEGORY_TAXONOMY from EBAY_CATEGORY_ID_TO_NAME
+// Path is "Business & Industrial > [category name]" - can be enhanced with full paths later
+EBAY_CATEGORY_TAXONOMY = Object.fromEntries(
+  Object.entries(EBAY_CATEGORY_ID_TO_NAME).map(([id, name]) => [
+    id,
+    { name, path: `Business & Industrial > ${name}` }
+  ])
+);
+
+// Build dropdown options with category ID and path
+// Format: "Category Name (123456)"
+CATEGORY_DROPDOWN_OPTIONS = Object.entries(EBAY_CATEGORY_ID_TO_NAME)
+  .map(([id, name]) => ({
+    id,
+    name,
+    path: `Business & Industrial > ${name}`,
+    display: `${name} (${id})`
+  }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+// Build EBAY_MARKETPLACE_CATEGORIES for backward compatibility
+EBAY_MARKETPLACE_CATEGORIES = Object.fromEntries(
+  Object.entries(EBAY_CATEGORY_ID_TO_NAME).map(([id, name]) => [
+    name,
+    { id, path: `Business & Industrial > ${name}` }
+  ])
+);
 
 // Map eBay Store Category names to likely eBay Product Category IDs
 // This helps infer the eBay Product Category when ebaycatid is empty
@@ -1464,30 +1462,50 @@ export default function ProListingBuilder() {
 
     try {
       await updateDoc(doc(db, 'products', itemId), { status: 'searching' });
-      const response = await fetch('/api/search-product', {
+      
+      // Use v2 API that fetches eBay item specifics from Taxonomy API
+      const response = await fetch('/api/search-product-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brand: item.brand, partNumber: item.partNumber })
       });
+      
       if (!response.ok) throw new Error(`API returned ${response.status}`);
       const data = await response.json();
+      
+      // Log metadata about eBay aspects for debugging
+      if (data._metadata) {
+        console.log('=== eBay Aspects Metadata ===');
+        console.log('Detected Category:', data._metadata.detectedCategory);
+        console.log('Category ID:', data._metadata.detectedCategoryId);
+        console.log('Aspects Loaded:', data._metadata.ebayAspectsLoaded);
+        console.log('Total Aspects:', data._metadata.totalAspects);
+      }
+      
       const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No product data found');
       const product = JSON.parse(jsonMatch[0]);
       
+      // Store eBay aspects with the product for reference
+      const ebayAspects = data._ebayAspects ? {
+        required: data._ebayAspects.required?.map(a => a.name) || [],
+        recommended: data._ebayAspects.recommended?.map(a => a.name) || []
+      } : null;
+      
       await updateDoc(doc(db, 'products', itemId), {
         status: 'complete',
         title: product.title || `${item.brand} ${item.partNumber}`,
-        productCategory: product.productCategory || '',
+        productCategory: product.productCategory || data._metadata?.detectedCategory || '',
         shortDescription: product.shortDescription || '',
         description: product.description || '',
         specifications: product.specifications || {},
         rawSpecifications: product.rawSpecifications || [],
         qualityFlag: product.qualityFlag || 'NEEDS_REVIEW',
-        ebayCategoryId: product.ebayCategory?.id || product.ebayCategoryId || '',
+        ebayCategoryId: product.ebayCategoryId || data._metadata?.detectedCategoryId || '',
         ebayStoreCategoryId: product.ebayStoreCategoryId || '',
-        bigcommerceCategoryId: product.bigcommerceCategoryId || ''
+        bigcommerceCategoryId: product.bigcommerceCategoryId || '',
+        ebayAspects: ebayAspects
       });
     } catch (error) {
       console.error('Processing error:', error);
@@ -1829,7 +1847,10 @@ export default function ProListingBuilder() {
                     <div className="flex gap-2">
                       <div className="flex-1 px-3 py-2 bg-gray-100 border rounded-lg text-sm">
                         {selected.productCategory ? (
-                          <span className="font-medium">{selected.productCategory}</span>
+                          <span className="font-medium">
+                            {selected.productCategory}
+                            {selected.ebayCategoryId && <span className="text-gray-500 ml-2">(ID: {selected.ebayCategoryId})</span>}
+                          </span>
                         ) : (
                           <span className="text-gray-400">Not detected</span>
                         )}
@@ -1841,22 +1862,31 @@ export default function ProListingBuilder() {
                         <RefreshCw className="w-4 h-4" /> Re-detect
                       </button>
                     </div>
-                    {selected.productCategory && EBAY_MARKETPLACE_CATEGORIES[selected.productCategory] && (
+                    {selected.ebayCategoryId && EBAY_CATEGORY_TAXONOMY[selected.ebayCategoryId] && (
                       <p className="text-xs text-green-700 mt-2 p-2 bg-green-50 rounded border border-green-200">
-                        📦 <strong>Full Path:</strong> {EBAY_MARKETPLACE_CATEGORIES[selected.productCategory].path}
-                        <br/>
-                        <span className="text-gray-500">Category ID: {EBAY_MARKETPLACE_CATEGORIES[selected.productCategory].id}</span>
+                        📦 <strong>Full eBay Path:</strong> {EBAY_CATEGORY_TAXONOMY[selected.ebayCategoryId].path}
                       </p>
                     )}
                     <details className="mt-2">
                       <summary className="text-xs text-blue-600 cursor-pointer hover:underline">Override category manually</summary>
                       <select 
-                        value={selected.productCategory || ''} 
-                        onChange={e => updateField(selected.id, 'productCategory', e.target.value)} 
-                        className="w-full px-3 py-2 border rounded-lg text-sm mt-2"
+                        value={selected.ebayCategoryId || ''} 
+                        onChange={e => {
+                          const catId = e.target.value;
+                          const catName = EBAY_CATEGORY_ID_TO_NAME[catId] || '';
+                          updateField(selected.id, 'ebayCategoryId', catId);
+                          if (catName) {
+                            updateField(selected.id, 'productCategory', catName);
+                          }
+                        }} 
+                        className="w-full px-3 py-2 border rounded-lg text-xs mt-2"
                       >
-                        <option value="">Select category...</option>
-                        {CATEGORY_OPTIONS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        <option value="">Select eBay category...</option>
+                        {CATEGORY_DROPDOWN_OPTIONS.map(cat => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name} ({cat.id})
+                          </option>
+                        ))}
                       </select>
                     </details>
                   </div>
