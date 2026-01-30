@@ -4,7 +4,7 @@
 // Pass 2: Category selection → eBay item specifics → Submit to SureDone
 
 import { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy 
 } from 'firebase/firestore';
@@ -20,7 +20,8 @@ const firebaseConfig = {
   appId: "1:726012298498:web:658b8138f964eed78ad033"
 };
 
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase only if not already initialized
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 
 // Condition options
