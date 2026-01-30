@@ -1627,12 +1627,17 @@ export default function ProListingBuilder() {
       const product = JSON.parse(jsonMatch[0]);
       
       // Store eBay aspects with the product for reference
-      const ebayAspects = data._ebayAspects ? {
-        required: data._ebayAspects.required?.map(a => a.name) || [],
-        recommended: data._ebayAspects.recommended?.map(a => a.name) || []
-      } : null;
+      // The aspects have 'ebayName' not 'name' based on ebay-category-aspects.js
+      let ebayAspects = null;
+      if (data._ebayAspects) {
+        ebayAspects = {
+          required: (data._ebayAspects.required || []).map(a => a.ebayName || a.name).filter(Boolean),
+          recommended: (data._ebayAspects.recommended || []).map(a => a.ebayName || a.name).filter(Boolean)
+        };
+      }
       
-      await updateDoc(doc(db, 'products', itemId), {
+      // Build update object, filtering out any undefined values
+      const updateData = {
         status: 'complete',
         title: product.title || `${item.brand} ${item.partNumber}`,
         productCategory: product.productType || data._metadata?.detectedCategory || '',
@@ -1644,10 +1649,18 @@ export default function ProListingBuilder() {
         qualityFlag: product.qualityFlag || 'NEEDS_REVIEW',
         ebayCategoryId: data._metadata?.detectedCategoryId || product.ebayCategoryId || '',
         ebayStoreCategoryId: data._metadata?.ebayStoreCategoryId || product.ebayStoreCategoryId || '',
-        ebayStoreCategoryId2: data._metadata?.ebayStoreCategoryId2 || '23399313015', // Default to ALL PRODUCTS
-        bigcommerceCategoryId: product.bigcommerceCategoryId || '',
-        ebayAspects: ebayAspects
-      });
+        ebayStoreCategoryId2: data._metadata?.ebayStoreCategoryId2 || '23399313015'
+      };
+      
+      // Only add optional fields if they have values (Firebase doesn't allow undefined)
+      if (product.bigcommerceCategoryId) {
+        updateData.bigcommerceCategoryId = product.bigcommerceCategoryId;
+      }
+      if (ebayAspects) {
+        updateData.ebayAspects = ebayAspects;
+      }
+      
+      await updateDoc(doc(db, 'products', itemId), updateData);
     } catch (error) {
       console.error('Processing error:', error);
       await updateDoc(doc(db, 'products', itemId), { status: 'error', error: error.message });
