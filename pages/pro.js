@@ -732,11 +732,20 @@ export default function ProListingBuilder() {
         'coilvoltage', 'enclosuretype', 'sensingrange', 'outputtype', 'ratio',
         'flowrate', 'capacity', 'kva', 'watts'
       ];
+      
+      // DEBUG: Log what we received
+      console.log('=== LOADING EXISTING LISTING DEBUG ===');
+      console.log('existingData keys count:', Object.keys(existingData).length);
+      console.log('Checking spec fields:');
       specFields.forEach(key => {
-        if (existingData[key] && existingData[key].toString().trim() !== '') {
+        const val = existingData[key];
+        console.log(`  ${key}: "${val}" (type: ${typeof val})`);
+        if (val && val.toString().trim() !== '') {
           specs[key] = existingData[key];
         }
       });
+      console.log('Final specs object:', specs);
+      console.log('Specs count:', Object.keys(specs).length);
 
       const docRef = await addDoc(collection(db, 'products'), {
         brand: existingData.brand || existingData.manufacturer || '',
