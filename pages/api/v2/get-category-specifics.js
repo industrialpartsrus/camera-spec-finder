@@ -1,12 +1,9 @@
 // pages/api/v2/get-category-specifics.js
-// PASS 2A: AI selects eBay category, then we fetch EXACT item specifics from eBay
-// Returns the real field names that eBay expects
-
-import Anthropic from '@anthropic-ai/sdk';
+// PASS 2A: Get eBay category and fetch ALL item specifics from eBay
+// Now includes OPTIONAL aspects (where most fields are!)
 
 // ============================================================================
 // PRODUCT TYPE TO EBAY CATEGORY MAPPING
-// These are eBay's official category IDs
 // ============================================================================
 
 const EBAY_CATEGORIES = {
@@ -17,8 +14,10 @@ const EBAY_CATEGORIES = {
   'Stepper Motor': { id: '9723', name: 'Stepper Motors' },
   'Electric Motor': { id: '181732', name: 'General Purpose Motors' },
   'AC Motor': { id: '181732', name: 'General Purpose Motors' },
+  'Induction Motor': { id: '181732', name: 'General Purpose Motors' },
   'DC Motor': { id: '181731', name: 'Definite Purpose Motors' },
   'Gearmotor': { id: '65452', name: 'Gearmotors' },
+  'Gear Motor': { id: '65452', name: 'Gearmotors' },
   
   // Drives
   'Servo Drive': { id: '78191', name: 'Servo Drives & Amplifiers' },
@@ -155,8 +154,10 @@ const EBAY_STORE_CATEGORIES = {
   'Stepper Motor': '17167471',
   'Electric Motor': '17167471',
   'AC Motor': '17167471',
+  'Induction Motor': '17167471',
   'DC Motor': '17167471',
   'Gearmotor': '17167471',
+  'Gear Motor': '17167471',
   
   // Drives
   'Servo Drive': '393390015',
@@ -236,7 +237,6 @@ const EBAY_STORE_CATEGORIES = {
   'Transformer': '5634104015',
   'Relay': '2242359015',
   'Control Relay': '2242359015',
-  'Safety Relay': '2464037015',
   'Solid State Relay': '2242359015',
   
   // Power Transmission
@@ -248,23 +248,13 @@ const EBAY_STORE_CATEGORIES = {
   'Linear Rail': '6690434015',
   'Linear Bearing': '4173713015',
   'Ball Bearing': '4173714015',
-  'Bearing': '6690505015',
-  
-  // Switches & Controls
-  'Limit Switch': '4173745015',
-  'Push Button': '4173735015',
-  'E-Stop': '4173756015',
-  'Selector Switch': '4173742015',
-  'Timer': '18373798',
-  'Counter': '18373799',
-  'Temperature Controller': '2461872015',
-  'Panel Meter': '5634088015'
+  'Bearing': '6690505015'
 };
 
 // ALL PRODUCTS store category (for Store Category 2)
 const ALL_PRODUCTS_STORE_CATEGORY = '23399313015';
 
-// Fields to IGNORE (don't fetch or display)
+// Fields to IGNORE (don't fetch or display) - User's request
 const IGNORED_FIELDS = [
   'California Prop 65 Warning',
   'Unit Type',
@@ -276,7 +266,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { productType, title, description, specifications } = req.body;
+  const { productType } = req.body;
 
   if (!productType) {
     return res.status(400).json({ error: 'productType is required' });
@@ -300,10 +290,11 @@ export default async function handler(req, res) {
     console.log('Store Category 1:', ebayStoreCategoryId);
     console.log('Store Category 2:', ebayStoreCategoryId2);
 
-    // Step 3: Fetch EXACT item specifics from eBay Taxonomy API
-    let ebayItemSpecifics = [];
+    // Step 3: Fetch ALL item specifics from eBay Taxonomy API
+    let allFields = [];
     let requiredFields = [];
     let recommendedFields = [];
+    let optionalFields = [];
 
     try {
       const baseUrl = req.headers.host?.includes('localhost')
@@ -317,39 +308,49 @@ export default async function handler(req, res) {
       if (aspectsResponse.ok) {
         const aspectsData = await aspectsResponse.json();
         
-        console.log('eBay Aspects Fetched:', aspectsData.totalAspects);
+        console.log('eBay API Total Aspects:', aspectsData.totalAspects);
+        console.log('Required count:', aspectsData.required?.length || 0);
+        console.log('Recommended count:', aspectsData.recommended?.length || 0);
+        console.log('Optional count:', aspectsData.optional?.length || 0);
 
         // Filter out ignored fields and format for UI
-        const filterAndFormat = (aspects) => {
+        const filterAndFormat = (aspects, isRequired = false) => {
           return (aspects || [])
             .filter(a => !IGNORED_FIELDS.includes(a.ebayName))
             .map(a => ({
               name: a.ebayName,                    // Display name (e.g., "Brand")
               fieldName: a.suredoneInlineField,    // SureDone field (e.g., "brand")
-              required: a.required,
+              required: isRequired || a.required,
+              usage: a.usage,
               mode: a.mode,                        // FREE_TEXT or SELECTION_ONLY
               allowedValues: a.allowedValues || [],
               dataType: a.dataType
             }));
         };
 
-        requiredFields = filterAndFormat(aspectsData.required);
-        recommendedFields = filterAndFormat(aspectsData.recommended);
+        // Get ALL types of fields - THIS IS THE FIX!
+        requiredFields = filterAndFormat(aspectsData.required, true);
+        recommendedFields = filterAndFormat(aspectsData.recommended, false);
+        optionalFields = filterAndFormat(aspectsData.optional, false);
         
-        // Combine all fields for display
-        ebayItemSpecifics = [...requiredFields, ...recommendedFields];
+        // Combine ALL fields - include OPTIONAL which has most of the specs
+        allFields = [...requiredFields, ...recommendedFields, ...optionalFields];
 
-        console.log('Required Fields:', requiredFields.length);
-        console.log('Recommended Fields:', recommendedFields.length);
-        console.log('Total (after filtering):', ebayItemSpecifics.length);
+        console.log('After filtering:');
+        console.log('  Required:', requiredFields.length);
+        console.log('  Recommended:', recommendedFields.length);
+        console.log('  Optional:', optionalFields.length);
+        console.log('  TOTAL:', allFields.length);
       } else {
         console.error('Failed to fetch eBay aspects:', aspectsResponse.status);
+        const errorText = await aspectsResponse.text();
+        console.error('Error details:', errorText);
       }
     } catch (error) {
       console.error('Error fetching eBay aspects:', error.message);
     }
 
-    // Return category info and item specifics
+    // Return category info and ALL item specifics
     res.status(200).json({
       success: true,
       stage: 'category_complete',
@@ -364,8 +365,9 @@ export default async function handler(req, res) {
         itemSpecifics: {
           required: requiredFields,
           recommended: recommendedFields,
-          all: ebayItemSpecifics,
-          totalCount: ebayItemSpecifics.length
+          optional: optionalFields,
+          all: allFields,
+          totalCount: allFields.length
         }
       },
       _meta: {

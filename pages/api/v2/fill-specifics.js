@@ -1,8 +1,16 @@
 // pages/api/v2/fill-specifics.js
 // PASS 2B: AI fills in values for the EXACT eBay item specifics
-// Uses the real field names from eBay - no transformation needed
+// Fixed: Better field name mapping and validation
 
 import Anthropic from '@anthropic-ai/sdk';
+
+// Convert eBay display name to SureDone field name
+// "Service Factor" → "servicefactor"
+// "Rated Load (HP)" → "ratedloadhp"
+function toSuredoneFieldName(ebayName) {
+  if (!ebayName) return '';
+  return ebayName.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -37,7 +45,8 @@ export default async function handler(req, res) {
       let fieldInfo = `- "${spec.name}"`;
       if (spec.allowedValues && spec.allowedValues.length > 0) {
         // For SELECTION_ONLY fields, show allowed values
-        fieldInfo += ` (MUST be one of: ${spec.allowedValues.slice(0, 15).join(', ')}${spec.allowedValues.length > 15 ? '...' : ''})`;
+        const displayValues = spec.allowedValues.slice(0, 20);
+        fieldInfo += ` (MUST be one of: ${displayValues.join(', ')}${spec.allowedValues.length > 20 ? '...' : ''})`;
       }
       if (spec.required) {
         fieldInfo += ' [REQUIRED]';
@@ -68,19 +77,31 @@ Return ONLY valid JSON (no markdown, no code blocks) with this structure:
 }
 
 RULES:
-1. Use the EXACT field names as shown (case-sensitive)
-2. For fields with allowed values, you MUST use one of the allowed values exactly
+1. Use the EXACT field names as shown (case-sensitive, including spaces and special characters)
+2. For fields with allowed values, you MUST use one of the allowed values exactly as written
 3. If you don't know a value with confidence, use null (not empty string, not "Unknown")
 4. Include units where appropriate (e.g., "24V", "1.5kW", "4mm")
 5. For "Brand" use: "${brand}"
 6. For "MPN" use: "${partNumber}"
 7. For "Type" field, use the specific product type like "${productType}"
+8. For "Model" use the part number: "${partNumber}"
 
-Research the product and fill in as many fields as you can accurately determine.`;
+MOTOR-SPECIFIC GUIDANCE (if applicable):
+- "Rated Load (HP)" - just the number, e.g., "3" not "3 HP"
+- "Base RPM" - just the number, e.g., "1800" not "1800 RPM"
+- "Nominal Rated Input Voltage" - include unit, e.g., "230 V" or "230/460 V"
+- "AC Phase" - use "Three Phase" or "Single Phase"
+- "Current Type" - use "AC" or "DC"
+- "Service Factor" - decimal number like "1.15"
+- "NEMA Frame Suffix" - just the letter like "T" or "TC"
+- "AC Motor Type" - common values: "Induction/Asynchronous", "Synchronous"
+- "Enclosure Type" - common values: "TEFC", "ODP", "TENV", "TEBC"
+
+Research the product ${brand} ${partNumber} and fill in as many fields as you can accurately determine.`;
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }]
     });
 
@@ -97,19 +118,31 @@ Research the product and fill in as many fields as you can accurately determine.
 
     // Count how many fields were filled
     const filledCount = Object.values(filledSpecifics).filter(v => v !== null && v !== '').length;
-    console.log('Fields Filled:', filledCount, 'of', itemSpecifics.length);
+    console.log('AI filled:', filledCount, 'of', itemSpecifics.length, 'fields');
     console.log('Confidence:', result.confidence);
 
     // Build the response with both the display format and SureDone format
     const specificsForUI = [];
     const specificsForSuredone = {};
 
+    // Log all field mappings for debugging
+    console.log('=== FIELD MAPPINGS ===');
+
     itemSpecifics.forEach(spec => {
+      // Get the value AI filled for this field (by eBay display name)
       const value = filledSpecifics[spec.name];
       
+      // Use the fieldName from the API, or generate it if missing
+      const suredoneField = spec.fieldName || toSuredoneFieldName(spec.name);
+      
+      // Log the mapping
+      if (value && value !== null) {
+        console.log(`  "${spec.name}" → "${suredoneField}": "${value}"`);
+      }
+      
       specificsForUI.push({
-        name: spec.name,           // eBay display name
-        fieldName: spec.fieldName, // SureDone field name
+        name: spec.name,           // eBay display name (e.g., "Service Factor")
+        fieldName: suredoneField,  // SureDone field name (e.g., "servicefactor")
         value: value || '',
         required: spec.required,
         allowedValues: spec.allowedValues,
@@ -117,10 +150,13 @@ Research the product and fill in as many fields as you can accurately determine.
       });
 
       // Only add to SureDone payload if we have a value
-      if (value && value !== null) {
-        specificsForSuredone[spec.fieldName] = value;
+      if (value && value !== null && value !== '' && value !== 'null') {
+        specificsForSuredone[suredoneField] = value;
       }
     });
+
+    console.log('=== SUREDONE PAYLOAD ===');
+    console.log(JSON.stringify(specificsForSuredone, null, 2));
 
     res.status(200).json({
       success: true,

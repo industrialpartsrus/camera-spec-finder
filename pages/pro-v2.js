@@ -1,7 +1,6 @@
 // pages/pro-v2.js
-// PRO LISTING BUILDER V2 - Clean Two-Pass Architecture
-// Pass 1: AI Research → User confirms title/description
-// Pass 2: Category selection → eBay item specifics → Submit to SureDone
+// PRO LISTING BUILDER V2 - Complete UI with all fixes
+// Fixes: WYSIWYG preview, labels, shipping dropdown, country of origin, price field
 
 import { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
@@ -20,7 +19,6 @@ const firebaseConfig = {
   appId: "1:726012298498:web:658b8138f964eed78ad033"
 };
 
-// Initialize Firebase only if not already initialized
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 
@@ -45,6 +43,17 @@ const SHIPPING_PROFILES = [
   { id: '161228820015', name: 'Local Pickup Only' }
 ];
 
+// Country of Origin options (ISO country names for eBay)
+const COUNTRY_OPTIONS = [
+  'United States', 'China', 'Japan', 'Germany', 'Taiwan', 'South Korea', 'Italy',
+  'United Kingdom', 'France', 'Mexico', 'Canada', 'Switzerland', 'Sweden',
+  'Netherlands', 'Belgium', 'Austria', 'Spain', 'Czech Republic', 'Poland',
+  'India', 'Brazil', 'Thailand', 'Malaysia', 'Singapore', 'Vietnam', 'Indonesia',
+  'Philippines', 'Turkey', 'Israel', 'Denmark', 'Finland', 'Norway', 'Ireland',
+  'Portugal', 'Hungary', 'Romania', 'Slovakia', 'Slovenia', 'Australia',
+  'New Zealand', 'South Africa', 'Unknown'
+];
+
 export default function ProV2() {
   // Auth
   const [userName, setUserName] = useState('');
@@ -59,6 +68,7 @@ export default function ProV2() {
   const [newPartNumber, setNewPartNumber] = useState('');
   const [newCondition, setNewCondition] = useState('used_good');
   const [newQuantity, setNewQuantity] = useState('1');
+  const [newPrice, setNewPrice] = useState('');
   const [newBoxLength, setNewBoxLength] = useState('');
   const [newBoxWidth, setNewBoxWidth] = useState('');
   const [newBoxHeight, setNewBoxHeight] = useState('');
@@ -82,7 +92,6 @@ export default function ProV2() {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setQueue(items);
       
-      // Update selected item if it changed
       if (selectedItem) {
         const updated = items.find(i => i.id === selectedItem.id);
         if (updated) setSelectedItem(updated);
@@ -132,11 +141,14 @@ export default function ProV2() {
       partNumber: newPartNumber.trim().toUpperCase(),
       condition: newCondition,
       quantity: newQuantity || '1',
+      price: newPrice || '0.00',
       boxLength: newBoxLength,
       boxWidth: newBoxWidth,
       boxHeight: newBoxHeight,
       weight: newWeight,
       shelfLocation: newShelf,
+      shippingProfileId: SHIPPING_PROFILES[0].id,
+      countryOfOrigin: '',
       status: 'pending',
       stage: 1,
       createdBy: userName,
@@ -149,6 +161,7 @@ export default function ProV2() {
       setNewPartNumber('');
       setNewCondition('used_good');
       setNewQuantity('1');
+      setNewPrice('');
       setNewBoxLength('');
       setNewBoxWidth('');
       setNewBoxHeight('');
@@ -228,7 +241,6 @@ export default function ProV2() {
     setIsFetchingSpecifics(true);
 
     try {
-      // 2A: Get category and specifics structure
       const categoryResponse = await fetch('/api/v2/get-category-specifics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -239,7 +251,8 @@ export default function ProV2() {
       const categoryResult = await categoryResponse.json();
       if (!categoryResult.success) throw new Error(categoryResult.error);
 
-      // 2B: Fill in values
+      console.log('Category result:', categoryResult.data.itemSpecifics.totalCount, 'aspects');
+
       const fillResponse = await fetch('/api/v2/fill-specifics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -319,6 +332,7 @@ export default function ProV2() {
             ebayStoreCategoryId: item.ebayStoreCategoryId,
             ebayStoreCategoryId2: item.ebayStoreCategoryId2,
             shippingProfileId: item.shippingProfileId || SHIPPING_PROFILES[0].id,
+            countryOfOrigin: item.countryOfOrigin,
             itemSpecifics: item.itemSpecificsForSuredone
           }
         })
@@ -444,14 +458,36 @@ export default function ProV2() {
                 {CONDITION_OPTIONS.map(opt => <option key={opt.key} value={opt.key}>{opt.label}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-2 mb-2">
-                <input type="text" placeholder="Qty" value={newQuantity} onChange={e => setNewQuantity(e.target.value)} className="px-3 py-2 border rounded" />
-                <input type="text" placeholder="Shelf" value={newShelf} onChange={e => setNewShelf(e.target.value)} className="px-3 py-2 border rounded" />
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Quantity</label>
+                  <input type="text" placeholder="1" value={newQuantity} onChange={e => setNewQuantity(e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Price ($)</label>
+                  <input type="text" placeholder="0.00" value={newPrice} onChange={e => setNewPrice(e.target.value)} className="w-full px-3 py-2 border rounded" />
+                </div>
+              </div>
+              <div className="mb-2">
+                <label className="block text-xs text-gray-500 mb-1">Shelf Location</label>
+                <input type="text" placeholder="e.g., B-12" value={newShelf} onChange={e => setNewShelf(e.target.value)} className="w-full px-3 py-2 border rounded" />
               </div>
               <div className="grid grid-cols-4 gap-1 mb-2">
-                <input type="text" placeholder="L" value={newBoxLength} onChange={e => setNewBoxLength(e.target.value)} className="px-2 py-1 border rounded text-sm" />
-                <input type="text" placeholder="W" value={newBoxWidth} onChange={e => setNewBoxWidth(e.target.value)} className="px-2 py-1 border rounded text-sm" />
-                <input type="text" placeholder="H" value={newBoxHeight} onChange={e => setNewBoxHeight(e.target.value)} className="px-2 py-1 border rounded text-sm" />
-                <input type="text" placeholder="Wt" value={newWeight} onChange={e => setNewWeight(e.target.value)} className="px-2 py-1 border rounded text-sm" />
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">L (in)</label>
+                  <input type="text" placeholder="L" value={newBoxLength} onChange={e => setNewBoxLength(e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">W (in)</label>
+                  <input type="text" placeholder="W" value={newBoxWidth} onChange={e => setNewBoxWidth(e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">H (in)</label>
+                  <input type="text" placeholder="H" value={newBoxHeight} onChange={e => setNewBoxHeight(e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Wt (lb)</label>
+                  <input type="text" placeholder="Wt" value={newWeight} onChange={e => setNewWeight(e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+                </div>
               </div>
               <button onClick={addToQueue} className="w-full bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700">+ Add to Queue</button>
             </div>
@@ -491,7 +527,7 @@ export default function ProV2() {
           </div>
 
           {/* Main Panel */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 80px)' }}>
             {selectedItem ? (
               <ItemPanel
                 item={selectedItem}
@@ -535,6 +571,14 @@ export default function ProV2() {
 // Item Panel Component
 function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdateField, onUpdateItemSpecific, isResearching, isFetchingSpecifics, isSubmitting }) {
   const stage = item.stage || 1;
+  const [showHtmlPreview, setShowHtmlPreview] = useState(true);
+  const [countrySearch, setCountrySearch] = useState('');
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+
+  // Filter countries based on search
+  const filteredCountries = COUNTRY_OPTIONS.filter(c => 
+    c.toLowerCase().includes(countrySearch.toLowerCase())
+  );
 
   return (
     <div className="max-w-4xl">
@@ -592,10 +636,39 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
             <input type="text" value={item.title || ''} onChange={e => onUpdateField(item.id, 'title', e.target.value)} maxLength={80} className="w-full px-3 py-2 border rounded" />
           </div>
 
-          {/* Description */}
+          {/* Description with WYSIWYG toggle */}
           <div className="bg-white rounded-lg border p-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea value={item.description || ''} onChange={e => onUpdateField(item.id, 'description', e.target.value)} rows={6} className="w-full px-3 py-2 border rounded font-mono text-sm" />
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium text-gray-700">Description</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowHtmlPreview(false)}
+                  className={`px-3 py-1 text-sm rounded ${!showHtmlPreview ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+                >
+                  HTML Code
+                </button>
+                <button
+                  onClick={() => setShowHtmlPreview(true)}
+                  className={`px-3 py-1 text-sm rounded ${showHtmlPreview ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+                >
+                  Preview
+                </button>
+              </div>
+            </div>
+            
+            {showHtmlPreview ? (
+              <div 
+                className="border rounded p-4 min-h-[200px] bg-gray-50 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: item.description || '<p class="text-gray-400">No description yet</p>' }}
+              />
+            ) : (
+              <textarea
+                value={item.description || ''}
+                onChange={e => onUpdateField(item.id, 'description', e.target.value)}
+                rows={10}
+                className="w-full px-3 py-2 border rounded font-mono text-sm"
+              />
+            )}
           </div>
 
           {/* Confirm (Stage 2) */}
@@ -630,13 +703,49 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
                 </div>
               </div>
 
+              {/* Country of Origin */}
+              <div className="bg-white rounded-lg border p-4">
+                <h3 className="font-semibold mb-3">🌍 Country of Origin</h3>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={item.countryOfOrigin || countrySearch}
+                    onChange={e => {
+                      setCountrySearch(e.target.value);
+                      setShowCountryDropdown(true);
+                    }}
+                    onFocus={() => setShowCountryDropdown(true)}
+                    placeholder="Start typing to search..."
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  {showCountryDropdown && filteredCountries.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredCountries.map(country => (
+                        <div
+                          key={country}
+                          onClick={() => {
+                            onUpdateField(item.id, 'countryOfOrigin', country);
+                            setCountrySearch('');
+                            setShowCountryDropdown(false);
+                          }}
+                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer"
+                        >
+                          {country}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">This will populate both "Country of Origin" and "Country/Region of Manufacture" fields</p>
+              </div>
+
               {/* Item Specifics */}
               <div className="bg-white rounded-lg border p-4">
                 <div className="flex justify-between mb-4">
                   <h3 className="font-semibold">📋 eBay Item Specifics</h3>
                   <span className="text-sm text-gray-500">{item.specificsFilledCount || 0} of {item.specificsTotalCount || 0} filled</span>
                 </div>
-                <div className="grid grid-cols-2 gap-4 max-h-80 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
                   {(item.itemSpecificsForUI || []).map((spec, idx) => (
                     <div key={idx}>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -685,26 +794,59 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
             </>
           )}
 
-          {/* Shipping Info */}
+          {/* Shipping & Location Info */}
           <div className="bg-white rounded-lg border p-4">
             <h3 className="font-semibold mb-3">📦 Shipping & Location</h3>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm text-gray-500 mb-1">Condition</label>
-                <p className="text-sm">{CONDITION_OPTIONS.find(c => c.key === item.condition)?.label}</p>
+                <p className="text-sm font-medium">{CONDITION_OPTIONS.find(c => c.key === item.condition)?.label}</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">Qty</label>
+                <label className="block text-sm text-gray-500 mb-1">Shipping Profile</label>
+                <select
+                  value={item.shippingProfileId || SHIPPING_PROFILES[0].id}
+                  onChange={e => onUpdateField(item.id, 'shippingProfileId', e.target.value)}
+                  className="w-full px-3 py-2 border rounded text-sm"
+                >
+                  {SHIPPING_PROFILES.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">Quantity</label>
                 <input type="text" value={item.quantity || '1'} onChange={e => onUpdateField(item.id, 'quantity', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">Price ($)</label>
+                <input type="text" value={item.price || ''} onChange={e => onUpdateField(item.id, 'price', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" placeholder="0.00" />
               </div>
               <div>
                 <label className="block text-sm text-gray-500 mb-1">Shelf</label>
                 <input type="text" value={item.shelfLocation || ''} onChange={e => onUpdateField(item.id, 'shelfLocation', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">Weight</label>
+                <label className="block text-sm text-gray-500 mb-1">Weight (lbs)</label>
                 <input type="text" value={item.weight || ''} onChange={e => onUpdateField(item.id, 'weight', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
               </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4 mt-3">
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">Length (in)</label>
+                <input type="text" value={item.boxLength || ''} onChange={e => onUpdateField(item.id, 'boxLength', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">Width (in)</label>
+                <input type="text" value={item.boxWidth || ''} onChange={e => onUpdateField(item.id, 'boxWidth', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">Height (in)</label>
+                <input type="text" value={item.boxHeight || ''} onChange={e => onUpdateField(item.id, 'boxHeight', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+              </div>
+              <div></div>
             </div>
           </div>
 
