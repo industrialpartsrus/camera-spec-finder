@@ -1,5 +1,5 @@
 // pages/api/v2/submit-listing.js
-// Clean SureDone submission - FIXED with correct BigCommerce categories and condition notes
+// Clean SureDone submission - FIXED with correct BigCommerce categories (comma-separated)
 
 // Brand ID mappings for BigCommerce
 const BRAND_IDS = {
@@ -16,165 +16,171 @@ const BRAND_IDS = {
   'weg': '95', 'marathon': '93', 'leeson': '91', 'teco': '96', 'reliance': '92'
 };
 
-// BigCommerce category mappings - FROM YOUR bigcommerce_categories.json
-// Format: "parent_id*child_id" or "parent_id*child_id*grandchild_id"
+// =============================================================================
+// BIGCOMMERCE CATEGORY MAPPINGS
+// FROM YOUR bigcommerce_categories.json
+// IMPORTANT: BigCommerce expects category IDs separated by COMMAS, not asterisks
+// Format: "id1,id2,id3" - item appears in ALL these categories
+// =============================================================================
 const BIGCOMMERCE_CATEGORIES = {
-  // Motors - Power Transmission -> Electric Motors
-  'Electric Motor': '23*26*30',
-  'AC Motor': '23*26*30',
-  'Induction Motor': '23*26*30',
-  'DC Motor': '23*26*30',
-  'Gearmotor': '23*26*30',
-  'Gear Motor': '23*26*30',
-  'Stepper Motor': '23*26*30',
+  // Motors - Shop All (23) + Power Transmission (26) + Electric Motors (30)
+  'Electric Motor': '23,26,30',
+  'AC Motor': '23,26,30',
+  'Induction Motor': '23,26,30',
+  'DC Motor': '23,26,30',
+  'Gearmotor': '23,26,30',
+  'Gear Motor': '23,26,30',
+  'Stepper Motor': '23,26,30',
   
-  // Servo Motors - Motion Control -> Servo Motors
-  'Servo Motor': '23*19*54',
-  'AC Servo Motor': '23*19*54',
-  'DC Servo Motor': '23*19*54',
+  // Servo Motors - Shop All (23) + Motion Control (19) + Servo Motors (54)
+  'Servo Motor': '23,19,54',
+  'AC Servo Motor': '23,19,54',
+  'DC Servo Motor': '23,19,54',
   
-  // Servo Drives - Motion Control -> Servo Drives & Amplifiers
-  'Servo Drive': '23*19*32',
-  'Servo Amplifier': '23*19*32',
+  // Servo Drives - Shop All (23) + Motion Control (19) + Servo Drives (32)
+  'Servo Drive': '23,19,32',
+  'Servo Amplifier': '23,19,32',
   
-  // VFDs - Speed Controls -> AC Drive
-  'VFD': '23*33*34',
-  'Variable Frequency Drive': '23*33*34',
-  'AC Drive': '23*33*34',
-  'Inverter': '23*33*34',
+  // VFDs - Shop All (23) + Speed Controls (33) + AC Drive (34)
+  'VFD': '23,33,34',
+  'Variable Frequency Drive': '23,33,34',
+  'AC Drive': '23,33,34',
+  'Inverter': '23,33,34',
   
-  // DC Drives - Speed Controls -> DC Drive
-  'DC Drive': '23*33*35',
+  // DC Drives - Shop All (23) + Speed Controls (33) + DC Drive (35)
+  'DC Drive': '23,33,35',
   
   // Stepper Drives
-  'Stepper Drive': '23*19*32',
+  'Stepper Drive': '23,19,32',
   
-  // PLCs - Automation Control -> PLC
-  'PLC': '23*18*24',
-  'PLC Processor': '23*18*24',
-  'PLC CPU': '23*18*24',
-  'PLC Chassis': '23*18*24',
+  // PLCs - Shop All (23) + Automation Control (18) + PLC (24)
+  'PLC': '23,18,24',
+  'PLC Processor': '23,18,24',
+  'PLC CPU': '23,18,24',
+  'PLC Chassis': '23,18,24',
   
-  // PLC I/O - Automation Control -> I/O Boards
-  'PLC I/O Module': '23*18*61',
-  'I/O Module': '23*18*61',
-  'Communication Module': '23*18*61',
+  // PLC I/O - Shop All (23) + Automation Control (18) + I/O Boards (61)
+  'PLC I/O Module': '23,18,61',
+  'I/O Module': '23,18,61',
+  'Communication Module': '23,18,61',
   
-  // PLC Power Supply - Automation Control -> Power Supply
-  'PLC Power Supply': '23*18*28',
-  'Power Supply': '23*18*28',
-  'Industrial Power Supply': '23*18*28',
+  // Power Supply - Shop All (23) + Automation Control (18) + Power Supply (28)
+  'PLC Power Supply': '23,18,28',
+  'Power Supply': '23,18,28',
+  'Industrial Power Supply': '23,18,28',
   
-  // HMI - Automation Control -> HMI
-  'HMI': '23*18*27',
-  'Touch Panel': '23*18*27',
-  'Operator Interface': '23*18*27',
+  // HMI - Shop All (23) + Automation Control (18) + HMI (27)
+  'HMI': '23,18,27',
+  'Touch Panel': '23,18,27',
+  'Operator Interface': '23,18,27',
   
-  // Proximity Sensors - Sensing Devices -> Proximity Sensors
-  'Proximity Sensor': '23*22*41',
-  'Inductive Proximity Sensor': '23*22*41',
-  'Capacitive Proximity Sensor': '23*22*41',
-  'Inductive Sensor': '23*22*41',
+  // Proximity Sensors - Shop All (23) + Sensing Devices (22) + Proximity Sensors (41)
+  'Proximity Sensor': '23,22,41',
+  'Inductive Proximity Sensor': '23,22,41',
+  'Capacitive Proximity Sensor': '23,22,41',
+  'Inductive Sensor': '23,22,41',
   
-  // Photoelectric Sensors - Sensing Devices -> Photoelectric Sensors
-  'Photoelectric Sensor': '23*22*42',
-  'Photo Sensor': '23*22*42',
+  // Photoelectric Sensors - Shop All (23) + Sensing Devices (22) + Photoelectric (42)
+  'Photoelectric Sensor': '23,22,42',
+  'Photo Sensor': '23,22,42',
   
-  // Fiber Optic Sensors - Sensing Devices -> Fiber Optic Sensors
-  'Fiber Optic Sensor': '23*22*78',
+  // Fiber Optic Sensors
+  'Fiber Optic Sensor': '23,22,78',
   
-  // Pressure Sensors - Sensing Devices -> Pressure Sensors
-  'Pressure Sensor': '23*22*116',
-  'Pressure Transducer': '23*22*116',
+  // Pressure Sensors
+  'Pressure Sensor': '23,22,116',
+  'Pressure Transducer': '23,22,116',
   
-  // Temperature Sensors - Sensing Devices -> Temperature Sensors
-  'Temperature Sensor': '23*22*65',
-  'Thermocouple': '23*22*65',
+  // Temperature Sensors
+  'Temperature Sensor': '23,22,65',
+  'Thermocouple': '23,22,65',
   
-  // Level Sensors - Sensing Devices -> Level Sensors
-  'Level Sensor': '23*22*148',
+  // Level Sensors
+  'Level Sensor': '23,22,148',
   
-  // Ultrasonic Sensors - Sensing Devices -> Ultrasonic Sensors
-  'Ultrasonic Sensor': '23*22*115',
+  // Ultrasonic Sensors
+  'Ultrasonic Sensor': '23,22,115',
   
-  // Light Curtains - Sensing Devices -> Light Curtains
-  'Light Curtain': '23*22*71',
-  'Safety Light Curtain': '23*22*71',
+  // Light Curtains
+  'Light Curtain': '23,22,71',
+  'Safety Light Curtain': '23,22,71',
   
-  // Barcode Scanners - Sensing Devices -> Barcode Scanners
-  'Barcode Scanner': '23*22*124',
-  'Barcode Reader': '23*22*124',
+  // Barcode Scanners
+  'Barcode Scanner': '23,22,124',
+  'Barcode Reader': '23,22,124',
   
-  // Encoders - Motion Control -> Encoders
-  'Encoder': '23*19*81',
-  'Rotary Encoder': '23*19*81',
-  'Linear Encoder': '23*19*81',
+  // Encoders - Shop All (23) + Motion Control (19) + Encoders (81)
+  'Encoder': '23,19,81',
+  'Rotary Encoder': '23,19,81',
+  'Linear Encoder': '23,19,81',
   
-  // Safety Relays - Industrial Controls -> Safety Relays
-  'Safety Relay': '23*49*96',
-  'Safety Controller': '23*49*96',
+  // Safety Relays - Shop All (23) + Industrial Controls (49) + Safety Relays (96)
+  'Safety Relay': '23,49,96',
+  'Safety Controller': '23,49,96',
   
-  // Pneumatic Cylinders - Pneumatics -> Cylinders
-  'Pneumatic Cylinder': '23*46*47',
-  'Air Cylinder': '23*46*47',
+  // Pneumatic Cylinders - Shop All (23) + Pneumatics (46) + Cylinders (47)
+  'Pneumatic Cylinder': '23,46,47',
+  'Air Cylinder': '23,46,47',
   
-  // Pneumatic Valves - Pneumatics -> Valves & Manifolds
-  'Pneumatic Valve': '23*46*68',
-  'Solenoid Valve': '23*74*76',
+  // Pneumatic Valves - Shop All (23) + Pneumatics (46) + Valves (68)
+  'Pneumatic Valve': '23,46,68',
   
-  // Pneumatic Grippers - Pneumatics -> Grippers
-  'Pneumatic Gripper': '23*46*117',
+  // Solenoid Valves - Shop All (23) + Valves (74) + Solenoid Valves (76)
+  'Solenoid Valve': '23,74,76',
   
-  // Pneumatic Regulators - Pneumatics -> Regulators
-  'Air Regulator': '23*46*86',
+  // Pneumatic Grippers
+  'Pneumatic Gripper': '23,46,117',
   
-  // Hydraulic Cylinders - Hydraulics -> Cylinders
-  'Hydraulic Cylinder': '23*84*107',
+  // Pneumatic Regulators
+  'Air Regulator': '23,46,86',
   
-  // Hydraulic Valves - Hydraulics -> Control Valves
-  'Hydraulic Valve': '23*84*91',
+  // Hydraulic Cylinders - Shop All (23) + Hydraulics (84) + Cylinders (107)
+  'Hydraulic Cylinder': '23,84,107',
   
-  // Hydraulic Pumps - Hydraulics -> Pumps
-  'Hydraulic Pump': '23*84*94',
+  // Hydraulic Valves
+  'Hydraulic Valve': '23,84,91',
   
-  // Circuit Breakers - Electrical -> Circuit Breakers
-  'Circuit Breaker': '23*20*44',
+  // Hydraulic Pumps
+  'Hydraulic Pump': '23,84,94',
   
-  // Contactors - Industrial Controls -> Motor Starters
-  'Contactor': '23*49*50',
-  'Motor Starter': '23*49*50',
+  // Circuit Breakers - Shop All (23) + Electrical (20) + Circuit Breakers (44)
+  'Circuit Breaker': '23,20,44',
   
-  // Transformers - Electrical -> Transformers
-  'Transformer': '23*20*37',
+  // Contactors - Shop All (23) + Industrial Controls (49) + Motor Starters (50)
+  'Contactor': '23,49,50',
+  'Motor Starter': '23,49,50',
   
-  // Relays - Industrial Controls -> Relays
-  'Relay': '23*49*66',
-  'Control Relay': '23*49*51',
-  'Solid State Relay': '23*49*66',
+  // Transformers - Shop All (23) + Electrical (20) + Transformers (37)
+  'Transformer': '23,20,37',
   
-  // Bearings - Power Transmission -> Bearings
-  'Bearing': '23*26*43',
-  'Ball Bearing': '23*26*67',
-  'Linear Bearing': '23*26*70',
+  // Relays - Shop All (23) + Industrial Controls (49) + Relays (66)
+  'Relay': '23,49,66',
+  'Control Relay': '23,49,51',
+  'Solid State Relay': '23,49,66',
   
-  // Gear Reducers - Power Transmission -> Gear Reducer
-  'Gearbox': '23*26*36',
-  'Gear Reducer': '23*26*36',
+  // Bearings - Shop All (23) + Power Transmission (26) + Bearings (43)
+  'Bearing': '23,26,43',
+  'Ball Bearing': '23,26,67',
+  'Linear Bearing': '23,26,70',
   
-  // Limit Switches - Industrial Controls -> Limit Switches
-  'Limit Switch': '23*49*58',
+  // Gear Reducers - Shop All (23) + Power Transmission (26) + Gear Reducer (36)
+  'Gearbox': '23,26,36',
+  'Gear Reducer': '23,26,36',
   
-  // Push Buttons - Industrial Controls -> Push Buttons & Switches
-  'Push Button': '23*49*64',
+  // Limit Switches - Industrial Controls (49) + Limit Switches (58)
+  'Limit Switch': '23,49,58',
   
-  // Timers - Industrial Controls -> Timers & Counters
-  'Timer': '23*49*62',
-  'Counter': '23*49*62',
+  // Push Buttons
+  'Push Button': '23,49,64',
   
-  // Temperature Controllers - Industrial Controls -> Temperature Controllers
-  'Temperature Controller': '23*49*63',
+  // Timers
+  'Timer': '23,49,62',
+  'Counter': '23,49,62',
   
-  // Default
+  // Temperature Controllers
+  'Temperature Controller': '23,49,63',
+  
+  // Default - just Shop All
   'Industrial Equipment': '23'
 };
 
@@ -307,6 +313,8 @@ export default async function handler(req, res) {
     const mpnFormatted = listing.partNumber.toUpperCase();
     const modelFormatted = (listing.model || listing.partNumber).toUpperCase();
     const bigcommerceBrandId = getBrandId(listing.brand);
+    
+    // Get BigCommerce categories - now using comma-separated format
     const bigcommerceCategories = BIGCOMMERCE_CATEGORIES[listing.productType] || '23';
     const keywords = generateKeywords(listing);
 
@@ -341,7 +349,7 @@ export default async function handler(req, res) {
     const conditionValue = listing.condition?.suredoneValue || 'Used';
     formData.append('condition', conditionValue);
     
-    // CONDITION NOTES - FIX: Add condition notes to SureDone
+    // CONDITION NOTES
     if (listing.condition?.descriptionNote || listing.conditionNotes) {
       const notes = listing.condition?.descriptionNote || listing.conditionNotes;
       formData.append('notes', notes);
@@ -401,6 +409,8 @@ export default async function handler(req, res) {
     }
 
     // === ITEM SPECIFICS ===
+    // These should come in as short field names (like 'ratedloadhp', 'baserpm')
+    // which SureDone uses for Recommended fields
     console.log('=== ITEM SPECIFICS ===');
     if (listing.itemSpecifics && typeof listing.itemSpecifics === 'object') {
       for (const [fieldName, value] of Object.entries(listing.itemSpecifics)) {
