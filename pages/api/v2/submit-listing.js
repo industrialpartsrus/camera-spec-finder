@@ -1,6 +1,5 @@
 // pages/api/v2/submit-listing.js
-// Clean SureDone submission - Complete version with all BigCommerce fields
-// Fixed field mapping for eBay item specifics
+// Clean SureDone submission - FIXED with correct BigCommerce categories and condition notes
 
 // Brand ID mappings for BigCommerce
 const BRAND_IDS = {
@@ -14,102 +13,166 @@ const BRAND_IDS = {
   'fuji': '84', 'fuji electric': '84', 'danfoss': '94', 'ckd': '157', 'iai': '150',
   'oriental motor': '104', 'vickers': '137', 'eaton': '72', 'cutler hammer': '72',
   'cutler-hammer': '72', 'phoenix contact': '50', 'wago': '50', 'pilz': '155',
-  'bihl+wiedemann': '97', 'bihl wiedemann': '97', 'b&r': '97', 'b&r automation': '97',
   'weg': '95', 'marathon': '93', 'leeson': '91', 'teco': '96', 'reliance': '92'
 };
 
-// BigCommerce category mappings - Full paths with parent categories
+// BigCommerce category mappings - FROM YOUR bigcommerce_categories.json
+// Format: "parent_id*child_id" or "parent_id*child_id*grandchild_id"
 const BIGCOMMERCE_CATEGORIES = {
-  // Motors - Shop All > Power Transmission > Electric Motors
-  'Servo Motor': '23*26*54',
-  'AC Servo Motor': '23*26*54',
-  'DC Servo Motor': '23*26*54',
-  'Stepper Motor': '23*26*30',
+  // Motors - Power Transmission -> Electric Motors
   'Electric Motor': '23*26*30',
   'AC Motor': '23*26*30',
-  'DC Motor': '23*26*30',
   'Induction Motor': '23*26*30',
+  'DC Motor': '23*26*30',
   'Gearmotor': '23*26*30',
   'Gear Motor': '23*26*30',
+  'Stepper Motor': '23*26*30',
   
-  // Drives
+  // Servo Motors - Motion Control -> Servo Motors
+  'Servo Motor': '23*19*54',
+  'AC Servo Motor': '23*19*54',
+  'DC Servo Motor': '23*19*54',
+  
+  // Servo Drives - Motion Control -> Servo Drives & Amplifiers
   'Servo Drive': '23*19*32',
   'Servo Amplifier': '23*19*32',
+  
+  // VFDs - Speed Controls -> AC Drive
   'VFD': '23*33*34',
   'Variable Frequency Drive': '23*33*34',
   'AC Drive': '23*33*34',
-  'DC Drive': '23*33',
-  'Stepper Drive': '23*19*32',
   'Inverter': '23*33*34',
   
-  // PLCs
+  // DC Drives - Speed Controls -> DC Drive
+  'DC Drive': '23*33*35',
+  
+  // Stepper Drives
+  'Stepper Drive': '23*19*32',
+  
+  // PLCs - Automation Control -> PLC
   'PLC': '23*18*24',
   'PLC Processor': '23*18*24',
   'PLC CPU': '23*18*24',
   'PLC Chassis': '23*18*24',
-  'PLC Power Supply': '23*18*28',
+  
+  // PLC I/O - Automation Control -> I/O Boards
   'PLC I/O Module': '23*18*61',
   'I/O Module': '23*18*61',
   'Communication Module': '23*18*61',
+  
+  // PLC Power Supply - Automation Control -> Power Supply
+  'PLC Power Supply': '23*18*28',
+  'Power Supply': '23*18*28',
+  'Industrial Power Supply': '23*18*28',
+  
+  // HMI - Automation Control -> HMI
   'HMI': '23*18*27',
   'Touch Panel': '23*18*27',
   'Operator Interface': '23*18*27',
-  'Power Supply': '23*18*28',
   
-  // Sensors
+  // Proximity Sensors - Sensing Devices -> Proximity Sensors
   'Proximity Sensor': '23*22*41',
   'Inductive Proximity Sensor': '23*22*41',
   'Capacitive Proximity Sensor': '23*22*41',
+  'Inductive Sensor': '23*22*41',
+  
+  // Photoelectric Sensors - Sensing Devices -> Photoelectric Sensors
   'Photoelectric Sensor': '23*22*42',
-  'Fiber Optic Sensor': '23*22*42',
+  'Photo Sensor': '23*22*42',
+  
+  // Fiber Optic Sensors - Sensing Devices -> Fiber Optic Sensors
+  'Fiber Optic Sensor': '23*22*78',
+  
+  // Pressure Sensors - Sensing Devices -> Pressure Sensors
   'Pressure Sensor': '23*22*116',
+  'Pressure Transducer': '23*22*116',
+  
+  // Temperature Sensors - Sensing Devices -> Temperature Sensors
   'Temperature Sensor': '23*22*65',
-  'Flow Sensor': '23*22',
-  'Level Sensor': '23*22*115',
-  'Laser Sensor': '23*22*41',
-  'Color Sensor': '23*22',
+  'Thermocouple': '23*22*65',
+  
+  // Level Sensors - Sensing Devices -> Level Sensors
+  'Level Sensor': '23*22*148',
+  
+  // Ultrasonic Sensors - Sensing Devices -> Ultrasonic Sensors
+  'Ultrasonic Sensor': '23*22*115',
+  
+  // Light Curtains - Sensing Devices -> Light Curtains
   'Light Curtain': '23*22*71',
   'Safety Light Curtain': '23*22*71',
-  'Barcode Scanner': '23*22',
+  
+  // Barcode Scanners - Sensing Devices -> Barcode Scanners
+  'Barcode Scanner': '23*22*124',
+  'Barcode Reader': '23*22*124',
+  
+  // Encoders - Motion Control -> Encoders
   'Encoder': '23*19*81',
   'Rotary Encoder': '23*19*81',
+  'Linear Encoder': '23*19*81',
   
-  // Pneumatics
+  // Safety Relays - Industrial Controls -> Safety Relays
+  'Safety Relay': '23*49*96',
+  'Safety Controller': '23*49*96',
+  
+  // Pneumatic Cylinders - Pneumatics -> Cylinders
   'Pneumatic Cylinder': '23*46*47',
   'Air Cylinder': '23*46*47',
+  
+  // Pneumatic Valves - Pneumatics -> Valves & Manifolds
   'Pneumatic Valve': '23*46*68',
-  'Solenoid Valve': '23*46*68',
+  'Solenoid Valve': '23*74*76',
+  
+  // Pneumatic Grippers - Pneumatics -> Grippers
   'Pneumatic Gripper': '23*46*117',
   
-  // Hydraulics
+  // Pneumatic Regulators - Pneumatics -> Regulators
+  'Air Regulator': '23*46*86',
+  
+  // Hydraulic Cylinders - Hydraulics -> Cylinders
   'Hydraulic Cylinder': '23*84*107',
+  
+  // Hydraulic Valves - Hydraulics -> Control Valves
   'Hydraulic Valve': '23*84*91',
+  
+  // Hydraulic Pumps - Hydraulics -> Pumps
   'Hydraulic Pump': '23*84*94',
   
-  // Electrical
+  // Circuit Breakers - Electrical -> Circuit Breakers
   'Circuit Breaker': '23*20*44',
+  
+  // Contactors - Industrial Controls -> Motor Starters
   'Contactor': '23*49*50',
   'Motor Starter': '23*49*50',
-  'Transformer': '23*20*37',
-  'Relay': '23*49*51',
-  'Control Relay': '23*49*51',
-  'Safety Relay': '23*49*96',
   
-  // Power Transmission
+  // Transformers - Electrical -> Transformers
+  'Transformer': '23*20*37',
+  
+  // Relays - Industrial Controls -> Relays
+  'Relay': '23*49*66',
+  'Control Relay': '23*49*51',
+  'Solid State Relay': '23*49*66',
+  
+  // Bearings - Power Transmission -> Bearings
+  'Bearing': '23*26*43',
+  'Ball Bearing': '23*26*67',
+  'Linear Bearing': '23*26*70',
+  
+  // Gear Reducers - Power Transmission -> Gear Reducer
   'Gearbox': '23*26*36',
   'Gear Reducer': '23*26*36',
-  'Linear Bearing': '23*26*70',
-  'Ball Bearing': '23*26*43',
-  'Bearing': '23*26*43',
-  'Linear Guide': '23*26',
-  'Linear Rail': '23*26',
-  'Ball Screw': '23*26',
   
-  // Controls
-  'Timer': '23*49',
-  'Counter': '23*49',
-  'Temperature Controller': '23*49',
-  'Panel Meter': '23*49',
+  // Limit Switches - Industrial Controls -> Limit Switches
+  'Limit Switch': '23*49*58',
+  
+  // Push Buttons - Industrial Controls -> Push Buttons & Switches
+  'Push Button': '23*49*64',
+  
+  // Timers - Industrial Controls -> Timers & Counters
+  'Timer': '23*49*62',
+  'Counter': '23*49*62',
+  
+  // Temperature Controllers - Industrial Controls -> Temperature Controllers
+  'Temperature Controller': '23*49*63',
   
   // Default
   'Industrial Equipment': '23'
@@ -148,7 +211,6 @@ function getBrandId(brandName) {
   return BRAND_IDS[brandLower] || null;
 }
 
-// Generate SEO keywords from product info
 function generateKeywords(listing) {
   const keywords = [
     listing.brand,
@@ -157,21 +219,6 @@ function generateKeywords(listing) {
     listing.manufacturer,
     listing.model
   ].filter(Boolean);
-  
-  // Add common search terms based on product type
-  const typeKeywords = {
-    'AC Motor': ['electric motor', 'induction motor', 'industrial motor'],
-    'Servo Motor': ['servo', 'servo motor', 'industrial servo'],
-    'VFD': ['variable frequency drive', 'inverter', 'ac drive'],
-    'PLC': ['programmable logic controller', 'plc', 'automation controller'],
-    'Proximity Sensor': ['proximity', 'sensor', 'inductive sensor'],
-    'Pneumatic Cylinder': ['air cylinder', 'pneumatic actuator', 'cylinder']
-  };
-  
-  if (typeKeywords[listing.productType]) {
-    keywords.push(...typeKeywords[listing.productType]);
-  }
-  
   return keywords.join(',');
 }
 
@@ -186,11 +233,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Listing data is required' });
   }
 
-  console.log('=== SUBMIT TO SUREDONE (V2 - COMPLETE) ===');
+  console.log('=== SUBMIT TO SUREDONE (V2) ===');
   console.log('Title:', listing.title);
   console.log('Brand:', listing.brand);
   console.log('Part Number:', listing.partNumber);
   console.log('Product Type:', listing.productType);
+  console.log('Condition:', listing.condition);
 
   const SUREDONE_USER = process.env.SUREDONE_USER;
   const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
@@ -286,13 +334,18 @@ export default async function handler(req, res) {
     // UPC
     if (upc) formData.append('upc', upc);
     
-    // Product Type (usertype)
+    // Product Type
     formData.append('usertype', listing.productType || 'Industrial Equipment');
     
     // Condition
-    formData.append('condition', listing.condition?.suredoneValue || 'Used');
-    if (listing.conditionNotes) {
-      formData.append('notes', listing.conditionNotes);
+    const conditionValue = listing.condition?.suredoneValue || 'Used';
+    formData.append('condition', conditionValue);
+    
+    // CONDITION NOTES - FIX: Add condition notes to SureDone
+    if (listing.condition?.descriptionNote || listing.conditionNotes) {
+      const notes = listing.condition?.descriptionNote || listing.conditionNotes;
+      formData.append('notes', notes);
+      console.log('Condition Notes:', notes.substring(0, 50) + '...');
     }
 
     // Dimensions & Weight
@@ -321,12 +374,12 @@ export default async function handler(req, res) {
 
     // Shipping & Returns
     formData.append('ebayshippingprofileid', listing.shippingProfileId || DEFAULT_SHIPPING_PROFILE);
-    const isForParts = listing.condition?.suredoneValue === 'For Parts or Not Working';
+    const isForParts = conditionValue === 'For Parts or Not Working';
     if (!isForParts) {
       formData.append('ebayreturnprofileid', listing.returnProfileId || DEFAULT_RETURN_PROFILE);
     }
 
-    // === BIGCOMMERCE FIELDS (COMPLETE) ===
+    // === BIGCOMMERCE FIELDS ===
     formData.append('bigcommercecategories', bigcommerceCategories);
     if (bigcommerceBrandId) formData.append('bigcommercebrandid', bigcommerceBrandId);
     formData.append('bigcommerceisconditionshown', 'on');
@@ -335,25 +388,10 @@ export default async function handler(req, res) {
     formData.append('bigcommerceisvisible', 'on');
     formData.append('bigcommercechannels', '1');
     formData.append('bigcommercempn', mpnFormatted);
-    
-    // Related products (-1 = auto-relate)
     formData.append('bigcommercerelatedproducts', '-1');
-    
-    // Page title (SEO)
     formData.append('bigcommercepagetitle', listing.title);
-    
-    // Meta description (SEO)
-    if (listing.shortDescription) {
-      formData.append('bigcommercemetadescription', listing.shortDescription);
-    } else {
-      // Generate a short description from title
-      formData.append('bigcommercemetadescription', `${listing.title} - Available at Industrial Parts R Us`);
-    }
-    
-    // Meta keywords (SEO)
+    formData.append('bigcommercemetadescription', listing.shortDescription || `${listing.title} - Available at Industrial Parts R Us`);
     formData.append('bigcommercemetakeywords', keywords);
-    
-    // Search keywords
     formData.append('bigcommercesearchkeywords', keywords);
 
     // === COUNTRY OF ORIGIN ===
@@ -362,13 +400,11 @@ export default async function handler(req, res) {
       formData.append('countryregionofmanufacture', listing.countryOfOrigin);
     }
 
-    // === ITEM SPECIFICS - DIRECT PASSTHROUGH ===
+    // === ITEM SPECIFICS ===
     console.log('=== ITEM SPECIFICS ===');
-    
     if (listing.itemSpecifics && typeof listing.itemSpecifics === 'object') {
       for (const [fieldName, value] of Object.entries(listing.itemSpecifics)) {
         if (value && value !== null && value !== '' && value !== 'null' && value !== 'undefined') {
-          // Use the SureDone field name directly
           formData.append(fieldName, value);
           console.log(`  ${fieldName}: ${value}`);
         }

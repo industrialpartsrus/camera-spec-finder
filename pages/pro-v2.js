@@ -1,6 +1,5 @@
 // pages/pro-v2.js
-// PRO LISTING BUILDER V2 - Complete UI with all fixes
-// Fixes: WYSIWYG preview, labels, shipping dropdown, country of origin, price field
+// PRO LISTING BUILDER V2 - FIXED: Correct shipping profiles, price moved to later stage
 
 import { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
@@ -22,28 +21,81 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 
-// Condition options
+// Condition options with descriptions for SureDone
 const CONDITION_OPTIONS = [
-  { key: 'new_in_box', label: 'New in Box', suredoneValue: 'New' },
-  { key: 'new_open_box', label: 'New Other (Open Box)', suredoneValue: 'New Other' },
-  { key: 'new_no_packaging', label: 'New not in Original Packaging', suredoneValue: 'New Other' },
-  { key: 'new_missing_hardware', label: 'New - Missing Hardware', suredoneValue: 'New Other' },
-  { key: 'refurbished', label: 'Manufacturer Refurbished', suredoneValue: 'Manufacturer Refurbished' },
-  { key: 'used_excellent', label: 'Used - Excellent', suredoneValue: 'Used' },
-  { key: 'used_good', label: 'Used - Good', suredoneValue: 'Used' },
-  { key: 'used_fair', label: 'Used - Fair', suredoneValue: 'Used' },
-  { key: 'for_parts', label: 'For Parts or Not Working', suredoneValue: 'For Parts or Not Working' }
+  { 
+    key: 'new_in_box', 
+    label: 'New in Box', 
+    suredoneValue: 'New',
+    descriptionNote: 'This item is BRAND NEW and FACTORY SEALED in the original manufacturer packaging.'
+  },
+  { 
+    key: 'new_open_box', 
+    label: 'New Other (Open Box)', 
+    suredoneValue: 'New Other',
+    descriptionNote: 'This item is NEW and has never been used or installed. The original packaging has been opened for inspection or photography, but all original contents are included.'
+  },
+  { 
+    key: 'new_no_packaging', 
+    label: 'New not in Original Packaging', 
+    suredoneValue: 'New Other',
+    descriptionNote: 'This item is NEW and has never been used or installed. It is not in the original manufacturer packaging, but all components are included.'
+  },
+  { 
+    key: 'new_missing_hardware', 
+    label: 'New - Missing Hardware', 
+    suredoneValue: 'New Other',
+    descriptionNote: 'This item is NEW and has never been used or installed. Original mounting hardware or accessories may not be included - please see photos for exactly what is included.'
+  },
+  { 
+    key: 'refurbished', 
+    label: 'Manufacturer Refurbished', 
+    suredoneValue: 'Manufacturer Refurbished',
+    descriptionNote: 'This item has been professionally refurbished by the manufacturer or an authorized service center. It has been tested and is fully functional.'
+  },
+  { 
+    key: 'used_excellent', 
+    label: 'Used - Excellent', 
+    suredoneValue: 'Used',
+    descriptionNote: 'This item is USED and in EXCELLENT condition. It has been tested and is fully functional with minimal signs of wear.'
+  },
+  { 
+    key: 'used_good', 
+    label: 'Used - Good', 
+    suredoneValue: 'Used',
+    descriptionNote: 'This item is USED and in GOOD condition. It has been tested and is fully functional with normal signs of wear from use.'
+  },
+  { 
+    key: 'used_fair', 
+    label: 'Used - Fair', 
+    suredoneValue: 'Used',
+    descriptionNote: 'This item is USED and in FAIR condition. It has been tested and is functional, but shows visible signs of wear. Please see photos for actual condition.'
+  },
+  { 
+    key: 'for_parts', 
+    label: 'For Parts or Not Working', 
+    suredoneValue: 'For Parts or Not Working',
+    descriptionNote: 'This item is being sold FOR PARTS OR NOT WORKING. It may be damaged, incomplete, or non-functional. Sold AS-IS with no warranty or returns.'
+  }
 ];
 
-// Shipping profiles
+// CORRECT Shipping profiles from your shipping_profiles.json
 const SHIPPING_PROFILES = [
-  { id: '69077991015', name: 'Standard Shipping' },
-  { id: '241498022015', name: 'Heavy/Overweight' },
+  { id: '69077991015', name: 'Small Package Shipping' },
+  { id: '71204399015', name: 'Small Package Free Shipping' },
+  { id: '109762088015', name: 'Medium Package Shipping' },
+  { id: '110997109015', name: 'Medium Package Free Shipping' },
+  { id: '260268833015', name: 'UPS Ground' },
+  { id: '257255165015', name: 'Calculated: UPS Ground Free, Same Day' },
+  { id: '257300245015', name: 'Calculated: UPS Ground, 1 Business Day' },
+  { id: '274446469015', name: 'Small Freight Items under 1000 Lbs' },
+  { id: '274433302015', name: 'Freight Shipping 2000 Lbs & Over' },
+  { id: '124173115015', name: 'Domestic and International Freight' },
   { id: '253736784015', name: 'Freight' },
   { id: '161228820015', name: 'Local Pickup Only' }
 ];
 
-// Country of Origin options (ISO country names for eBay)
+// Country of Origin options
 const COUNTRY_OPTIONS = [
   'United States', 'China', 'Japan', 'Germany', 'Taiwan', 'South Korea', 'Italy',
   'United Kingdom', 'France', 'Mexico', 'Canada', 'Switzerland', 'Sweden',
@@ -63,12 +115,11 @@ export default function ProV2() {
   const [queue, setQueue] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // New item form
+  // New item form - REMOVED PRICE (moved to later)
   const [newBrand, setNewBrand] = useState('');
   const [newPartNumber, setNewPartNumber] = useState('');
   const [newCondition, setNewCondition] = useState('used_good');
   const [newQuantity, setNewQuantity] = useState('1');
-  const [newPrice, setNewPrice] = useState('');
   const [newBoxLength, setNewBoxLength] = useState('');
   const [newBoxWidth, setNewBoxWidth] = useState('');
   const [newBoxHeight, setNewBoxHeight] = useState('');
@@ -136,12 +187,16 @@ export default function ProV2() {
       return;
     }
 
+    // Get the condition config with description note
+    const conditionConfig = CONDITION_OPTIONS.find(c => c.key === newCondition);
+
     const newItem = {
       brand: newBrand.trim(),
       partNumber: newPartNumber.trim().toUpperCase(),
       condition: newCondition,
+      conditionConfig: conditionConfig, // Store the full condition config including descriptionNote
       quantity: newQuantity || '1',
-      price: newPrice || '0.00',
+      price: '', // Price will be entered later
       boxLength: newBoxLength,
       boxWidth: newBoxWidth,
       boxHeight: newBoxHeight,
@@ -161,7 +216,6 @@ export default function ProV2() {
       setNewPartNumber('');
       setNewCondition('used_good');
       setNewQuantity('1');
-      setNewPrice('');
       setNewBoxLength('');
       setNewBoxWidth('');
       setNewBoxHeight('');
@@ -209,7 +263,7 @@ export default function ProV2() {
           series: result.data.series,
           researchedSpecs: result.data.specifications,
           confidence: result.data.confidence,
-          conditionConfig: result.data.condition
+          // Keep the conditionConfig we already have
         });
       } else {
         throw new Error(result.error || 'Research failed');
@@ -241,18 +295,30 @@ export default function ProV2() {
     setIsFetchingSpecifics(true);
 
     try {
+      console.log('Fetching category for productType:', item.productType);
+      
       const categoryResponse = await fetch('/api/v2/get-category-specifics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productType: item.productType })
       });
 
-      if (!categoryResponse.ok) throw new Error('Failed to get category');
+      if (!categoryResponse.ok) {
+        const errorText = await categoryResponse.text();
+        console.error('Category API error:', errorText);
+        throw new Error('Failed to get category');
+      }
+      
       const categoryResult = await categoryResponse.json();
+      console.log('Category result:', categoryResult);
+      
       if (!categoryResult.success) throw new Error(categoryResult.error);
 
-      console.log('Category result:', categoryResult.data.itemSpecifics.totalCount, 'aspects');
+      console.log('eBay Category:', categoryResult.data.ebayCategory);
+      console.log('Store Category 1:', categoryResult.data.ebayStoreCategory1);
+      console.log('Item Specifics count:', categoryResult.data.itemSpecifics.totalCount);
 
+      // Fill specifics with AI
       const fillResponse = await fetch('/api/v2/fill-specifics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -265,8 +331,14 @@ export default function ProV2() {
         })
       });
 
-      if (!fillResponse.ok) throw new Error('Failed to fill specifics');
+      if (!fillResponse.ok) {
+        const errorText = await fillResponse.text();
+        console.error('Fill specifics error:', errorText);
+        throw new Error('Failed to fill specifics');
+      }
+      
       const fillResult = await fillResponse.json();
+      console.log('Fill result:', fillResult);
 
       await updateDoc(doc(db, 'products-v2', itemId), {
         status: 'specifics_loaded',
@@ -275,10 +347,10 @@ export default function ProV2() {
         ebayCategoryName: categoryResult.data.ebayCategory.name,
         ebayStoreCategoryId: categoryResult.data.ebayStoreCategory1,
         ebayStoreCategoryId2: categoryResult.data.ebayStoreCategory2,
-        itemSpecificsForUI: fillResult.data.specificsForUI,
-        itemSpecificsForSuredone: fillResult.data.specificsForSuredone,
-        specificsFilledCount: fillResult.data.filledCount,
-        specificsTotalCount: fillResult.data.totalCount
+        itemSpecificsForUI: fillResult.data?.specificsForUI || [],
+        itemSpecificsForSuredone: fillResult.data?.specificsForSuredone || {},
+        specificsFilledCount: fillResult.data?.filledCount || 0,
+        specificsTotalCount: fillResult.data?.totalCount || 0
       });
 
     } catch (error) {
@@ -304,6 +376,12 @@ export default function ProV2() {
     const item = queue.find(q => q.id === itemId);
     if (!item) return;
 
+    // Check if price is set
+    if (!item.price || item.price === '0' || item.price === '0.00') {
+      alert('Please enter a price before submitting');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -320,7 +398,8 @@ export default function ProV2() {
             manufacturer: item.manufacturer,
             model: item.model,
             productType: item.productType,
-            condition: item.conditionConfig,
+            condition: item.conditionConfig, // Pass full config with descriptionNote
+            conditionNotes: item.conditionConfig?.descriptionNote,
             quantity: item.quantity,
             price: item.price || '0.00',
             boxLength: item.boxLength,
@@ -447,9 +526,8 @@ export default function ProV2() {
         </header>
 
         <div className="flex">
-          {/* Left Panel */}
+          {/* Left Panel - Add Form (no price) */}
           <div className="w-80 bg-white border-r min-h-screen p-4">
-            {/* Add Form */}
             <div className="mb-6">
               <h3 className="font-semibold mb-3">Add New Item</h3>
               <input type="text" placeholder="Brand" value={newBrand} onChange={e => setNewBrand(e.target.value)} className="w-full px-3 py-2 border rounded mb-2" />
@@ -463,13 +541,9 @@ export default function ProV2() {
                   <input type="text" placeholder="1" value={newQuantity} onChange={e => setNewQuantity(e.target.value)} className="w-full px-3 py-2 border rounded" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Price ($)</label>
-                  <input type="text" placeholder="0.00" value={newPrice} onChange={e => setNewPrice(e.target.value)} className="w-full px-3 py-2 border rounded" />
+                  <label className="block text-xs text-gray-500 mb-1">Shelf Location</label>
+                  <input type="text" placeholder="e.g., B-12" value={newShelf} onChange={e => setNewShelf(e.target.value)} className="w-full px-3 py-2 border rounded" />
                 </div>
-              </div>
-              <div className="mb-2">
-                <label className="block text-xs text-gray-500 mb-1">Shelf Location</label>
-                <input type="text" placeholder="e.g., B-12" value={newShelf} onChange={e => setNewShelf(e.target.value)} className="w-full px-3 py-2 border rounded" />
               </div>
               <div className="grid grid-cols-4 gap-1 mb-2">
                 <div>
@@ -575,7 +649,6 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
   const [countrySearch, setCountrySearch] = useState('');
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
-  // Filter countries based on search
   const filteredCountries = COUNTRY_OPTIONS.filter(c => 
     c.toLowerCase().includes(countrySearch.toLowerCase())
   );
@@ -636,42 +709,23 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
             <input type="text" value={item.title || ''} onChange={e => onUpdateField(item.id, 'title', e.target.value)} maxLength={80} className="w-full px-3 py-2 border rounded" />
           </div>
 
-          {/* Description with WYSIWYG toggle */}
+          {/* Description */}
           <div className="bg-white rounded-lg border p-4">
             <div className="flex justify-between items-center mb-2">
               <label className="text-sm font-medium text-gray-700">Description</label>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setShowHtmlPreview(false)}
-                  className={`px-3 py-1 text-sm rounded ${!showHtmlPreview ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
-                >
-                  HTML Code
-                </button>
-                <button
-                  onClick={() => setShowHtmlPreview(true)}
-                  className={`px-3 py-1 text-sm rounded ${showHtmlPreview ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
-                >
-                  Preview
-                </button>
+                <button onClick={() => setShowHtmlPreview(false)} className={`px-3 py-1 text-sm rounded ${!showHtmlPreview ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>HTML Code</button>
+                <button onClick={() => setShowHtmlPreview(true)} className={`px-3 py-1 text-sm rounded ${showHtmlPreview ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>Preview</button>
               </div>
             </div>
-            
             {showHtmlPreview ? (
-              <div 
-                className="border rounded p-4 min-h-[200px] bg-gray-50 prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: item.description || '<p class="text-gray-400">No description yet</p>' }}
-              />
+              <div className="border rounded p-4 min-h-[200px] bg-gray-50 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: item.description || '<p class="text-gray-400">No description yet</p>' }} />
             ) : (
-              <textarea
-                value={item.description || ''}
-                onChange={e => onUpdateField(item.id, 'description', e.target.value)}
-                rows={10}
-                className="w-full px-3 py-2 border rounded font-mono text-sm"
-              />
+              <textarea value={item.description || ''} onChange={e => onUpdateField(item.id, 'description', e.target.value)} rows={10} className="w-full px-3 py-2 border rounded font-mono text-sm" />
             )}
           </div>
 
-          {/* Confirm (Stage 2) */}
+          {/* Confirm */}
           {stage === 2 && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <p className="text-green-700 mb-3">Review above. Click Confirm to load eBay item specifics.</p>
@@ -684,7 +738,7 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
             </div>
           )}
 
-          {/* Stage 4+: Categories & Item Specifics */}
+          {/* Stage 4+: Categories, Specifics, Price */}
           {stage >= 4 && (
             <>
               {/* Categories */}
@@ -698,7 +752,7 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
                   </div>
                   <div>
                     <label className="block text-sm text-gray-500">Store Category 1</label>
-                    <p className="text-sm">{item.ebayStoreCategoryId}</p>
+                    <p className="text-sm">{item.ebayStoreCategoryId || 'Not set'}</p>
                   </div>
                 </div>
               </div>
@@ -710,10 +764,7 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
                   <input
                     type="text"
                     value={item.countryOfOrigin || countrySearch}
-                    onChange={e => {
-                      setCountrySearch(e.target.value);
-                      setShowCountryDropdown(true);
-                    }}
+                    onChange={e => { setCountrySearch(e.target.value); setShowCountryDropdown(true); }}
                     onFocus={() => setShowCountryDropdown(true)}
                     placeholder="Start typing to search..."
                     className="w-full px-3 py-2 border rounded"
@@ -721,22 +772,11 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
                   {showCountryDropdown && filteredCountries.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {filteredCountries.map(country => (
-                        <div
-                          key={country}
-                          onClick={() => {
-                            onUpdateField(item.id, 'countryOfOrigin', country);
-                            setCountrySearch('');
-                            setShowCountryDropdown(false);
-                          }}
-                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer"
-                        >
-                          {country}
-                        </div>
+                        <div key={country} onClick={() => { onUpdateField(item.id, 'countryOfOrigin', country); setCountrySearch(''); setShowCountryDropdown(false); }} className="px-3 py-2 hover:bg-blue-50 cursor-pointer">{country}</div>
                       ))}
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">This will populate both "Country of Origin" and "Country/Region of Manufacture" fields</p>
               </div>
 
               {/* Item Specifics */}
@@ -745,22 +785,85 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
                   <h3 className="font-semibold">📋 eBay Item Specifics</h3>
                   <span className="text-sm text-gray-500">{item.specificsFilledCount || 0} of {item.specificsTotalCount || 0} filled</span>
                 </div>
-                <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-                  {(item.itemSpecificsForUI || []).map((spec, idx) => (
-                    <div key={idx}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {spec.name} {spec.required && <span className="text-red-500">*</span>}
-                      </label>
-                      {spec.allowedValues?.length > 0 ? (
-                        <select value={spec.value || ''} onChange={e => onUpdateItemSpecific(item.id, spec.fieldName, e.target.value)} className="w-full px-3 py-2 border rounded text-sm">
-                          <option value="">Select...</option>
-                          {spec.allowedValues.map((v, i) => <option key={i} value={v}>{v}</option>)}
-                        </select>
-                      ) : (
-                        <input type="text" value={spec.value || ''} onChange={e => onUpdateItemSpecific(item.id, spec.fieldName, e.target.value)} className="w-full px-3 py-2 border rounded text-sm" />
-                      )}
-                    </div>
-                  ))}
+                {(item.itemSpecificsForUI || []).length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                    {(item.itemSpecificsForUI || []).map((spec, idx) => (
+                      <div key={idx}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {spec.name} {spec.required && <span className="text-red-500">*</span>}
+                        </label>
+                        {spec.allowedValues?.length > 0 ? (
+                          <select value={spec.value || ''} onChange={e => onUpdateItemSpecific(item.id, spec.fieldName, e.target.value)} className="w-full px-3 py-2 border rounded text-sm">
+                            <option value="">Select...</option>
+                            {spec.allowedValues.map((v, i) => <option key={i} value={v}>{v}</option>)}
+                          </select>
+                        ) : (
+                          <input type="text" value={spec.value || ''} onChange={e => onUpdateItemSpecific(item.id, spec.fieldName, e.target.value)} className="w-full px-3 py-2 border rounded text-sm" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No item specifics loaded. Try refreshing or check the eBay category.</p>
+                )}
+              </div>
+
+              {/* Shipping, Price & Location - PRICE IS HERE NOW */}
+              <div className="bg-white rounded-lg border p-4">
+                <h3 className="font-semibold mb-3">📦 Shipping, Pricing & Location</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm text-gray-500 mb-1">Condition</label>
+                    <p className="text-sm font-medium">{CONDITION_OPTIONS.find(c => c.key === item.condition)?.label}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-500 mb-1">Shipping Profile</label>
+                    <select
+                      value={item.shippingProfileId || SHIPPING_PROFILES[0].id}
+                      onChange={e => onUpdateField(item.id, 'shippingProfileId', e.target.value)}
+                      className="w-full px-3 py-2 border rounded text-sm"
+                    >
+                      {SHIPPING_PROFILES.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm text-gray-500 mb-1">Quantity</label>
+                    <input type="text" value={item.quantity || '1'} onChange={e => onUpdateField(item.id, 'quantity', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-500 mb-1">Price ($) *</label>
+                    <input 
+                      type="text" 
+                      value={item.price || ''} 
+                      onChange={e => onUpdateField(item.id, 'price', e.target.value)} 
+                      className="w-full px-2 py-1 border rounded text-sm border-orange-300 bg-orange-50" 
+                      placeholder="Required" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-500 mb-1">Shelf</label>
+                    <input type="text" value={item.shelfLocation || ''} onChange={e => onUpdateField(item.id, 'shelfLocation', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-500 mb-1">Weight (lbs)</label>
+                    <input type="text" value={item.weight || ''} onChange={e => onUpdateField(item.id, 'weight', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-500 mb-1">Length (in)</label>
+                    <input type="text" value={item.boxLength || ''} onChange={e => onUpdateField(item.id, 'boxLength', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-500 mb-1">Width (in)</label>
+                    <input type="text" value={item.boxWidth || ''} onChange={e => onUpdateField(item.id, 'boxWidth', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-500 mb-1">Height (in)</label>
+                    <input type="text" value={item.boxHeight || ''} onChange={e => onUpdateField(item.id, 'boxHeight', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
+                  </div>
                 </div>
               </div>
 
@@ -769,14 +872,15 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   {item.status === 'ready' ? (
                     <>
-                      <p className="text-blue-700 mb-3">✅ Ready! Submit to SureDone.</p>
-                      <button onClick={() => onSubmit(item.id)} disabled={isSubmitting} className="bg-blue-600 text-white px-6 py-2 rounded font-medium hover:bg-blue-700 disabled:opacity-50">
+                      <p className="text-blue-700 mb-3">✅ Ready! Enter price and submit to SureDone.</p>
+                      <button onClick={() => onSubmit(item.id)} disabled={isSubmitting || !item.price} className="bg-blue-600 text-white px-6 py-2 rounded font-medium hover:bg-blue-700 disabled:opacity-50">
                         {isSubmitting ? '📤 Submitting...' : '📤 Submit to SureDone'}
                       </button>
+                      {!item.price && <p className="text-orange-600 text-sm mt-2">⚠️ Please enter a price before submitting</p>}
                     </>
                   ) : (
                     <>
-                      <p className="text-blue-700 mb-3">Review specifics, then mark ready.</p>
+                      <p className="text-blue-700 mb-3">Review specifics and enter price, then mark ready.</p>
                       <button onClick={() => onMarkReady(item.id)} className="bg-blue-600 text-white px-6 py-2 rounded font-medium hover:bg-blue-700">✓ Mark Ready</button>
                     </>
                   )}
@@ -793,62 +897,6 @@ function ItemPanel({ item, onResearch, onConfirm, onMarkReady, onSubmit, onUpdat
               )}
             </>
           )}
-
-          {/* Shipping & Location Info */}
-          <div className="bg-white rounded-lg border p-4">
-            <h3 className="font-semibold mb-3">📦 Shipping & Location</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Condition</label>
-                <p className="text-sm font-medium">{CONDITION_OPTIONS.find(c => c.key === item.condition)?.label}</p>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Shipping Profile</label>
-                <select
-                  value={item.shippingProfileId || SHIPPING_PROFILES[0].id}
-                  onChange={e => onUpdateField(item.id, 'shippingProfileId', e.target.value)}
-                  className="w-full px-3 py-2 border rounded text-sm"
-                >
-                  {SHIPPING_PROFILES.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Quantity</label>
-                <input type="text" value={item.quantity || '1'} onChange={e => onUpdateField(item.id, 'quantity', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Price ($)</label>
-                <input type="text" value={item.price || ''} onChange={e => onUpdateField(item.id, 'price', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" placeholder="0.00" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Shelf</label>
-                <input type="text" value={item.shelfLocation || ''} onChange={e => onUpdateField(item.id, 'shelfLocation', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Weight (lbs)</label>
-                <input type="text" value={item.weight || ''} onChange={e => onUpdateField(item.id, 'weight', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
-              </div>
-            </div>
-            <div className="grid grid-cols-4 gap-4 mt-3">
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Length (in)</label>
-                <input type="text" value={item.boxLength || ''} onChange={e => onUpdateField(item.id, 'boxLength', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Width (in)</label>
-                <input type="text" value={item.boxWidth || ''} onChange={e => onUpdateField(item.id, 'boxWidth', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Height (in)</label>
-                <input type="text" value={item.boxHeight || ''} onChange={e => onUpdateField(item.id, 'boxHeight', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
-              </div>
-              <div></div>
-            </div>
-          </div>
 
           {/* Error */}
           {item.status === 'error' && (

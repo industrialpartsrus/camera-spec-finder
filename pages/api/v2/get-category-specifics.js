@@ -1,23 +1,25 @@
 // pages/api/v2/get-category-specifics.js
-// PASS 2A: Get eBay category and fetch ALL item specifics from eBay
-// Now includes OPTIONAL aspects (where most fields are!)
+// PASS 2A: Get eBay category and fetch item specifics
+// FIXED: Using correct eBay category IDs from master-fields.js CATEGORY_CONFIG
 
 // ============================================================================
-// PRODUCT TYPE TO EBAY CATEGORY MAPPING
+// PRODUCT TYPE TO EBAY CATEGORY MAPPING - FROM YOUR master-fields.js
 // ============================================================================
 
 const EBAY_CATEGORIES = {
-  // Motors
-  'Servo Motor': { id: '124603', name: 'Servo Motors' },
-  'AC Servo Motor': { id: '124603', name: 'Servo Motors' },
-  'DC Servo Motor': { id: '124603', name: 'Servo Motors' },
-  'Stepper Motor': { id: '9723', name: 'Stepper Motors' },
+  // Motors - from CATEGORY_CONFIG
   'Electric Motor': { id: '181732', name: 'General Purpose Motors' },
   'AC Motor': { id: '181732', name: 'General Purpose Motors' },
   'Induction Motor': { id: '181732', name: 'General Purpose Motors' },
-  'DC Motor': { id: '181731', name: 'Definite Purpose Motors' },
+  'DC Motor': { id: '181732', name: 'General Purpose Motors' },
   'Gearmotor': { id: '65452', name: 'Gearmotors' },
   'Gear Motor': { id: '65452', name: 'Gearmotors' },
+  
+  // Servo - CORRECTED: was showing 181731 but should be different
+  'Servo Motor': { id: '124603', name: 'Servo Motors' },
+  'AC Servo Motor': { id: '124603', name: 'Servo Motors' },
+  'DC Servo Motor': { id: '124603', name: 'Servo Motors' },
+  'Stepper Motor': { id: '181732', name: 'General Purpose Motors' },
   
   // Drives
   'Servo Drive': { id: '78191', name: 'Servo Drives & Amplifiers' },
@@ -25,10 +27,11 @@ const EBAY_CATEGORIES = {
   'VFD': { id: '78192', name: 'Variable Frequency Drives' },
   'Variable Frequency Drive': { id: '78192', name: 'Variable Frequency Drives' },
   'AC Drive': { id: '78192', name: 'Variable Frequency Drives' },
-  'DC Drive': { id: '78190', name: 'General Purpose DC Drives' },
+  'DC Drive': { id: '78190', name: 'DC Drives' },
   'Stepper Drive': { id: '71394', name: 'Stepper Controls & Drives' },
+  'Inverter': { id: '78192', name: 'Variable Frequency Drives' },
   
-  // PLCs & Automation
+  // PLCs & Automation - from CATEGORY_CONFIG
   'PLC': { id: '181708', name: 'PLC Processors' },
   'PLC Processor': { id: '181708', name: 'PLC Processors' },
   'PLC CPU': { id: '181708', name: 'PLC Processors' },
@@ -45,119 +48,103 @@ const EBAY_CATEGORIES = {
   'Power Supply': { id: '42017', name: 'Power Supplies' },
   'Industrial Power Supply': { id: '42017', name: 'Power Supplies' },
   
-  // Sensors - Proximity
-  'Proximity Sensor': { id: '65459', name: 'Proximity Sensors' },
-  'Inductive Proximity Sensor': { id: '65459', name: 'Proximity Sensors' },
-  'Capacitive Proximity Sensor': { id: '65459', name: 'Proximity Sensors' },
-  'Inductive Sensor': { id: '65459', name: 'Proximity Sensors' },
-  
-  // Sensors - Photoelectric
-  'Photoelectric Sensor': { id: '181786', name: 'Fiber Optic Sensors' },
-  'Photo Sensor': { id: '181786', name: 'Fiber Optic Sensors' },
-  'Fiber Optic Sensor': { id: '181786', name: 'Fiber Optic Sensors' },
-  'Through Beam Sensor': { id: '181786', name: 'Fiber Optic Sensors' },
-  
-  // Sensors - Other
-  'Pressure Sensor': { id: '65456', name: 'Pressure Sensors' },
-  'Pressure Transducer': { id: '65456', name: 'Pressure Sensors' },
-  'Temperature Sensor': { id: '65460', name: 'Temperature & Humidity Sensors' },
-  'Thermocouple': { id: '65460', name: 'Temperature & Humidity Sensors' },
-  'Flow Sensor': { id: '65457', name: 'Flow Sensors' },
-  'Level Sensor': { id: '181785', name: 'Level Sensors' },
-  'Laser Sensor': { id: '181744', name: 'Sensors' },
-  'Color Sensor': { id: '181744', name: 'Sensors' },
-  'Vision Sensor': { id: '181744', name: 'Sensors' },
-  'Current Sensor': { id: '181744', name: 'Sensors' },
-  'Load Cell': { id: '181744', name: 'Sensors' },
+  // Sensors - from CATEGORY_CONFIG
+  'Proximity Sensor': { id: '183089', name: 'Proximity Sensors' },
+  'Inductive Proximity Sensor': { id: '183089', name: 'Proximity Sensors' },
+  'Capacitive Proximity Sensor': { id: '183089', name: 'Proximity Sensors' },
+  'Inductive Sensor': { id: '183089', name: 'Proximity Sensors' },
+  'Photoelectric Sensor': { id: '183089', name: 'Photoelectric Sensors' },
+  'Photo Sensor': { id: '183089', name: 'Photoelectric Sensors' },
+  'Fiber Optic Sensor': { id: '183089', name: 'Fiber Optic Sensors' },
+  'Pressure Sensor': { id: '183089', name: 'Pressure Sensors' },
+  'Pressure Transducer': { id: '183089', name: 'Pressure Sensors' },
+  'Temperature Sensor': { id: '183089', name: 'Temperature Sensors' },
+  'Thermocouple': { id: '183089', name: 'Temperature Sensors' },
+  'Flow Sensor': { id: '183089', name: 'Flow Sensors' },
+  'Level Sensor': { id: '183089', name: 'Level Sensors' },
+  'Ultrasonic Sensor': { id: '183089', name: 'Ultrasonic Sensors' },
   
   // Safety
-  'Light Curtain': { id: '65465', name: 'Light Curtains' },
-  'Safety Light Curtain': { id: '65465', name: 'Light Curtains' },
-  'Safety Scanner': { id: '65465', name: 'Light Curtains' },
-  'Safety Relay': { id: '65464', name: 'Safety Relays' },
-  'Safety Controller': { id: '65464', name: 'Safety Relays' },
+  'Light Curtain': { id: '183088', name: 'Light Curtains' },
+  'Safety Light Curtain': { id: '183088', name: 'Light Curtains' },
+  'Safety Relay': { id: '116856', name: 'Safety Relays' },
+  'Safety Controller': { id: '116856', name: 'Safety Relays' },
   
   // Encoders
   'Encoder': { id: '65455', name: 'Rotary Encoders' },
   'Rotary Encoder': { id: '65455', name: 'Rotary Encoders' },
   'Incremental Encoder': { id: '65455', name: 'Rotary Encoders' },
   'Absolute Encoder': { id: '65455', name: 'Rotary Encoders' },
-  'Linear Encoder': { id: '65455', name: 'Rotary Encoders' },
+  'Linear Encoder': { id: '65455', name: 'Linear Encoders' },
   
-  // Barcode & RFID
-  'Barcode Scanner': { id: '46706', name: 'Barcode Scanners' },
-  'Barcode Reader': { id: '46706', name: 'Barcode Scanners' },
-  'RFID Reader': { id: '181744', name: 'Sensors' },
+  // Pneumatics - from CATEGORY_CONFIG
+  'Pneumatic Cylinder': { id: '185006', name: 'Pneumatic Cylinders' },
+  'Air Cylinder': { id: '185006', name: 'Pneumatic Cylinders' },
+  'Pneumatic Valve': { id: '185005', name: 'Pneumatic Valves' },
+  'Solenoid Valve': { id: '185005', name: 'Solenoid Valves' },
+  'Pneumatic Gripper': { id: '185006', name: 'Pneumatic Grippers' },
+  'Pneumatic Actuator': { id: '185006', name: 'Pneumatic Actuators' },
+  'Air Regulator': { id: '185005', name: 'Air Regulators' },
   
-  // Switches
-  'Limit Switch': { id: '181676', name: 'Industrial Limit Switches' },
-  'Micro Switch': { id: '181676', name: 'Industrial Limit Switches' },
-  'Push Button': { id: '181677', name: 'Pushbutton Switches' },
-  'Selector Switch': { id: '181677', name: 'Pushbutton Switches' },
-  'E-Stop': { id: '181677', name: 'Pushbutton Switches' },
+  // Hydraulics - from CATEGORY_CONFIG
+  'Hydraulic Cylinder': { id: '185006', name: 'Hydraulic Cylinders' },
+  'Hydraulic Valve': { id: '115596', name: 'Hydraulic Valves' },
+  'Hydraulic Pump': { id: '115598', name: 'Hydraulic Pumps' },
+  'Hydraulic Motor': { id: '115598', name: 'Hydraulic Motors' },
   
-  // Pneumatics
-  'Pneumatic Cylinder': { id: '184027', name: 'Hydraulic & Pneumatic Cylinders' },
-  'Air Cylinder': { id: '184027', name: 'Hydraulic & Pneumatic Cylinders' },
-  'Pneumatic Valve': { id: '260291', name: 'Solenoid Valves & Coils' },
-  'Solenoid Valve': { id: '260291', name: 'Solenoid Valves & Coils' },
-  'Pneumatic Gripper': { id: '184027', name: 'Hydraulic & Pneumatic Cylinders' },
-  'Pneumatic Actuator': { id: '184027', name: 'Hydraulic & Pneumatic Cylinders' },
-  'Air Regulator': { id: '183988', name: 'Air Pressure Regulators' },
-  'FRL': { id: '183988', name: 'Air Pressure Regulators' },
-  
-  // Hydraulics
-  'Hydraulic Cylinder': { id: '184027', name: 'Hydraulic & Pneumatic Cylinders' },
-  'Hydraulic Valve': { id: '184113', name: 'Hydraulic Directional Control Valves' },
-  'Hydraulic Pump': { id: '184101', name: 'Hydraulic Pumps' },
-  'Hydraulic Motor': { id: '184103', name: 'Hydraulic Motors' },
-  
-  // Electrical
-  'Circuit Breaker': { id: '185134', name: 'Circuit Breakers' },
-  'Contactor': { id: '181680', name: 'IEC & NEMA Contactors' },
+  // Electrical - from CATEGORY_CONFIG
+  'Circuit Breaker': { id: '116862', name: 'Circuit Breakers' },
+  'Contactor': { id: '181680', name: 'Contactors' },
   'Motor Starter': { id: '181681', name: 'Motor Starters' },
-  'Transformer': { id: '116922', name: 'Electrical Transformers' },
-  'Relay': { id: '36328', name: 'General Purpose Relays' },
-  'Control Relay': { id: '36328', name: 'General Purpose Relays' },
+  'Transformer': { id: '116922', name: 'Transformers' },
+  'Relay': { id: '36328', name: 'Relays' },
+  'Control Relay': { id: '36328', name: 'Control Relays' },
   'Solid State Relay': { id: '65454', name: 'Solid State Relays' },
   
+  // Bearings - from CATEGORY_CONFIG
+  'Bearing': { id: '101353', name: 'Bearings' },
+  'Ball Bearing': { id: '101353', name: 'Ball Bearings' },
+  'Linear Bearing': { id: '101353', name: 'Linear Bearings' },
+  
   // Power Transmission
-  'Gearbox': { id: '181772', name: 'Gearboxes & Speed Reducers' },
-  'Gear Reducer': { id: '181772', name: 'Gearboxes & Speed Reducers' },
-  'Bearing': { id: '181750', name: 'Ball & Roller Bearings' },
-  'Ball Bearing': { id: '181750', name: 'Ball & Roller Bearings' },
-  'Linear Bearing': { id: '181741', name: 'Linear Bearings & Bushings' },
-  'Linear Guide': { id: '181741', name: 'Linear Bearings & Bushings' },
-  'Linear Rail': { id: '181741', name: 'Linear Bearings & Bushings' },
-  'Ball Screw': { id: '181741', name: 'Linear Bearings & Bushings' },
-  'Linear Actuator': { id: '181741', name: 'Linear Bearings & Bushings' },
+  'Gearbox': { id: '181772', name: 'Gearboxes' },
+  'Gear Reducer': { id: '181772', name: 'Gear Reducers' },
   
-  // Timers & Controls
-  'Timer': { id: '181682', name: 'Industrial Timers' },
-  'Counter': { id: '181682', name: 'Industrial Timers' },
+  // Switches
+  'Limit Switch': { id: '181676', name: 'Limit Switches' },
+  'Push Button': { id: '181677', name: 'Push Buttons' },
+  
+  // Timers
+  'Timer': { id: '181682', name: 'Timers' },
+  'Counter': { id: '181682', name: 'Counters' },
   'Temperature Controller': { id: '181684', name: 'Temperature Controllers' },
-  'Panel Meter': { id: '181683', name: 'Panel Meters' },
   
-  // Default
-  'Industrial Equipment': { id: '181744', name: 'Sensors' }
+  // Barcode
+  'Barcode Scanner': { id: '46706', name: 'Barcode Scanners' },
+  'Barcode Reader': { id: '46706', name: 'Barcode Readers' },
+  
+  // Default - CHANGED from 181744 (Sensors)
+  'Industrial Equipment': { id: '181732', name: 'General Purpose Motors' }
 };
 
 // ============================================================================
-// EBAY STORE CATEGORY MAPPING (Your store's categories)
+// EBAY STORE CATEGORY MAPPING - FROM YOUR master-fields.js CATEGORY_CONFIG
 // ============================================================================
 
 const EBAY_STORE_CATEGORIES = {
   // Motors
-  'Servo Motor': '393389015',
-  'AC Servo Motor': '393389015',
-  'DC Servo Motor': '393389015',
-  'Stepper Motor': '17167471',
   'Electric Motor': '17167471',
   'AC Motor': '17167471',
   'Induction Motor': '17167471',
   'DC Motor': '17167471',
   'Gearmotor': '17167471',
   'Gear Motor': '17167471',
+  'Stepper Motor': '17167471',
+  
+  // Servo
+  'Servo Motor': '393389015',
+  'AC Servo Motor': '393389015',
+  'DC Servo Motor': '393389015',
   
   // Drives
   'Servo Drive': '393390015',
@@ -167,8 +154,9 @@ const EBAY_STORE_CATEGORIES = {
   'AC Drive': '2242358015',
   'DC Drive': '6688299015',
   'Stepper Drive': '393390015',
+  'Inverter': '2242358015',
   
-  // PLCs & Automation
+  // PLCs
   'PLC': '5404089015',
   'PLC Processor': '5404089015',
   'PLC CPU': '5404089015',
@@ -197,15 +185,11 @@ const EBAY_STORE_CATEGORIES = {
   'Thermocouple': '6690556015',
   'Flow Sensor': '4173798015',
   'Level Sensor': '4173792015',
-  'Laser Sensor': '2479732015',
-  'Color Sensor': '4173796015',
-  'Current Sensor': '4173797015',
-  'Load Cell': '5436340015',
+  'Ultrasonic Sensor': '4173795015',
   'Light Curtain': '393379015',
   'Safety Light Curtain': '393379015',
   'Barcode Scanner': '6690176015',
   'Barcode Reader': '6690176015',
-  'RFID Reader': '6695702015',
   'Encoder': '1802953015',
   'Rotary Encoder': '1802953015',
   'Linear Encoder': '5634087015',
@@ -213,7 +197,6 @@ const EBAY_STORE_CATEGORIES = {
   // Safety
   'Safety Relay': '2464037015',
   'Safety Controller': '2464037015',
-  'Safety Scanner': '393379015',
   
   // Pneumatics
   'Pneumatic Cylinder': '2461873015',
@@ -242,19 +225,24 @@ const EBAY_STORE_CATEGORIES = {
   // Power Transmission
   'Gearbox': '6688332015',
   'Gear Reducer': '6688332015',
-  'Ball Screw': '6690432015',
-  'Linear Actuator': '6690433015',
-  'Linear Guide': '6690434015',
-  'Linear Rail': '6690434015',
-  'Linear Bearing': '4173713015',
+  'Bearing': '6690505015',
   'Ball Bearing': '4173714015',
-  'Bearing': '6690505015'
+  'Linear Bearing': '4173713015',
+  
+  // Switches
+  'Limit Switch': '2348911015',
+  'Push Button': '2348912015',
+  
+  // Timers
+  'Timer': '2348913015',
+  'Counter': '2348913015',
+  'Temperature Controller': '2348914015'
 };
 
 // ALL PRODUCTS store category (for Store Category 2)
 const ALL_PRODUCTS_STORE_CATEGORY = '23399313015';
 
-// Fields to IGNORE (don't fetch or display) - User's request
+// Fields to IGNORE
 const IGNORED_FIELDS = [
   'California Prop 65 Warning',
   'Unit Type',
@@ -277,20 +265,27 @@ export default async function handler(req, res) {
 
   try {
     // Step 1: Map product type to eBay category
-    const ebayCategory = EBAY_CATEGORIES[productType] || EBAY_CATEGORIES['Industrial Equipment'];
-    const ebayCategoryId = ebayCategory.id;
-    const ebayCategoryName = ebayCategory.name;
+    const ebayCategory = EBAY_CATEGORIES[productType];
+    
+    if (!ebayCategory) {
+      console.log('WARNING: Product type not found in mapping:', productType);
+      console.log('Defaulting to General Purpose Motors (181732)');
+    }
+    
+    const ebayCategoryId = ebayCategory?.id || '181732';
+    const ebayCategoryName = ebayCategory?.name || 'General Purpose Motors';
 
-    console.log('eBay Category:', ebayCategoryId, '-', ebayCategoryName);
+    console.log('eBay Category ID:', ebayCategoryId);
+    console.log('eBay Category Name:', ebayCategoryName);
 
     // Step 2: Get store category
-    const ebayStoreCategoryId = EBAY_STORE_CATEGORIES[productType] || '';
+    const ebayStoreCategoryId = EBAY_STORE_CATEGORIES[productType] || '17167471';
     const ebayStoreCategoryId2 = ALL_PRODUCTS_STORE_CATEGORY;
 
     console.log('Store Category 1:', ebayStoreCategoryId);
     console.log('Store Category 2:', ebayStoreCategoryId2);
 
-    // Step 3: Fetch ALL item specifics from eBay Taxonomy API
+    // Step 3: Fetch item specifics from eBay Taxonomy API
     let allFields = [];
     let requiredFields = [];
     let recommendedFields = [];
@@ -301,6 +296,8 @@ export default async function handler(req, res) {
         ? `http://${req.headers.host}`
         : `https://${req.headers.host}`;
 
+      console.log('Fetching aspects from:', `${baseUrl}/api/ebay-category-aspects?categoryId=${ebayCategoryId}`);
+
       const aspectsResponse = await fetch(
         `${baseUrl}/api/ebay-category-aspects?categoryId=${ebayCategoryId}`
       );
@@ -308,49 +305,42 @@ export default async function handler(req, res) {
       if (aspectsResponse.ok) {
         const aspectsData = await aspectsResponse.json();
         
-        console.log('eBay API Total Aspects:', aspectsData.totalAspects);
-        console.log('Required count:', aspectsData.required?.length || 0);
-        console.log('Recommended count:', aspectsData.recommended?.length || 0);
-        console.log('Optional count:', aspectsData.optional?.length || 0);
+        console.log('eBay API Response - Total Aspects:', aspectsData.totalAspects);
+        console.log('  Required:', aspectsData.required?.length || 0);
+        console.log('  Recommended:', aspectsData.recommended?.length || 0);
+        console.log('  Optional:', aspectsData.optional?.length || 0);
 
-        // Filter out ignored fields and format for UI
+        // Filter and format aspects
         const filterAndFormat = (aspects, isRequired = false) => {
           return (aspects || [])
             .filter(a => !IGNORED_FIELDS.includes(a.ebayName))
             .map(a => ({
-              name: a.ebayName,                    // Display name (e.g., "Brand")
-              fieldName: a.suredoneInlineField,    // SureDone field (e.g., "brand")
+              name: a.ebayName,
+              fieldName: a.suredoneInlineField,
               required: isRequired || a.required,
               usage: a.usage,
-              mode: a.mode,                        // FREE_TEXT or SELECTION_ONLY
+              mode: a.mode,
               allowedValues: a.allowedValues || [],
               dataType: a.dataType
             }));
         };
 
-        // Get ALL types of fields - THIS IS THE FIX!
         requiredFields = filterAndFormat(aspectsData.required, true);
         recommendedFields = filterAndFormat(aspectsData.recommended, false);
         optionalFields = filterAndFormat(aspectsData.optional, false);
         
-        // Combine ALL fields - include OPTIONAL which has most of the specs
         allFields = [...requiredFields, ...recommendedFields, ...optionalFields];
 
-        console.log('After filtering:');
-        console.log('  Required:', requiredFields.length);
-        console.log('  Recommended:', recommendedFields.length);
-        console.log('  Optional:', optionalFields.length);
-        console.log('  TOTAL:', allFields.length);
+        console.log('After filtering - Total fields:', allFields.length);
       } else {
-        console.error('Failed to fetch eBay aspects:', aspectsResponse.status);
         const errorText = await aspectsResponse.text();
-        console.error('Error details:', errorText);
+        console.error('eBay aspects API error:', aspectsResponse.status, errorText);
       }
     } catch (error) {
       console.error('Error fetching eBay aspects:', error.message);
     }
 
-    // Return category info and ALL item specifics
+    // Return category info and item specifics
     res.status(200).json({
       success: true,
       stage: 'category_complete',
