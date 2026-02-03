@@ -1240,7 +1240,6 @@ export default function ProListingBuilder() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [showSpecs, setShowSpecs] = useState(true);
-  const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const fileInputRef = useRef(null);
   
   // NEW: State for SKU comparison
@@ -1662,54 +1661,6 @@ export default function ProListingBuilder() {
       }
       
       await updateDoc(doc(db, 'products', itemId), updateData);
-
-      // =================================================================
-      // PASS 2: AUTO-FILL EBAY ITEM SPECIFICS
-      // Fires automatically after Pass 1 — no button needed
-      // Uses eBay Taxonomy aspects + Pass 1 specs → AI fills all fields
-      // =================================================================
-      if (data._ebayAspects && data._ebayAspects.all?.length > 0) {
-        console.log('=== AUTO-TRIGGERING PASS 2 ===');
-        console.log(`${data._ebayAspects.all.length} eBay aspects available`);
-        
-        try {
-          await updateDoc(doc(db, 'products', itemId), { pass2Status: 'filling' });
-          
-          const pass2Response = await fetch('/api/v2/auto-fill-ebay-specifics', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              brand: item.brand,
-              partNumber: item.partNumber,
-              productType: product.productType || data._metadata?.detectedCategory || '',
-              title: product.title || `${item.brand} ${item.partNumber}`,
-              ebayAspects: data._ebayAspects,
-              pass1Specs: product.specifications || {}
-            })
-          });
-
-          if (pass2Response.ok) {
-            const pass2Data = await pass2Response.json();
-            if (pass2Data.success && pass2Data.data) {
-              console.log(`Pass 2 filled ${pass2Data.data.filledCount}/${pass2Data.data.totalCount} eBay fields`);
-              
-              await updateDoc(doc(db, 'products', itemId), {
-                ebayItemSpecifics: pass2Data.data.specificsForUI || [],
-                ebayItemSpecificsForSuredone: pass2Data.data.specificsForSuredone || {},
-                pass2Status: 'complete',
-                pass2FilledCount: pass2Data.data.filledCount || 0,
-                pass2TotalCount: pass2Data.data.totalCount || 0
-              });
-            }
-          } else {
-            console.error('Pass 2 API error:', pass2Response.status);
-            await updateDoc(doc(db, 'products', itemId), { pass2Status: 'error' });
-          }
-        } catch (pass2Error) {
-          console.error('Pass 2 error:', pass2Error);
-          await updateDoc(doc(db, 'products', itemId), { pass2Status: 'error' });
-        }
-      }
     } catch (error) {
       console.error('Processing error:', error);
       await updateDoc(doc(db, 'products', itemId), { status: 'error', error: error.message });
@@ -1831,9 +1782,7 @@ export default function ProListingBuilder() {
           ebayStoreCategoryId: item.ebayStoreCategoryId || '',
           ebayStoreCategoryId2: item.ebayStoreCategoryId2 || '',
           bigcommerceCategoryId: item.bigcommerceCategoryId || '',
-          ebayShippingProfileId: item.ebayShippingProfileId || '69077991015',
-          // Pass 2: eBay item specifics (pre-filled by AI)
-          ebayItemSpecificsForSuredone: item.ebayItemSpecificsForSuredone || {}
+          ebayShippingProfileId: item.ebayShippingProfileId || '69077991015'
         };
         
         console.log('Creating new listing:', productData);
@@ -1991,12 +1940,6 @@ export default function ProListingBuilder() {
                     </div>
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
                     {item.productCategory && <p className="text-xs text-blue-600 mt-1">{item.productCategory}</p>}
-                    {item.pass2Status === 'complete' && (
-                      <p className="text-[10px] text-purple-600 mt-0.5">🏷️ {item.pass2FilledCount || 0} eBay specs filled</p>
-                    )}
-                    {item.pass2Status === 'filling' && (
-                      <p className="text-[10px] text-purple-500 mt-0.5 animate-pulse">⏳ Filling eBay specs...</p>
-                    )}
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-1 rounded ml-2">
                     <X className="w-4 h-4" />
@@ -2029,16 +1972,6 @@ export default function ProListingBuilder() {
                       </span>
                     )}
                     {selected.productCategory && <span className="text-sm px-2 py-1 rounded bg-blue-100 text-blue-700">{selected.productCategory}</span>}
-                    {selected.pass2Status === 'complete' && (
-                      <span className="text-sm px-2 py-1 rounded bg-purple-100 text-purple-700">
-                        🏷️ {selected.pass2FilledCount}/{selected.pass2TotalCount} eBay specs
-                      </span>
-                    )}
-                    {selected.pass2Status === 'filling' && (
-                      <span className="text-sm px-2 py-1 rounded bg-purple-100 text-purple-600 animate-pulse">
-                        ⏳ Filling eBay specs...
-                      </span>
-                    )}
                   </div>
                 </div>
                 <button onClick={() => processItem(selected.id)} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm flex items-center gap-1">
@@ -2158,198 +2091,6 @@ export default function ProListingBuilder() {
                       <div className="p-4 text-gray-500 text-sm">No specifications found</div>
                     )}
                   </div>
-
-                  {/* eBay Item Specifics (Pass 2) */}
-                  {(selected.ebayItemSpecifics?.length > 0 || selected.pass2Status === 'filling') && (
-                    <div className="border rounded-lg overflow-hidden">
-                      <button onClick={() => setShowEbaySpecifics(!showEbaySpecifics)} className="w-full px-4 py-3 bg-purple-50 flex justify-between items-center hover:bg-purple-100 transition">
-                        <span className="font-semibold text-purple-800">
-                          🏷️ eBay Item Specifics
-                          {selected.pass2Status === 'filling' && (
-                            <span className="ml-2 text-sm text-purple-600 animate-pulse">⏳ AI filling...</span>
-                          )}
-                          {selected.pass2Status === 'complete' && (
-                            <span className="ml-2 text-sm text-green-600">
-                              ✓ {selected.pass2FilledCount || 0}/{selected.pass2TotalCount || 0} filled
-                            </span>
-                          )}
-                          {selected.pass2Status === 'error' && (
-                            <span className="ml-2 text-sm text-red-600">⚠ Error</span>
-                          )}
-                        </span>
-                        {showEbaySpecifics ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                      </button>
-                      {showEbaySpecifics && selected.pass2Status === 'filling' && (
-                        <div className="p-6 text-center">
-                          <Loader className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-2" />
-                          <p className="text-sm text-gray-600">AI is filling eBay item specifics...</p>
-                        </div>
-                      )}
-                      {showEbaySpecifics && selected.ebayItemSpecifics?.length > 0 && (
-                        <div className="p-4">
-                          {/* Required fields first */}
-                          {selected.ebayItemSpecifics.filter(s => s.required).length > 0 && (
-                            <div className="mb-4">
-                              <p className="text-xs font-bold text-red-600 mb-2 uppercase">Required</p>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {selected.ebayItemSpecifics.filter(s => s.required).map((spec, idx) => (
-                                  <div key={`req-${idx}`} className="flex flex-col">
-                                    <label className="text-xs font-medium text-red-700 mb-1">{spec.ebayName} *</label>
-                                    {spec.mode === 'SELECTION_ONLY' && spec.allowedValues?.length > 0 ? (
-                                      <select
-                                        value={spec.value || ''}
-                                        onChange={e => {
-                                          const newSpecifics = [...selected.ebayItemSpecifics];
-                                          const i = newSpecifics.findIndex(s => s.ebayName === spec.ebayName);
-                                          if (i !== -1) {
-                                            newSpecifics[i] = { ...newSpecifics[i], value: e.target.value };
-                                            // Update both UI and SureDone data
-                                            const newSuredone = { ...selected.ebayItemSpecificsForSuredone };
-                                            if (spec.suredoneInlineField) newSuredone[spec.suredoneInlineField] = e.target.value;
-                                            if (spec.suredoneDynamicField) newSuredone[spec.suredoneDynamicField] = e.target.value;
-                                            updateField(selected.id, 'ebayItemSpecifics', newSpecifics);
-                                            updateField(selected.id, 'ebayItemSpecificsForSuredone', newSuredone);
-                                          }
-                                        }}
-                                        className={`px-3 py-2 border rounded-lg text-sm ${!spec.value ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'}`}
-                                      >
-                                        <option value="">Select...</option>
-                                        {spec.allowedValues.map(v => <option key={v} value={v}>{v}</option>)}
-                                      </select>
-                                    ) : (
-                                      <input
-                                        type="text"
-                                        value={spec.value || ''}
-                                        onChange={e => {
-                                          const newSpecifics = [...selected.ebayItemSpecifics];
-                                          const i = newSpecifics.findIndex(s => s.ebayName === spec.ebayName);
-                                          if (i !== -1) {
-                                            newSpecifics[i] = { ...newSpecifics[i], value: e.target.value };
-                                            const newSuredone = { ...selected.ebayItemSpecificsForSuredone };
-                                            if (spec.suredoneInlineField) newSuredone[spec.suredoneInlineField] = e.target.value;
-                                            if (spec.suredoneDynamicField) newSuredone[spec.suredoneDynamicField] = e.target.value;
-                                            updateField(selected.id, 'ebayItemSpecifics', newSpecifics);
-                                            updateField(selected.id, 'ebayItemSpecificsForSuredone', newSuredone);
-                                          }
-                                        }}
-                                        className={`px-3 py-2 border rounded-lg text-sm ${!spec.value ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'}`}
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {/* Recommended fields */}
-                          {selected.ebayItemSpecifics.filter(s => !s.required && s.usage === 'RECOMMENDED').length > 0 && (
-                            <div className="mb-4">
-                              <p className="text-xs font-bold text-blue-600 mb-2 uppercase">Recommended</p>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {selected.ebayItemSpecifics.filter(s => !s.required && s.usage === 'RECOMMENDED').map((spec, idx) => (
-                                  <div key={`rec-${idx}`} className="flex flex-col">
-                                    <label className="text-xs font-medium text-blue-700 mb-1">{spec.ebayName}</label>
-                                    {spec.mode === 'SELECTION_ONLY' && spec.allowedValues?.length > 0 ? (
-                                      <select
-                                        value={spec.value || ''}
-                                        onChange={e => {
-                                          const newSpecifics = [...selected.ebayItemSpecifics];
-                                          const i = newSpecifics.findIndex(s => s.ebayName === spec.ebayName);
-                                          if (i !== -1) {
-                                            newSpecifics[i] = { ...newSpecifics[i], value: e.target.value };
-                                            const newSuredone = { ...selected.ebayItemSpecificsForSuredone };
-                                            if (spec.suredoneInlineField) newSuredone[spec.suredoneInlineField] = e.target.value;
-                                            if (spec.suredoneDynamicField) newSuredone[spec.suredoneDynamicField] = e.target.value;
-                                            updateField(selected.id, 'ebayItemSpecifics', newSpecifics);
-                                            updateField(selected.id, 'ebayItemSpecificsForSuredone', newSuredone);
-                                          }
-                                        }}
-                                        className={`px-3 py-2 border rounded-lg text-sm ${spec.value ? 'bg-green-50 border-green-200' : 'bg-white'}`}
-                                      >
-                                        <option value="">Select...</option>
-                                        {spec.allowedValues.map(v => <option key={v} value={v}>{v}</option>)}
-                                      </select>
-                                    ) : (
-                                      <input
-                                        type="text"
-                                        value={spec.value || ''}
-                                        onChange={e => {
-                                          const newSpecifics = [...selected.ebayItemSpecifics];
-                                          const i = newSpecifics.findIndex(s => s.ebayName === spec.ebayName);
-                                          if (i !== -1) {
-                                            newSpecifics[i] = { ...newSpecifics[i], value: e.target.value };
-                                            const newSuredone = { ...selected.ebayItemSpecificsForSuredone };
-                                            if (spec.suredoneInlineField) newSuredone[spec.suredoneInlineField] = e.target.value;
-                                            if (spec.suredoneDynamicField) newSuredone[spec.suredoneDynamicField] = e.target.value;
-                                            updateField(selected.id, 'ebayItemSpecifics', newSpecifics);
-                                            updateField(selected.id, 'ebayItemSpecificsForSuredone', newSuredone);
-                                          }
-                                        }}
-                                        className={`px-3 py-2 border rounded-lg text-sm ${spec.value ? 'bg-green-50 border-green-200' : 'bg-white'}`}
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {/* Optional fields (collapsed by default) */}
-                          {selected.ebayItemSpecifics.filter(s => !s.required && s.usage !== 'RECOMMENDED').length > 0 && (
-                            <details className="mt-2">
-                              <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
-                                Optional fields ({selected.ebayItemSpecifics.filter(s => !s.required && s.usage !== 'RECOMMENDED').length})
-                              </summary>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                                {selected.ebayItemSpecifics.filter(s => !s.required && s.usage !== 'RECOMMENDED').map((spec, idx) => (
-                                  <div key={`opt-${idx}`} className="flex flex-col">
-                                    <label className="text-xs font-medium text-gray-500 mb-1">{spec.ebayName}</label>
-                                    {spec.mode === 'SELECTION_ONLY' && spec.allowedValues?.length > 0 ? (
-                                      <select
-                                        value={spec.value || ''}
-                                        onChange={e => {
-                                          const newSpecifics = [...selected.ebayItemSpecifics];
-                                          const i = newSpecifics.findIndex(s => s.ebayName === spec.ebayName);
-                                          if (i !== -1) {
-                                            newSpecifics[i] = { ...newSpecifics[i], value: e.target.value };
-                                            const newSuredone = { ...selected.ebayItemSpecificsForSuredone };
-                                            if (spec.suredoneInlineField) newSuredone[spec.suredoneInlineField] = e.target.value;
-                                            if (spec.suredoneDynamicField) newSuredone[spec.suredoneDynamicField] = e.target.value;
-                                            updateField(selected.id, 'ebayItemSpecifics', newSpecifics);
-                                            updateField(selected.id, 'ebayItemSpecificsForSuredone', newSuredone);
-                                          }
-                                        }}
-                                        className={`px-3 py-2 border rounded-lg text-sm ${spec.value ? 'bg-green-50 border-green-200' : 'bg-white'}`}
-                                      >
-                                        <option value="">Select...</option>
-                                        {spec.allowedValues.map(v => <option key={v} value={v}>{v}</option>)}
-                                      </select>
-                                    ) : (
-                                      <input
-                                        type="text"
-                                        value={spec.value || ''}
-                                        onChange={e => {
-                                          const newSpecifics = [...selected.ebayItemSpecifics];
-                                          const i = newSpecifics.findIndex(s => s.ebayName === spec.ebayName);
-                                          if (i !== -1) {
-                                            newSpecifics[i] = { ...newSpecifics[i], value: e.target.value };
-                                            const newSuredone = { ...selected.ebayItemSpecificsForSuredone };
-                                            if (spec.suredoneInlineField) newSuredone[spec.suredoneInlineField] = e.target.value;
-                                            if (spec.suredoneDynamicField) newSuredone[spec.suredoneDynamicField] = e.target.value;
-                                            updateField(selected.id, 'ebayItemSpecifics', newSpecifics);
-                                            updateField(selected.id, 'ebayItemSpecificsForSuredone', newSuredone);
-                                          }
-                                        }}
-                                        className={`px-3 py-2 border rounded-lg text-sm ${spec.value ? 'bg-green-50 border-green-200' : 'bg-white'}`}
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </details>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   {/* Description */}
                   <div>

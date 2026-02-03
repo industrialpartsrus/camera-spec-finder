@@ -725,38 +725,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // ==========================================================================
-    // PASS 2: EBAY ITEM SPECIFICS (AI-filled from Taxonomy API)
-    // These come pre-mapped to SureDone field names (both inline + prefix)
-    // Only adds fields that weren't already set by Pass 1 spec processing
-    // ==========================================================================
-    if (product.ebayItemSpecificsForSuredone && typeof product.ebayItemSpecificsForSuredone === 'object') {
-      console.log('\n=== PROCESSING PASS 2 EBAY ITEM SPECIFICS ===');
-      let pass2Count = 0;
-      let pass2Skipped = 0;
-
-      for (const [fieldName, value] of Object.entries(product.ebayItemSpecificsForSuredone)) {
-        // Skip empty/null/N/A values
-        if (!value || value === 'null' || value === null || value === 'N/A' || value === 'Unknown') continue;
-
-        // Skip brand/mpn — already handled above
-        if (fieldName === 'brand' || fieldName === 'mpn' || fieldName === 'ebayitemspecificsbrand' || fieldName === 'ebayitemspecificsmpn') continue;
-
-        // Only add if not already set by Pass 1
-        if (!fieldsSet.has(fieldName)) {
-          formData.append(fieldName, value);
-          fieldsSet.add(fieldName);
-          specsCount++;
-          pass2Count++;
-          console.log(`  ✓ PASS2: ${fieldName} = "${value}"`);
-        } else {
-          pass2Skipped++;
-          console.log(`  ⊘ PASS2 SKIP (already set): ${fieldName}`);
-        }
-      }
-      console.log(`Pass 2: Added ${pass2Count} new fields, skipped ${pass2Skipped} (already set by Pass 1)`);
-    }
-
     console.log(`Total eBay item specifics set: ${specsCount}`);
 
     // === SEND TO SUREDONE ===
