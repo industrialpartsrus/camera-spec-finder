@@ -81,155 +81,305 @@ const BIGCOMMERCE_CATEGORY_MAP = {
 };
 
 // =============================================================================
-// KNOWN SUREDONE EBAY ITEM SPECIFIC FIELDS
-// These are the actual field names SureDone accepts for eBay item specifics
+// SUREDONE FIELD MAPPING FOR EBAY ITEM SPECIFICS
 // =============================================================================
-const KNOWN_SUREDONE_FIELDS = new Set([
-  // Motors
-  'ratedloadhp', 'baserpm', 'acphase', 'nominalratedinputvoltage', 'actualratedinputvoltage',
-  'servicefactor', 'nemaframesuffix', 'acmotortype', 'specialmotorconstruction',
-  'fullloadamps', 'enclosuretype', 'iecframesize', 'insulationclass', 'nemadesignletter',
-  'mountingtype', 'currenttype', 'shafttype', 'shaftdiameter', 'invertervectordutyrating',
-  'reversiblenonreversible', 'iprating', 'dcstatorwindingtype', 'acfrequencyrating',
-  'ratedfullloadtorque', 'startinglockedrotortorque', 'protectionagainstliquids',
-  'protectionagainstsolids',
+// SureDone has TWO types of eBay fields:
+//   1. INLINE fields: short names like "ratedloadhp", "baserpm", "enclosuretype"
+//      → These map directly to eBay Recommended item specifics
+//   2. PREFIX fields: "ebayitemspecifics" + name like "ebayitemspecificsacphase"  
+//      → These ALSO map to eBay Recommended but need the prefix
+//
+// Some specs only work with the prefix. We must send BOTH where applicable.
+// =============================================================================
+
+// Fields that work as INLINE (short name) in SureDone → eBay Recommended
+const INLINE_FIELDS = new Set([
+  // Motors - confirmed inline in SureDone headers
+  'ratedloadhp', 'baserpm', 'nominalratedinputvoltage', 'actualratedinputvoltage',
+  'fullloadamps', 'enclosuretype', 'mountingtype', 'currenttype', 'shaftdiameter',
+  'reversiblenonreversible', 'dcstatorwindingtype', 'ratedfullloadtorque',
+  'numberofpoles', 'numberofphases', 'motortype', 'insulationclass', 'nemadesignletter',
+  'stallcurrent', 'noloadrpm',
   // Sensors
-  'nominalsensingradius', 'operatingdistance', 'sensortype', 'outputtype', 'sensingrange',
+  'sensingrange', 'operatingdistance', 'sensortype', 'outputtype',
   // Pneumatic/Hydraulic
-  'boresize', 'strokelength', 'cylindertype', 'inletportdiameter', 'outletportdiameter',
-  'solenoidvalvetype', 'numberofports', 'maxpsi', 'ratedpressure', 'maximumpressure',
-  'maximumflowrate',
+  'borediameter', 'strokelength', 'cylindertype', 'maxpsi', 'ratedpressure',
+  'maximumpressure', 'maximumflowrate', 'hydraulicpumptype', 'pumpaction',
+  'centrifugalpumptype',
   // PLC/HMI/Communication
-  'communicationstandard', 'displaytype', 'displayscreensize', 'numberofiopoints',
-  // Circuit Breakers/Relays
-  'numberofpoles', 'coilvoltage', 'auxiliarycontacts', 'nemasize', 'currentrating',
-  'voltagerating', 'interruptingrating', 'breakertype', 'tripcurve',
-  // Transformers
-  'kvarating', 'primaryvoltage', 'secondaryvoltage', 'transformertype',
+  'communicationstandard',
+  // Circuit Breakers/Relays/Contactors
+  'coilvoltage', 'currentrating', 'voltagerating',
   // General
-  'countryoforigin', 'model', 'mpn', 'voltage', 'amperage', 'frequency', 'phase'
+  'countryoforigin', 'model', 'mpn', 'voltage', 'amperage', 'frequency', 'phase',
+  'horsepower', 'frame', 'rpm', 'kva', 'shaftdiameter'
 ]);
 
-// =============================================================================
-// LEGACY MAPPING: Human-readable keys → SureDone field names
-// This handles cases where AI or old code used different key names
-// =============================================================================
-const LEGACY_FIELD_MAP = {
-  // Horsepower variations
+// Fields that REQUIRE "ebayitemspecifics" prefix in SureDone → eBay Recommended
+// Key = the clean field name, Value = the exact SureDone header name
+const PREFIX_FIELDS = {
+  'acphase': 'ebayitemspecificsacphase',
+  'servicefactor': 'ebayitemspecificsservicefactor',
+  'acfrequencyrating': 'ebayitemspecificsacfrequencyrating',
+  'iecframesize': 'ebayitemspecificsiecframesize',
+  'nemaframesuffix': 'ebayitemspecificsnemaframesuffix',
+  'acmotortype': 'ebayitemspecificsacmotortype',
+  'specialmotorconstruction': 'ebayitemspecificsspecialmotorconstruction',
+  'invertervectordutyrating': 'ebayitemspecificsinvertervectordutyrating',
+  'iprating': 'ebayitemspecificsiprating',
+  'protectionagainstliquids': 'ebayitemspecificsprotectionagainstliquids',
+  'protectionagainstsolids': 'ebayitemspecificsprotectionagainstsolids',
+  'startinglockedrotortorque': 'ebayitemspecificsstartinglockedrotortorque',
+  'shafttype': 'ebayitemspecificsshafttype',
+  'nominalsensingradius': 'ebayitemspecificsnominalsensingradius',
+  'displayscreensize': 'ebayitemspecificsdisplayscreensize',
+  'displaytype': 'ebayitemspecificsdisplaytype',
+  'nemasize': 'ebayitemspecificsnemasize',
+  'solenoidvalvetype': 'ebayitemspecificssolenoidvalvetype',
+  'inletportdiameter': 'ebayitemspecificsinletportdiameter',
+  'outletportdiameter': 'ebayitemspecificsoutletportdiameter',
+  'numberofports': 'ebayitemspecificsnumberofports',
+  'cylinderaction': 'ebayitemspecificscylinderaction',
+  'boresize': 'ebayitemspecificsboresize',
+  'countryoforigin': 'ebayitemspecificscountryoforigin',
+  'features': 'ebayitemspecificsfeatures'
+};
+
+// Master mapping: AI key variations → canonical clean field name
+const SPEC_KEY_MAP = {
+  // === HORSEPOWER ===
   'horsepower': 'ratedloadhp',
   'hp': 'ratedloadhp',
   'rated_load': 'ratedloadhp',
+  'ratedload': 'ratedloadhp',
   'rated load': 'ratedloadhp',
-  'rated_load_hp': 'ratedloadhp',
-  
-  // RPM variations
+  'ratedloadhp': 'ratedloadhp',
+
+  // === RPM ===
   'rpm': 'baserpm',
   'speed': 'baserpm',
   'base_rpm': 'baserpm',
-  
-  // Phase variations
+  'baserpm': 'baserpm',
+
+  // === PHASE ===
   'phase': 'acphase',
+  'phases': 'acphase',
   'ac_phase': 'acphase',
-  
-  // Voltage variations
+  'acphase': 'acphase',
+  'numberofphases': 'acphase',
+
+  // === VOLTAGE ===
   'voltage': 'nominalratedinputvoltage',
   'input_voltage': 'nominalratedinputvoltage',
+  'inputvoltage': 'nominalratedinputvoltage',
   'rated_voltage': 'nominalratedinputvoltage',
-  
-  // Amperage variations
+  'nominalratedinputvoltage': 'nominalratedinputvoltage',
+
+  // === AMPERAGE ===
   'amperage': 'fullloadamps',
   'amps': 'fullloadamps',
   'current': 'fullloadamps',
   'fla': 'fullloadamps',
   'full_load_amps': 'fullloadamps',
-  
-  // Frame variations
+  'fullloadamps': 'fullloadamps',
+
+  // === FRAME ===
   'frame': 'iecframesize',
   'frame_size': 'iecframesize',
   'framesize': 'iecframesize',
-  
-  // Enclosure variations
+  'iecframesize': 'iecframesize',
+
+  // === ENCLOSURE ===
   'enclosure': 'enclosuretype',
   'enclosure_type': 'enclosuretype',
-  
-  // Service factor
+  'enclosuretype': 'enclosuretype',
+
+  // === SERVICE FACTOR ===
   'service_factor': 'servicefactor',
-  
-  // Frequency
+  'servicefactor': 'servicefactor',
+
+  // === FREQUENCY ===
   'frequency': 'acfrequencyrating',
   'hz': 'acfrequencyrating',
-  
-  // Insulation
+  'acfrequencyrating': 'acfrequencyrating',
+
+  // === INSULATION ===
   'insulation_class': 'insulationclass',
   'insulation': 'insulationclass',
-  
-  // Motor type
+  'insulationclass': 'insulationclass',
+
+  // === MOTOR TYPE ===
   'motor_type': 'acmotortype',
+  'motortype': 'acmotortype',
+  'acmotortype': 'acmotortype',
   'type': 'acmotortype',
-  
-  // NEMA
+
+  // === NEMA ===
   'nema_design': 'nemadesignletter',
+  'nemadesign': 'nemadesignletter',
+  'nemadesignletter': 'nemadesignletter',
   'nema_frame_suffix': 'nemaframesuffix',
   'frame_suffix': 'nemaframesuffix',
-  
-  // Mounting
+  'nemaframesuffix': 'nemaframesuffix',
+
+  // === MOUNTING ===
   'mounting': 'mountingtype',
   'mounting_type': 'mountingtype',
-  
-  // Country
+  'mountingtype': 'mountingtype',
+
+  // === SHAFT ===
+  'shaft_diameter': 'shaftdiameter',
+  'shaftdiameter': 'shaftdiameter',
+  'shaft_type': 'shafttype',
+  'shafttype': 'shafttype',
+
+  // === SPECIAL MOTOR ===
+  'special_construction': 'specialmotorconstruction',
+  'specialmotorconstruction': 'specialmotorconstruction',
+  'inverter_duty': 'invertervectordutyrating',
+  'vfd_rated': 'invertervectordutyrating',
+  'vector_duty': 'invertervectordutyrating',
+  'invertervectordutyrating': 'invertervectordutyrating',
+
+  // === CURRENT TYPE ===
+  'current_type': 'currenttype',
+  'currenttype': 'currenttype',
+
+  // === IP/PROTECTION ===
+  'ip_rating': 'iprating',
+  'iprating': 'iprating',
+
+  // === REVERSIBILITY ===
+  'reversible': 'reversiblenonreversible',
+  'reversiblenonreversible': 'reversiblenonreversible',
+
+  // === TORQUE ===
+  'torque': 'ratedfullloadtorque',
+  'full_load_torque': 'ratedfullloadtorque',
+  'ratedfullloadtorque': 'ratedfullloadtorque',
+  'starting_torque': 'startinglockedrotortorque',
+  'locked_rotor_torque': 'startinglockedrotortorque',
+  'startinglockedrotortorque': 'startinglockedrotortorque',
+
+  // === DC MOTOR ===
+  'dc_winding': 'dcstatorwindingtype',
+  'dcstatorwindingtype': 'dcstatorwindingtype',
+  'stator_type': 'dcstatorwindingtype',
+
+  // === COUNTRY ===
   'country_of_origin': 'countryoforigin',
+  'countryoforigin': 'countryoforigin',
+  'country_of_manufacture': 'countryoforigin',
   'origin': 'countryoforigin',
   'country': 'countryoforigin',
-  
-  // Sensors
+
+  // === EFFICIENCY ===
+  'efficiency': 'efficiency',
+  'efficiencyclass': 'efficiency',
+
+  // === SENSORS ===
   'sensing_range': 'nominalsensingradius',
+  'sensingrange': 'sensingrange',
+  'sensing_distance': 'nominalsensingradius',
+  'nominalsensingradius': 'nominalsensingradius',
+  'operating_distance': 'operatingdistance',
+  'operatingdistance': 'operatingdistance',
+  'sensor_type': 'sensortype',
+  'sensortype': 'sensortype',
   'output_type': 'outputtype',
-  
-  // Pneumatics
-  'bore_diameter': 'boresize',
+  'outputtype': 'outputtype',
+
+  // === PNEUMATIC / HYDRAULIC ===
   'bore_size': 'boresize',
+  'boresize': 'boresize',
+  'bore_diameter': 'borediameter',
+  'borediameter': 'borediameter',
   'bore': 'boresize',
   'stroke': 'strokelength',
   'stroke_length': 'strokelength',
-  
-  // Communication
+  'strokelength': 'strokelength',
+  'cylinder_type': 'cylindertype',
+  'cylindertype': 'cylindertype',
+  'port_size': 'inletportdiameter',
+  'inlet_port': 'inletportdiameter',
+  'outlet_port': 'outletportdiameter',
+  'valve_type': 'solenoidvalvetype',
+  'number_of_ports': 'numberofports',
+  'numberofports': 'numberofports',
+  'psi': 'maxpsi',
+  'maxpsi': 'maxpsi',
+  'pressure': 'ratedpressure',
+  'max_pressure': 'maximumpressure',
+  'maxpressure': 'maximumpressure',
+  'flow_rate': 'maximumflowrate',
+  'flowrate': 'maximumflowrate',
+
+  // === PLC / HMI / COMMUNICATION ===
   'communication': 'communicationstandard',
   'communication_protocol': 'communicationstandard',
   'protocol': 'communicationstandard',
-  
-  // Poles
+  'communicationstandard': 'communicationstandard',
+  'display_type': 'displaytype',
+  'displaytype': 'displaytype',
+  'display_size': 'displayscreensize',
+  'screen_size': 'displayscreensize',
+  'displayscreensize': 'displayscreensize',
+
+  // === CIRCUIT BREAKERS / RELAYS / CONTACTORS ===
   'poles': 'numberofpoles',
-  'number_of_poles': 'numberofpoles'
+  'number_of_poles': 'numberofpoles',
+  'numberofpoles': 'numberofpoles',
+  'coil_voltage': 'coilvoltage',
+  'coilvoltage': 'coilvoltage',
+  'current_rating': 'currentrating',
+  'currentrating': 'currentrating',
+  'voltage_rating': 'voltagerating',
+  'voltagerating': 'voltagerating',
+  'nema_size': 'nemasize',
+  'nemasize': 'nemasize'
 };
 
+// Fields to SKIP - already handled by core form fields
+const SKIP_SPEC_KEYS = new Set([
+  'brand', 'mpn', 'model', 'manufacturer', 'upc', 'condition'
+]);
+
 // =============================================================================
-// NORMALIZE SPEC KEY: Converts any format to SureDone field name
+// NORMALIZE SPEC KEY: Returns { inline, prefix } SureDone field names
+// Returns an object with one or both field names to send to SureDone
 // =============================================================================
-function normalizeSpecKey(key) {
+function resolveSpecField(key) {
   if (!key) return null;
-  
-  // First, convert to lowercase and remove special chars for comparison
+
   const keyLower = key.toLowerCase().trim();
   const keyClean = keyLower.replace(/[^a-z0-9]/g, '');
   const keyUnderscore = keyLower.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-  
-  // 1. Check if it's already a known SureDone field
-  if (KNOWN_SUREDONE_FIELDS.has(keyClean)) {
-    return keyClean;
+
+  // Skip fields already handled elsewhere
+  if (SKIP_SPEC_KEYS.has(keyClean)) return null;
+
+  // Find the canonical field name
+  const canonical = SPEC_KEY_MAP[keyLower] || SPEC_KEY_MAP[keyClean] || SPEC_KEY_MAP[keyUnderscore] || keyClean;
+
+  // Build result: which SureDone fields to send
+  const result = { canonical };
+
+  // Check if this field has an inline version
+  if (INLINE_FIELDS.has(canonical)) {
+    result.inline = canonical;
   }
-  
-  // 2. Check legacy mapping with various key formats
-  if (LEGACY_FIELD_MAP[keyLower]) return LEGACY_FIELD_MAP[keyLower];
-  if (LEGACY_FIELD_MAP[keyClean]) return LEGACY_FIELD_MAP[keyClean];
-  if (LEGACY_FIELD_MAP[keyUnderscore]) return LEGACY_FIELD_MAP[keyUnderscore];
-  
-  // 3. Try the cleaned version (handles eBay display names like "Rated Load (HP)" → "ratedloadhp")
-  if (KNOWN_SUREDONE_FIELDS.has(keyClean)) {
-    return keyClean;
+
+  // Check if this field needs the ebayitemspecifics prefix
+  if (PREFIX_FIELDS[canonical]) {
+    result.prefix = PREFIX_FIELDS[canonical];
   }
-  
-  // 4. Not a known field - return the cleaned version anyway (SureDone might accept it)
-  return keyClean;
+
+  // If neither matched, try sending as inline (SureDone may accept it)
+  if (!result.inline && !result.prefix) {
+    result.inline = canonical;
+  }
+
+  return result;
 }
 
 // =============================================================================
@@ -509,7 +659,7 @@ export default async function handler(req, res) {
 
     // ==========================================================================
     // PROCESS SPECIFICATIONS → EBAY ITEM SPECIFICS
-    // Handles: AI lowercase keys, legacy keys, and eBay display names
+    // Sends BOTH inline AND ebayitemspecifics-prefix versions where needed
     // ==========================================================================
     console.log('=== PROCESSING SPECIFICATIONS ===');
     console.log('Input specifications:', JSON.stringify(product.specifications, null, 2));
@@ -525,21 +675,39 @@ export default async function handler(req, res) {
           continue;
         }
 
-        // Normalize the key to SureDone field name
-        const suredoneField = normalizeSpecKey(key);
+        // Resolve the key to SureDone field name(s)
+        const resolved = resolveSpecField(key);
 
-        if (suredoneField && !fieldsSet.has(suredoneField)) {
-          formData.append(suredoneField, value);
-          fieldsSet.add(suredoneField);
+        if (!resolved) {
+          console.log(`  SKIP: "${key}" (handled elsewhere or not mappable)`);
+          continue;
+        }
+
+        const { canonical, inline, prefix } = resolved;
+
+        // Send inline version if available and not already set
+        if (inline && !fieldsSet.has(inline)) {
+          formData.append(inline, value);
+          fieldsSet.add(inline);
           specsCount++;
-          
-          if (key !== suredoneField) {
-            console.log(`  ✓ "${key}" → ${suredoneField} = "${value}"`);
-          } else {
-            console.log(`  ✓ ${suredoneField} = "${value}"`);
+          console.log(`  ✓ INLINE: "${key}" → ${inline} = "${value}"`);
+        }
+
+        // Send prefix version if available and not already set
+        if (prefix && !fieldsSet.has(prefix)) {
+          formData.append(prefix, value);
+          fieldsSet.add(prefix);
+          specsCount++;
+          console.log(`  ✓ PREFIX: "${key}" → ${prefix} = "${value}"`);
+        }
+
+        if (!inline && !prefix) {
+          console.log(`  ⚠ NO MAPPING: "${key}" → "${canonical}" (sent as-is)`);
+          if (!fieldsSet.has(canonical)) {
+            formData.append(canonical, value);
+            fieldsSet.add(canonical);
+            specsCount++;
           }
-        } else if (fieldsSet.has(suredoneField)) {
-          console.log(`  SKIP: "${key}" (already set as ${suredoneField})`);
         }
       }
     }
@@ -550,6 +718,11 @@ export default async function handler(req, res) {
       fieldsSet.add('countryoforigin');
       specsCount++;
       console.log(`  ✓ countryOfOrigin → countryoforigin = "${product.countryOfOrigin}"`);
+      // Also send prefix version
+      if (!fieldsSet.has('ebayitemspecificscountryoforigin')) {
+        formData.append('ebayitemspecificscountryoforigin', product.countryOfOrigin);
+        fieldsSet.add('ebayitemspecificscountryoforigin');
+      }
     }
 
     console.log(`Total eBay item specifics set: ${specsCount}`);
