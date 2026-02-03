@@ -686,14 +686,28 @@ export default async function handler(req, res) {
         const { canonical, inline, prefix } = resolved;
 
         // Send inline version if available and not already set
-        // NOTE: We ONLY send inline fields. Prefix (ebayitemspecifics*) creates
-        // unwanted "Dynamic (eBay only)" duplicates in SureDone.
-        // The inline field names land in eBay's Recommended section which is correct.
-        if (inline && !fieldsSet.has(inline)) {
+        // For fields that exist in INLINE_FIELDS, send inline name only.
+        // For fields that ONLY exist in PREFIX_FIELDS, send prefix name only.
+        // NEVER send both (that creates Dynamic duplicates in SureDone).
+        if (inline && INLINE_FIELDS.has(inline) && !fieldsSet.has(inline)) {
           formData.append(inline, value);
           fieldsSet.add(inline);
           specsCount++;
           console.log(`  ✓ INLINE: "${key}" → ${inline} = "${value}"`);
+        } else if (prefix && !fieldsSet.has(prefix)) {
+          // Field requires prefix to reach eBay Recommended section
+          formData.append(prefix, value);
+          fieldsSet.add(prefix);
+          // Also track the inline name so Pass 2 won't duplicate
+          if (inline) fieldsSet.add(inline);
+          specsCount++;
+          console.log(`  ✓ PREFIX-ONLY: "${key}" → ${prefix} = "${value}"`);
+        } else if (inline && !fieldsSet.has(inline)) {
+          // Fallback: field not in INLINE_FIELDS or PREFIX_FIELDS, try inline anyway
+          formData.append(inline, value);
+          fieldsSet.add(inline);
+          specsCount++;
+          console.log(`  ✓ FALLBACK INLINE: "${key}" → ${inline} = "${value}"`);
         }
 
         if (!inline && !prefix) {
@@ -717,7 +731,8 @@ export default async function handler(req, res) {
 
     // ==========================================================================
     // PASS 2: EBAY ITEM SPECIFICS (AI-filled from Taxonomy API)
-    // These come pre-mapped to SureDone field names (both inline + prefix)
+    // These come with inline field names from auto-fill-ebay-specifics.js
+    // Some fields require prefix to work in SureDone, so we check PREFIX_FIELDS
     // Only adds fields that weren't already set by Pass 1 spec processing
     // ==========================================================================
     if (product.ebayItemSpecificsForSuredone && typeof product.ebayItemSpecificsForSuredone === 'object') {
@@ -732,13 +747,24 @@ export default async function handler(req, res) {
         // Skip brand/mpn — already handled above
         if (fieldName === 'brand' || fieldName === 'mpn' || fieldName === 'ebayitemspecificsbrand' || fieldName === 'ebayitemspecificsmpn') continue;
 
-        // Only add if not already set by Pass 1
-        if (!fieldsSet.has(fieldName)) {
-          formData.append(fieldName, value);
-          fieldsSet.add(fieldName);
+        // Determine the correct SureDone field name:
+        // If the field is in PREFIX_FIELDS, use the prefix version
+        // Otherwise use the inline name as-is
+        const prefixVersion = PREFIX_FIELDS[fieldName];
+        const actualFieldName = prefixVersion || fieldName;
+
+        // Only add if not already set by Pass 1 (check both inline and prefix)
+        if (!fieldsSet.has(fieldName) && !fieldsSet.has(actualFieldName)) {
+          formData.append(actualFieldName, value);
+          fieldsSet.add(actualFieldName);
+          fieldsSet.add(fieldName); // Track both to prevent future dupes
           specsCount++;
           pass2Count++;
-          console.log(`  ✓ PASS2: ${fieldName} = "${value}"`);
+          if (prefixVersion) {
+            console.log(`  ✓ PASS2 PREFIX: ${fieldName} → ${actualFieldName} = "${value}"`);
+          } else {
+            console.log(`  ✓ PASS2 INLINE: ${fieldName} = "${value}"`);
+          }
         } else {
           pass2Skipped++;
           console.log(`  ⊘ PASS2 SKIP (already set): ${fieldName}`);
