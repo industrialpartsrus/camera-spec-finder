@@ -738,7 +738,11 @@ function generatePrompt(brand, partNumber, detectedCategory = null) {
     }
   }
 
-  return `Search for comprehensive technical information about: ${brand} ${partNumber}
+  return `Search for the EXACT product: ${brand} ${partNumber}
+
+IMPORTANT: You must find specifications for this EXACT model number "${partNumber}" by ${brand}. 
+Do NOT use specs from similar or related models. Search for "${brand} ${partNumber}" and verify the catalog/part number matches exactly.
+If you find the manufacturer's official product page (e.g., baldor.com, abb.com, siemens.com), use those specs.
 
 This appears to be a ${category} product. Create a professional eBay product listing.
 
@@ -763,6 +767,8 @@ CRITICAL REQUIREMENTS FOR specifications OBJECT:
 2. For fields with allowed values, you MUST pick from the allowed values list
 3. If you can't determine a value, use null (don't guess)
 4. Extract ALL available specifications from the product data
+5. VERIFY the model number "${partNumber}" matches EXACTLY - do not confuse with similar models
+6. If search results show conflicting specs, prefer the manufacturer's official catalog page
 
 DESCRIPTION FORMAT (must be valid HTML):
 <p>Professional 2-3 sentence introduction explaining what this ${category} product is, its primary use cases, and key features.</p>
@@ -794,7 +800,10 @@ REQUIREMENTS:
 }
 
 function generateGenericPrompt(brand, partNumber) {
-  return `Search for comprehensive technical information about: ${brand} ${partNumber}
+  return `Search for the EXACT product: ${brand} ${partNumber}
+
+IMPORTANT: Find specs for this EXACT model "${partNumber}" by ${brand}. Do NOT use specs from similar models.
+Search for "${brand} ${partNumber}" and verify the catalog/part number matches exactly.
 
 Return ONLY valid JSON (no markdown, no code blocks):
 {
