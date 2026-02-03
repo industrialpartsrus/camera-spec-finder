@@ -169,18 +169,16 @@ Respond with ONLY valid JSON object (no markdown, no backticks), mapping each eB
         multiValue: aspect.multiValue || false
       });
 
-      // Build SureDone payload — send BOTH inline and prefix versions
+      // Build SureDone payload — send INLINE ONLY (not prefix)
+      // Pass 1's existing dual-field logic in suredone-create-listing.js handles prefix versions
+      // Sending prefix here creates unwanted Dynamic (eBay only) duplicates
       if (isValid) {
-        // Inline field (for Recommended section in eBay)
+        // Inline field only (for Recommended section in eBay)
         if (aspect.suredoneInlineField) {
           specificsForSuredone[aspect.suredoneInlineField] = value;
         }
-        // Prefix field (for Dynamic section in eBay, also catches any that inline misses)
-        if (aspect.suredoneDynamicField) {
-          specificsForSuredone[aspect.suredoneDynamicField] = value;
-        }
         filledCount++;
-        console.log(`  ✓ ${ebayName} → inline: ${aspect.suredoneInlineField}, prefix: ${aspect.suredoneDynamicField} = "${value}"`);
+        console.log(`  ✓ ${ebayName} → ${aspect.suredoneInlineField} = "${value}"`);
       }
     }
 
