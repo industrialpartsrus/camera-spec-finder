@@ -809,7 +809,13 @@ const ALL_PRODUCTS_STORE_CATEGORY = '23399313015';
 // ============================================================================
 
 function buildProductIdentificationPrompt(brand, partNumber) {
-  return `You are an expert industrial equipment specialist. Research and identify this product: ${brand} ${partNumber}
+  return `You are an expert industrial equipment specialist. Research and identify this EXACT product: ${brand} ${partNumber}
+
+CRITICAL: You MUST find specifications for the EXACT model number "${partNumber}" by ${brand}. 
+- Do NOT substitute specs from a similar or related model.
+- Do NOT use specs from a different size, voltage, or variant.
+- If you cannot find the exact specs for "${partNumber}", return what you CAN confirm and set "qualityFlag" to "NEEDS ATTENTION".
+- The model/MPN in your response MUST be "${partNumber}" — not a similar part number.
 
 FIRST, determine what TYPE of product this is. Choose the MOST SPECIFIC type from this list:
 

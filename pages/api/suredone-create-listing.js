@@ -686,19 +686,14 @@ export default async function handler(req, res) {
         const { canonical, inline, prefix } = resolved;
 
         // Send inline version if available and not already set
+        // NOTE: We ONLY send inline fields. Prefix (ebayitemspecifics*) creates
+        // unwanted "Dynamic (eBay only)" duplicates in SureDone.
+        // The inline field names land in eBay's Recommended section which is correct.
         if (inline && !fieldsSet.has(inline)) {
           formData.append(inline, value);
           fieldsSet.add(inline);
           specsCount++;
           console.log(`  ✓ INLINE: "${key}" → ${inline} = "${value}"`);
-        }
-
-        // Send prefix version if available and not already set
-        if (prefix && !fieldsSet.has(prefix)) {
-          formData.append(prefix, value);
-          fieldsSet.add(prefix);
-          specsCount++;
-          console.log(`  ✓ PREFIX: "${key}" → ${prefix} = "${value}"`);
         }
 
         if (!inline && !prefix) {
@@ -718,11 +713,6 @@ export default async function handler(req, res) {
       fieldsSet.add('countryoforigin');
       specsCount++;
       console.log(`  ✓ countryOfOrigin → countryoforigin = "${product.countryOfOrigin}"`);
-      // Also send prefix version
-      if (!fieldsSet.has('ebayitemspecificscountryoforigin')) {
-        formData.append('ebayitemspecificscountryoforigin', product.countryOfOrigin);
-        fieldsSet.add('ebayitemspecificscountryoforigin');
-      }
     }
 
     // ==========================================================================
