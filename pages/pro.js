@@ -591,175 +591,338 @@ const SHIPPING_PROFILES = [
 // eBay Store Categories (YOUR store's categories)
 // Complete list from eBay Store - Updated January 2025
 const EBAY_STORE_CATEGORIES = [
-  // Top Level - All Products
-  { id: '23399313015', name: 'â˜… ALL PRODUCTS', level: 1 },
-  
-  // Assembly Tools
-  { id: '11495474015', name: 'ASSEMBLY TOOLS', level: 1 },
-  
-  // Automation Control
-  { id: '5384028015', name: 'AUTOMATION CONTROL', level: 1 },
-  { id: '6686264015', name: '  â”” HMI', level: 2 },
-  { id: '18373835', name: '  â”” I/O BOARDS', level: 2 },
-  { id: '5404089015', name: '  â”” PLC', level: 2 },
-  { id: '2242362015', name: '  â”” POWER SUPPLY', level: 2 },
-  
-  // Bearings
-  { id: '6690505015', name: 'BEARINGS', level: 1 },
-  { id: '4173714015', name: '  â”” BALL', level: 2 },
-  { id: '4173170015', name: '  â”” CAM FOLLOWER', level: 2 },
-  { id: '4173165015', name: '  â”” FLANGE BEARINGS', level: 2 },
-  { id: '4173713015', name: '  â”” LINEAR', level: 2 },
-  { id: '4173171015', name: '  â”” NEEDLE', level: 2 },
-  { id: '4173166015', name: '  â”” PILLOW BLOCK', level: 2 },
-  { id: '4173168015', name: '  â”” ROLLER', level: 2 },
-  { id: '4173167015', name: '  â”” TAPERED', level: 2 },
-  { id: '4173169015', name: '  â”” THRUST', level: 2 },
-  
-  // Computers
-  { id: '19438754015', name: 'COMPUTERS & ACCESSORIES', level: 1 },
-  
-  // Electrical
-  { id: '393385015', name: 'ELECTRICAL', level: 1 },
-  { id: '5634105015', name: '  â”” CIRCUIT BREAKERS', level: 2 },
-  { id: '20338717', name: '  â”” DISCONNECTS', level: 2 },
-  { id: '18373801', name: '  â”” ENCLOSURES', level: 2 },
-  { id: '18373807', name: '  â”” FUSES & HOLDERS', level: 2 },
-  { id: '5634104015', name: '  â”” TRANSFORMERS', level: 2 },
-  
-  // Filtration
-  { id: '2343161015', name: 'FILTRATION', level: 1 },
-  { id: '2343164015', name: '  â”” AIR FILTER', level: 2 },
-  { id: '2343166015', name: '  â”” COOLANT FILTER', level: 2 },
-  { id: '2343163015', name: '  â”” HYDRAULIC FILTER', level: 2 },
-  { id: '2343165015', name: '  â”” OIL FILTER', level: 2 },
-  { id: '2343162015', name: '  â”” WATER FILTER', level: 2 },
-  
+  // Special - All Products (standalone, selectable)
+  { id: '23399313015', name: 'ALL PRODUCTS', level: 1, hasChildren: false },
+
+  // ASSEMBLY TOOLS (standalone)
+  { id: '11495474015', name: 'ASSEMBLY TOOLS', level: 1, hasChildren: false },
+
+  // AUTOMATION CONTROL
+  { id: '5384028015', name: 'AUTOMATION CONTROL', level: 1, hasChildren: true },
+  { id: '6686264015', name: 'HMI', level: 2, hasChildren: false },
+  { id: '18373835', name: 'I/O BOARDS', level: 2, hasChildren: false },
+  { id: '5404089015', name: 'PLC', level: 2, hasChildren: false },
+  { id: '2242362015', name: 'POWER SUPPLY', level: 2, hasChildren: false },
+
+  // BEARINGS
+  { id: '6690505015', name: 'BEARINGS', level: 1, hasChildren: true },
+  { id: '4173714015', name: 'BALL', level: 2, hasChildren: false },
+  { id: '4173170015', name: 'CAM FOLLOWER', level: 2, hasChildren: false },
+  { id: '4173165015', name: 'FLANGE BEARINGS', level: 2, hasChildren: false },
+  { id: '4173713015', name: 'LINEAR', level: 2, hasChildren: false },
+  { id: '4173171015', name: 'NEEDLE', level: 2, hasChildren: false },
+  { id: '4173166015', name: 'PILLOW BLOCK', level: 2, hasChildren: false },
+  { id: '4173168015', name: 'ROLLER', level: 2, hasChildren: false },
+  { id: '4173167015', name: 'TAPERED', level: 2, hasChildren: false },
+  { id: '4173169015', name: 'THRUST', level: 2, hasChildren: false },
+
+  // COMPUTERS & ACCESSORIES (standalone)
+  { id: '19438754015', name: 'COMPUTERS & ACCESSORIES', level: 1, hasChildren: false },
+
+  // ELECTRICAL
+  { id: '393385015', name: 'ELECTRICAL', level: 1, hasChildren: true },
+  { id: '5634105015', name: 'CIRCUIT BREAKERS', level: 2, hasChildren: false },
+  { id: '20338717', name: 'DISCONNECTS', level: 2, hasChildren: false },
+  { id: '18373801', name: 'ENCLOSURES', level: 2, hasChildren: false },
+  { id: '18373807', name: 'FUSES & HOLDERS', level: 2, hasChildren: false },
+  { id: '5634104015', name: 'TRANSFORMERS', level: 2, hasChildren: false },
+
+  // FILTRATION
+  { id: '2343161015', name: 'FILTRATION', level: 1, hasChildren: true },
+  { id: '2343164015', name: 'AIR FILTER', level: 2, hasChildren: false },
+  { id: '2343166015', name: 'COOLANT FILTER', level: 2, hasChildren: false },
+  { id: '2343163015', name: 'HYDRAULIC FILTER', level: 2, hasChildren: false },
+  { id: '2343165015', name: 'OIL FILTER', level: 2, hasChildren: false },
+  { id: '2343162015', name: 'WATER FILTER', level: 2, hasChildren: false },
+
   // HVAC
-  { id: '17167473', name: 'HVAC', level: 1 },
-  { id: '2457873015', name: '  â”” CHILLERS', level: 2 },
-  { id: '2457884015', name: '  â”” FANS', level: 2 },
-  
-  // Hydraulics
-  { id: '6689962015', name: 'HYDRAULICS', level: 1 },
-  { id: '6696063015', name: '  â”” HYDRAULIC ACCUMULATORS', level: 2 },
-  { id: '6696062015', name: '  â”” HYDRAULIC ACTUATORS', level: 2 },
-  { id: '6696061015', name: '  â”” HYDRAULIC CYLINDERS', level: 2 },
-  { id: '6696064015', name: '  â”” HYDRAULIC PUMPS', level: 2 },
-  { id: '6696060015', name: '  â”” HYDRAULIC VALVES', level: 2 },
-  
-  // Industrial Control
-  { id: '6688149015', name: 'INDUSTRIAL CONTROL', level: 1 },
-  { id: '2242359015', name: '  â”” CONTROL RELAYS', level: 2 },
-  { id: '1856435015', name: '  â”” CORD SETS', level: 2 },
-  { id: '18373799', name: '  â”” COUNTERS', level: 2 },
-  { id: '4173756015', name: '  â”” E-STOP SWITCHES', level: 2 },
-  { id: '4173739015', name: '  â”” FOOT SWITCHES', level: 2 },
-  { id: '1484016015', name: '  â”” GAUGES', level: 2 },
-  { id: '4173737015', name: '  â”” ILLUMINATED BUTTONS', level: 2 },
-  { id: '4173758015', name: '  â”” JOYSTICKS', level: 2 },
-  { id: '4173738015', name: '  â”” KEY SWITCHES', level: 2 },
-  { id: '4173745015', name: '  â”” LIMIT SWITCHES', level: 2 },
-  { id: '2464037015', name: '  â”” MACHINE SAFETY', level: 2 },
-  { id: '4173736015', name: '  â”” MAINTAINED BUTTONS', level: 2 },
-  { id: '4173752015', name: '  â”” MICRO SWITCHES', level: 2 },
-  { id: '4173735015', name: '  â”” MOMENTARY BUTTONS', level: 2 },
-  { id: '2348910015', name: '  â”” MOTOR CONTROLS', level: 2 },
-  { id: '4173743015', name: '  â”” PALM OPERATED BUTTONS', level: 2 },
-  { id: '5634088015', name: '  â”” PANEL METERS', level: 2 },
-  { id: '2464042015', name: '  â”” PILOT LIGHTS', level: 2 },
-  { id: '4173757015', name: '  â”” POTENTIOMETERS', level: 2 },
-  { id: '1484009015', name: '  â”” PRESSURE CONTROLS', level: 2 },
-  { id: '4173742015', name: '  â”” SELECTOR SWITCHES', level: 2 },
-  { id: '6327053015', name: '  â”” SOUND MODULES', level: 2 },
-  { id: '6690583015', name: '  â”” STACK LIGHTS', level: 2 },
-  { id: '2461872015', name: '  â”” TEMPERATURE CONTROLS', level: 2 },
-  { id: '18373798', name: '  â”” TIMERS', level: 2 },
-  { id: '18373834', name: '  â”” TRANSDUCERS', level: 2 },
-  { id: '5634089015', name: '  â”” TRANSMITTERS', level: 2 },
-  
-  // Motion Control
-  { id: '6686262015', name: 'MOTION CONTROL', level: 1 },
-  { id: '1802953015', name: '  â”” ENCODERS', level: 2 },
-  { id: '393390015', name: '  â”” SERVO DRIVES', level: 2 },
-  
-  // Pneumatics
-  { id: '6689961015', name: 'PNEUMATICS', level: 1 },
-  { id: '2461878015', name: '  â”” ACTUATORS', level: 2 },
-  { id: '2461873015', name: '  â”” CYLINDERS', level: 2 },
-  { id: '2461877015', name: '  â”” DRYERS', level: 2 },
-  { id: '2461880015', name: '  â”” FILTERS', level: 2 },
-  { id: '6699359015', name: '  â”” GRIPPER', level: 2 },
-  { id: '2461876015', name: '  â”” LUBRICATORS', level: 2 },
-  { id: '6690373015', name: '  â”” MUFFLER', level: 2 },
-  { id: '6699358015', name: '  â”” NIPPER', level: 2 },
-  { id: '2461874015', name: '  â”” PNEUMATIC VALVES', level: 2 },
-  { id: '2461875015', name: '  â”” REGULATORS', level: 2 },
-  
-  // Power Transmission
-  { id: '17167474', name: 'POWER TRANSMISSION', level: 1 },
-  { id: '6690432015', name: '  â”” BALL SCREWS', level: 2 },
-  { id: '6688333015', name: '  â”” BELTS', level: 2 },
-  { id: '6688331015', name: '  â”” BRAKES', level: 2 },
-  { id: '393386015', name: '  â”” CLUTCHES', level: 2 },
-  { id: '17167471', name: '  â”” ELECTRIC MOTORS', level: 2 },
-  { id: '6688332015', name: '  â”” GEAR REDUCERS', level: 2 },
-  { id: '6690433015', name: '  â”” LINEAR ACTUATORS', level: 2 },
-  { id: '6690434015', name: '  â”” LINEAR RAILS', level: 2 },
-  { id: '6688335015', name: '  â”” ROLLER CHAINS', level: 2 },
-  { id: '393389015', name: '  â”” SERVO MOTORS', level: 2 },
-  { id: '6688334015', name: '  â”” SPROCKETS', level: 2 },
-  
-  // Pumps
-  { id: '6689959015', name: 'PUMPS', level: 1 },
-  { id: '6689968015', name: '  â”” CENTRIFUGAL PUMP', level: 2 },
-  { id: '6689971015', name: '  â”” CONDENSATE PUMP', level: 2 },
-  { id: '6689969015', name: '  â”” DIAPHRAGM PUMP', level: 2 },
-  { id: '6689966015', name: '  â”” HYDRAULIC PUMP', level: 2 },
-  { id: '6689970015', name: '  â”” METERING PUMP', level: 2 },
-  { id: '6689967015', name: '  â”” VACUUM PUMP', level: 2 },
-  
-  // Sensing Devices
-  { id: '6686267015', name: 'SENSING DEVICES', level: 1 },
-  { id: '6690176015', name: '  â”” BARCODE SCANNERS', level: 2 },
-  { id: '4173796015', name: '  â”” COLOR SENSORS', level: 2 },
-  { id: '4173797015', name: '  â”” CURRENT SENSORS', level: 2 },
-  { id: '5785856015', name: '  â”” FIBER OPTIC SENSORS', level: 2 },
-  { id: '4173798015', name: '  â”” FLOW SENSORS', level: 2 },
-  { id: '2479732015', name: '  â”” LASER SENSORS', level: 2 },
-  { id: '4173792015', name: '  â”” LEVEL SENSORS', level: 2 },
-  { id: '393379015', name: '  â”” LIGHT CURTAINS', level: 2 },
-  { id: '4173799015', name: '  â”” LIGHT SENSORS', level: 2 },
-  { id: '5634087015', name: '  â”” LINEAR SENSORS', level: 2 },
-  { id: '5436340015', name: '  â”” LOAD CELLS', level: 2 },
-  { id: '4173793015', name: '  â”” PHOTOELECTRIC SENSORS', level: 2 },
-  { id: '6690386015', name: '  â”” PRESSURE SENSORS', level: 2 },
-  { id: '4173791015', name: '  â”” PROXIMITY SENSORS', level: 2 },
-  { id: '6695702015', name: '  â”” RFID READER', level: 2 },
-  { id: '6690556015', name: '  â”” TEMPERATURE SENSORS', level: 2 },
-  
-  // Speed Controls
-  { id: '6686272015', name: 'SPEED CONTROLS', level: 1 },
-  { id: '2242358015', name: '  â”” AC DRIVE', level: 2 },
-  { id: '6688299015', name: '  â”” DC DRIVE', level: 2 },
-  
-  // Valves
-  { id: '6690464015', name: 'VALVES', level: 1 },
-  { id: '6690466015', name: '  â”” BALL VALVES', level: 2 },
-  { id: '6690465015', name: '  â”” BUTTERFLY VALVES', level: 2 },
-  { id: '6690467015', name: '  â”” CHECK VALVES', level: 2 },
-  { id: '6690474015', name: '  â”” FLOAT VALVES', level: 2 },
-  { id: '6690469015', name: '  â”” GAS VALVES', level: 2 },
-  { id: '6690472015', name: '  â”” GLOBE VALVES', level: 2 },
-  { id: '6690470015', name: '  â”” LOCKOUT VALVES', level: 2 },
-  { id: '6690486015', name: '  â”” PRESSURE RELIEF', level: 2 },
-  { id: '6690471015', name: '  â”” PROPORTIONAL VALVES', level: 2 },
-  { id: '6690468015', name: '  â”” SOLENOID VALVES', level: 2 },
-  { id: '6690473015', name: '  â”” STEAM VALVES', level: 2 },
-  
+  { id: '17167473', name: 'HVAC', level: 1, hasChildren: true },
+  { id: '2457873015', name: 'CHILLERS', level: 2, hasChildren: false },
+  { id: '2457884015', name: 'FANS', level: 2, hasChildren: false },
+
+  // HYDRAULICS
+  { id: '6689962015', name: 'HYDRAULICS', level: 1, hasChildren: true },
+  { id: '6696063015', name: 'HYDRAULIC ACCUMULATORS', level: 2, hasChildren: false },
+  { id: '6696062015', name: 'HYDRAULIC ACTUATORS', level: 2, hasChildren: false },
+  { id: '6696061015', name: 'HYDRAULIC CYLINDERS', level: 2, hasChildren: false },
+  { id: '6696064015', name: 'HYDRAULIC PUMPS', level: 2, hasChildren: false },
+  { id: '6696060015', name: 'HYDRAULIC VALVES', level: 2, hasChildren: false },
+
+  // INDUSTRIAL CONTROL
+  { id: '6688149015', name: 'INDUSTRIAL CONTROL', level: 1, hasChildren: true },
+  { id: '2242359015', name: 'CONTROL RELAYS', level: 2, hasChildren: false },
+  { id: '1856435015', name: 'CORD SETS', level: 2, hasChildren: false },
+  { id: '18373799', name: 'COUNTERS', level: 2, hasChildren: false },
+  { id: '4173756015', name: 'E-STOP SWITCHES', level: 2, hasChildren: false },
+  { id: '4173739015', name: 'FOOT SWITCHES', level: 2, hasChildren: false },
+  { id: '1484016015', name: 'GAUGES', level: 2, hasChildren: false },
+  { id: '4173737015', name: 'ILLUMINATED BUTTONS', level: 2, hasChildren: false },
+  { id: '4173758015', name: 'JOYSTICKS', level: 2, hasChildren: false },
+  { id: '4173738015', name: 'KEY SWITCHES', level: 2, hasChildren: false },
+  { id: '4173745015', name: 'LIMIT SWITCHES', level: 2, hasChildren: false },
+  { id: '2464037015', name: 'MACHINE SAFETY', level: 2, hasChildren: false },
+  { id: '4173736015', name: 'MAINTAINED BUTTONS', level: 2, hasChildren: false },
+  { id: '4173752015', name: 'MICRO SWITCHES', level: 2, hasChildren: false },
+  { id: '4173735015', name: 'MOMENTARY BUTTONS', level: 2, hasChildren: false },
+  { id: '2348910015', name: 'MOTOR CONTROLS', level: 2, hasChildren: false },
+  { id: '4173743015', name: 'PALM OPERATED BUTTONS', level: 2, hasChildren: false },
+  { id: '5634088015', name: 'PANEL METERS', level: 2, hasChildren: false },
+  { id: '2464042015', name: 'PILOT LIGHTS', level: 2, hasChildren: false },
+  { id: '4173757015', name: 'POTENTIOMETERS', level: 2, hasChildren: false },
+  { id: '1484009015', name: 'PRESSURE CONTROLS', level: 2, hasChildren: false },
+  { id: '4173742015', name: 'SELECTOR SWITCHES', level: 2, hasChildren: false },
+  { id: '6327053015', name: 'SOUND MODULES', level: 2, hasChildren: false },
+  { id: '6690583015', name: 'STACK LIGHTS', level: 2, hasChildren: false },
+  { id: '2461872015', name: 'TEMPERATURE CONTROLS', level: 2, hasChildren: false },
+  { id: '18373798', name: 'TIMERS', level: 2, hasChildren: false },
+  { id: '18373834', name: 'TRANSDUCERS', level: 2, hasChildren: false },
+  { id: '5634089015', name: 'TRANSMITTERS', level: 2, hasChildren: false },
+
+  // LIGHTING BALLASTS (standalone)
+  { id: '20030375015', name: 'LIGHTING BALLASTS', level: 1, hasChildren: false },
+
+  // MACHINERY (standalone)
+  { id: '5384029015', name: 'MACHINERY', level: 1, hasChildren: false },
+
+  // MATERIAL HANDLING (standalone)
+  { id: '2348909015', name: 'MATERIAL HANDLING', level: 1, hasChildren: false },
+
+  // MOTION CONTROL
+  { id: '6686262015', name: 'MOTION CONTROL', level: 1, hasChildren: true },
+  { id: '1802953015', name: 'ENCODERS', level: 2, hasChildren: false },
+  { id: '393390015', name: 'SERVO DRIVES', level: 2, hasChildren: false },
+
+  // PNEUMATICS
+  { id: '6689961015', name: 'PNEUMATICS', level: 1, hasChildren: true },
+  { id: '2461878015', name: 'ACTUATORS', level: 2, hasChildren: false },
+  { id: '2461873015', name: 'CYLINDERS', level: 2, hasChildren: false },
+  { id: '2461877015', name: 'DRYERS', level: 2, hasChildren: false },
+  { id: '2461880015', name: 'FILTERS', level: 2, hasChildren: false },
+  { id: '6699359015', name: 'GRIPPER', level: 2, hasChildren: false },
+  { id: '2461876015', name: 'LUBRICATORS', level: 2, hasChildren: false },
+  { id: '6690373015', name: 'MUFFLER', level: 2, hasChildren: false },
+  { id: '6699358015', name: 'NIPPER', level: 2, hasChildren: false },
+  { id: '2461874015', name: 'PNEUMATIC VALVES', level: 2, hasChildren: false },
+  { id: '2461875015', name: 'REGULATORS', level: 2, hasChildren: false },
+
+  // POWER TRANSMISSION
+  { id: '17167474', name: 'POWER TRANSMISSION', level: 1, hasChildren: true },
+  { id: '6690432015', name: 'BALL SCREWS', level: 2, hasChildren: false },
+  { id: '6688333015', name: 'BELTS', level: 2, hasChildren: false },
+  { id: '6688331015', name: 'BRAKES', level: 2, hasChildren: false },
+  { id: '393386015', name: 'CLUTCHES', level: 2, hasChildren: false },
+  { id: '17167471', name: 'ELECTRIC MOTORS', level: 2, hasChildren: false },
+  { id: '6688332015', name: 'GEAR REDUCERS', level: 2, hasChildren: false },
+  { id: '6690433015', name: 'LINEAR ACTUATORS', level: 2, hasChildren: false },
+  { id: '6690434015', name: 'LINEAR RAILS', level: 2, hasChildren: false },
+  { id: '6688335015', name: 'ROLLER CHAINS', level: 2, hasChildren: false },
+  { id: '393389015', name: 'SERVO MOTORS', level: 2, hasChildren: false },
+  { id: '6688334015', name: 'SPROCKETS', level: 2, hasChildren: false },
+
+  // PUMPS
+  { id: '6689959015', name: 'PUMPS', level: 1, hasChildren: true },
+  { id: '6689968015', name: 'CENTRIFUGAL PUMP', level: 2, hasChildren: false },
+  { id: '6689971015', name: 'CONDENSATE PUMP', level: 2, hasChildren: false },
+  { id: '6689969015', name: 'DIAPHRAGM PUMP', level: 2, hasChildren: false },
+  { id: '6689966015', name: 'HYDRAULIC PUMP', level: 2, hasChildren: false },
+  { id: '6689970015', name: 'METERING PUMP', level: 2, hasChildren: false },
+  { id: '6689967015', name: 'VACUUM PUMP', level: 2, hasChildren: false },
+
+  // QUALITY & TEST (standalone)
+  { id: '6686263015', name: 'QUALITY & TEST', level: 1, hasChildren: false },
+
+  // REGENERATIVE BLOWERS (standalone)
+  { id: '18206302015', name: 'REGENERATIVE BLOWERS', level: 1, hasChildren: false },
+
+  // ROBOTICS (standalone)
+  { id: '5384030015', name: 'ROBOTICS', level: 1, hasChildren: false },
+
+  // SEARCH BY BRAND
+  { id: '5933544015', name: 'SEARCH BY BRAND', level: 1, hasChildren: true },
+  { id: '5933571015', name: 'ABB', level: 2, hasChildren: false },
+  { id: '5933639015', name: 'ACME', level: 2, hasChildren: false },
+  { id: '5933572015', name: 'ADEPT TECH', level: 2, hasChildren: false },
+  { id: '5933557015', name: 'ALLEN BRADLEY', level: 2, hasChildren: false },
+  { id: '6690346015', name: 'ALPHA', level: 2, hasChildren: false },
+  { id: '6706056015', name: 'ARO', level: 2, hasChildren: false },
+  { id: '6690590015', name: 'ARROW', level: 2, hasChildren: false },
+  { id: '5933573015', name: 'ASCO', level: 2, hasChildren: false },
+  { id: '6675026015', name: 'ATLAS COPCO', level: 2, hasChildren: false },
+  { id: '6690334015', name: 'ATO', level: 2, hasChildren: false },
+  { id: '5933586015', name: 'AUTOMATION DIRECT', level: 2, hasChildren: false },
+  { id: '6690335015', name: 'BALDOR', level: 2, hasChildren: false },
+  { id: '5933595015', name: 'BALLUFF', level: 2, hasChildren: false },
+  { id: '5933560015', name: 'BANNER ENGINEERING', level: 2, hasChildren: false },
+  { id: '6690371015', name: 'BARKSDALE', level: 2, hasChildren: false },
+  { id: '6690342015', name: 'BAYSIDE', level: 2, hasChildren: false },
+  { id: '5933583015', name: 'BEI', level: 2, hasChildren: false },
+  { id: '5933591015', name: 'BIMBA', level: 2, hasChildren: false },
+  { id: '6690337015', name: 'BISON', level: 2, hasChildren: false },
+  { id: '6690336015', name: 'BODINE', level: 2, hasChildren: false },
+  { id: '6690445015', name: 'BOSCH', level: 2, hasChildren: false },
+  { id: '6690344015', name: 'BOSTON GEAR', level: 2, hasChildren: false },
+  { id: '6690582015', name: 'BRAD HARRISON', level: 2, hasChildren: false },
+  { id: '6695680015', name: 'BUSSMAN', level: 2, hasChildren: false },
+  { id: '6690461015', name: 'CKD', level: 2, hasChildren: false },
+  { id: '5933568015', name: 'CONTROL TECHNIQUES', level: 2, hasChildren: false },
+  { id: '5933563015', name: 'CUTLER HAMMER', level: 2, hasChildren: false },
+  { id: '6690485015', name: 'DAIKIN', level: 2, hasChildren: false },
+  { id: '6690121015', name: 'DAYTON', level: 2, hasChildren: false },
+  { id: '6690341015', name: 'DODGE', level: 2, hasChildren: false },
+  { id: '6690484015', name: 'DYNAQUIP', level: 2, hasChildren: false },
+  { id: '5933593015', name: 'EAGLE SIGNAL', level: 2, hasChildren: false },
+  { id: '5933596015', name: 'EFECTOR', level: 2, hasChildren: false },
+  { id: '5933567015', name: 'EMERSON', level: 2, hasChildren: false },
+  { id: '6690094015', name: 'ENERPAC', level: 2, hasChildren: false },
+  { id: '5933569015', name: 'FANUC', level: 2, hasChildren: false },
+  { id: '6690589015', name: 'FEDERAL SIGNAL', level: 2, hasChildren: false },
+  { id: '6695705015', name: 'FERRAZ SHAWMUT', level: 2, hasChildren: false },
+  { id: '5933575015', name: 'FESTO', level: 2, hasChildren: false },
+  { id: '5933564015', name: 'FUJI', level: 2, hasChildren: false },
+  { id: '5933599015', name: 'GE', level: 2, hasChildren: false },
+  { id: '6690367015', name: 'GIDDINGS & LEWIS', level: 2, hasChildren: false },
+  { id: '6695677015', name: 'GOULD', level: 2, hasChildren: false },
+  { id: '6690116015', name: 'GRACO', level: 2, hasChildren: false },
+  { id: '6695679015', name: 'HEIDENHAIN', level: 2, hasChildren: false },
+  { id: '6671553015', name: 'HOFFMAN', level: 2, hasChildren: false },
+  { id: '5933602015', name: 'HONEYWELL', level: 2, hasChildren: false },
+  { id: '6690347015', name: 'HORTON', level: 2, hasChildren: false },
+  { id: '6690437015', name: 'HYDAC', level: 2, hasChildren: false },
+  { id: '6695678015', name: 'IAI', level: 2, hasChildren: false },
+  { id: '5933600015', name: 'IDEC', level: 2, hasChildren: false },
+  { id: '5933603015', name: 'INGERSOLL RAND', level: 2, hasChildren: false },
+  { id: '5933601015', name: 'JOHNSON CONTROLS', level: 2, hasChildren: false },
+  { id: '6695864015', name: 'JOKAB SAFETY', level: 2, hasChildren: false },
+  { id: '5933559015', name: 'KEYENCE', level: 2, hasChildren: false },
+  { id: '6690338015', name: 'LEESON', level: 2, hasChildren: false },
+  { id: '6695888015', name: 'LIEBERT', level: 2, hasChildren: false },
+  { id: '7989168015', name: 'LITTELFUSE', level: 2, hasChildren: false },
+  { id: '6689963015', name: 'MAC VALVE', level: 2, hasChildren: false },
+  { id: '5933580015', name: 'MILLER', level: 2, hasChildren: false },
+  { id: '5933585015', name: 'MITSUBISHI', level: 2, hasChildren: false },
+  { id: '5933582015', name: 'MODICON', level: 2, hasChildren: false },
+  { id: '5933590015', name: 'MOOG', level: 2, hasChildren: false },
+  { id: '6690370015', name: 'MOTION INDUSTRIES', level: 2, hasChildren: false },
+  { id: '5933570015', name: 'MOTOMAN', level: 2, hasChildren: false },
+  { id: '5933597015', name: 'MTS', level: 2, hasChildren: false },
+  { id: '6688143015', name: 'NATIONAL INSTRUMENTS', level: 2, hasChildren: false },
+  { id: '8615563015', name: 'NEMIC LAMBDA', level: 2, hasChildren: false },
+  { id: '6690343015', name: 'NEUGART', level: 2, hasChildren: false },
+  { id: '5933581015', name: 'NORDSON', level: 2, hasChildren: false },
+  { id: '6690460015', name: 'NORGREN', level: 2, hasChildren: false },
+  { id: '6690459015', name: 'NUMATICS', level: 2, hasChildren: false },
+  { id: '5933558015', name: 'OMRON', level: 2, hasChildren: false },
+  { id: '6718027015', name: 'ORIENTAL MOTOR CO.', level: 2, hasChildren: false },
+  { id: '5933565015', name: 'PACIFIC SCIENTIFIC', level: 2, hasChildren: false },
+  { id: '5933566015', name: 'PANASONIC', level: 2, hasChildren: false },
+  { id: '5933577015', name: 'PARKER', level: 2, hasChildren: false },
+  { id: '6690588015', name: 'PATLITE', level: 2, hasChildren: false },
+  { id: '6717974015', name: 'PEPPERL+FUCHS', level: 2, hasChildren: false },
+  { id: '6688145015', name: 'PHD', level: 2, hasChildren: false },
+  { id: '5933592015', name: 'PHOENIX CONTACT', level: 2, hasChildren: false },
+  { id: '5933578015', name: 'PILZ', level: 2, hasChildren: false },
+  { id: '5933579015', name: 'PINNACLE', level: 2, hasChildren: false },
+  { id: '9100281015', name: 'PROFACE', level: 2, hasChildren: false },
+  { id: '6688144015', name: 'RED LION', level: 2, hasChildren: false },
+  { id: '6690340015', name: 'RELIANCE', level: 2, hasChildren: false },
+  { id: '5933589015', name: 'REXROTH', level: 2, hasChildren: false },
+  { id: '6689964015', name: 'ROSS VALVE', level: 2, hasChildren: false },
+  { id: '5933584015', name: 'SANYO DENKI', level: 2, hasChildren: false },
+  { id: '6706057015', name: 'SCHMERSAL', level: 2, hasChildren: false },
+  { id: '6690345015', name: 'SEW EURODRIVE', level: 2, hasChildren: false },
+  { id: '5933594015', name: 'SICK', level: 2, hasChildren: false },
+  { id: '5933561015', name: 'SIEMENS', level: 2, hasChildren: false },
+  { id: '8530044015', name: 'SKF', level: 2, hasChildren: false },
+  { id: '6690446015', name: 'SKINNER', level: 2, hasChildren: false },
+  { id: '5933574015', name: 'SMC', level: 2, hasChildren: false },
+  { id: '5933638015', name: 'SOLA', level: 2, hasChildren: false },
+  { id: '6695902015', name: 'SONY', level: 2, hasChildren: false },
+  { id: '6690456015', name: 'SPEEDAIR', level: 2, hasChildren: false },
+  { id: '6690368015', name: 'SPRECHER SCHUH', level: 2, hasChildren: false },
+  { id: '5933562015', name: 'SQUARE D', level: 2, hasChildren: false },
+  { id: '5933588015', name: 'STI', level: 2, hasChildren: false },
+  { id: '5933587015', name: 'SUNX', level: 2, hasChildren: false },
+  { id: '5933598015', name: 'TELEMECANIQUE', level: 2, hasChildren: false },
+  { id: '6690369015', name: 'THOMSON INDUSTRIES', level: 2, hasChildren: false },
+  { id: '7989166015', name: 'TIMKEN', level: 2, hasChildren: false },
+  { id: '6690385015', name: 'TOL-O-MATIC', level: 2, hasChildren: false },
+  { id: '6690366015', name: 'TURCK', level: 2, hasChildren: false },
+  { id: '6695908015', name: 'UTICOR', level: 2, hasChildren: false },
+  { id: '5933576015', name: 'VICKERS', level: 2, hasChildren: false },
+  { id: '6686271015', name: 'YASKAWA', level: 2, hasChildren: false },
+  { id: '6692842015', name: 'YOKOGAWA', level: 2, hasChildren: false },
+  { id: '6690339015', name: 'ZANDER', level: 2, hasChildren: false },
+
+  // SENSING DEVICES
+  { id: '6686267015', name: 'SENSING DEVICES', level: 1, hasChildren: true },
+  { id: '6690176015', name: 'BARCODE SCANNERS', level: 2, hasChildren: false },
+  { id: '4173796015', name: 'COLOR SENSORS', level: 2, hasChildren: false },
+  { id: '4173797015', name: 'CURRENT SENSORS', level: 2, hasChildren: false },
+  { id: '5785856015', name: 'FIBER OPTIC SENSORS', level: 2, hasChildren: false },
+  { id: '4173798015', name: 'FLOW SENSORS', level: 2, hasChildren: false },
+  { id: '2479732015', name: 'LASER SENSORS', level: 2, hasChildren: false },
+  { id: '4173792015', name: 'LEVEL SENSORS', level: 2, hasChildren: false },
+  { id: '393379015', name: 'LIGHT CURTAINS', level: 2, hasChildren: false },
+  { id: '4173799015', name: 'LIGHT SENSORS', level: 2, hasChildren: false },
+  { id: '5634087015', name: 'LINEAR SENSORS', level: 2, hasChildren: false },
+  { id: '5436340015', name: 'LOAD CELLS', level: 2, hasChildren: false },
+  { id: '4173793015', name: 'PHOTOELECTRIC SENSORS', level: 2, hasChildren: false },
+  { id: '6690386015', name: 'PRESSURE SENSORS', level: 2, hasChildren: false },
+  { id: '4173791015', name: 'PROXIMITY SENSORS', level: 2, hasChildren: false },
+  { id: '6695702015', name: 'RFID READER', level: 2, hasChildren: false },
+  { id: '6690556015', name: 'TEMPERATURE SENSORS', level: 2, hasChildren: false },
+
+  // SPEED CONTROLS
+  { id: '6686272015', name: 'SPEED CONTROLS', level: 1, hasChildren: true },
+  { id: '2242358015', name: 'AC DRIVE', level: 2, hasChildren: false },
+  { id: '6688299015', name: 'DC DRIVE', level: 2, hasChildren: false },
+
+  // VALVES
+  { id: '6690464015', name: 'VALVES', level: 1, hasChildren: true },
+  { id: '6690466015', name: 'BALL VALVES', level: 2, hasChildren: false },
+  { id: '6690465015', name: 'BUTTERFLY VALVES', level: 2, hasChildren: false },
+  { id: '6690467015', name: 'CHECK VALVES', level: 2, hasChildren: false },
+  { id: '6690474015', name: 'FLOAT VALVES', level: 2, hasChildren: false },
+  { id: '6690469015', name: 'GAS VALVES', level: 2, hasChildren: false },
+  { id: '6690472015', name: 'GLOBE VALVES', level: 2, hasChildren: false },
+  { id: '6690470015', name: 'LOCKOUT VALVES', level: 2, hasChildren: false },
+  { id: '6690486015', name: 'PRESSURE RELIEF', level: 2, hasChildren: false },
+  { id: '6690471015', name: 'PROPORTIONAL VALVES', level: 2, hasChildren: false },
+  { id: '6690468015', name: 'SOLENOID VALVES', level: 2, hasChildren: false },
+  { id: '6690473015', name: 'STEAM VALVES', level: 2, hasChildren: false },
+
   // Other
-  { id: '1', name: 'Other Items', level: 1 }
+  { id: '1', name: 'Other Items', level: 1, hasChildren: false }
 ];
+
+// Helper: render store category <select> options with optgroup for parents
+// Parents with children become <optgroup> (non-selectable, bold)
+// Standalone parents and all children become <option> (selectable)
+function renderStoreCategoryOptions() {
+  const result = [];
+  let i = 0;
+  while (i < EBAY_STORE_CATEGORIES.length) {
+    const cat = EBAY_STORE_CATEGORIES[i];
+    if (cat.level === 1 && cat.hasChildren) {
+      const children = [];
+      let j = i + 1;
+      while (j < EBAY_STORE_CATEGORIES.length && EBAY_STORE_CATEGORIES[j].level === 2) {
+        children.push(EBAY_STORE_CATEGORIES[j]);
+        j++;
+      }
+      result.push(
+        React.createElement('optgroup', { key: cat.id, label: cat.name },
+          children.map(c => React.createElement('option', { key: c.id, value: c.id }, c.name))
+        )
+      );
+      i = j;
+    } else {
+      result.push(React.createElement('option', { key: cat.id, value: cat.id }, cat.name));
+      i++;
+    }
+  }
+  return result;
+}
 
 // Spec field labels (proper display names - includes lowercase variants)
 const SPEC_LABELS = {
@@ -1483,8 +1646,8 @@ export default function ProListingBuilder() {
         const storeCat = EBAY_STORE_CATEGORIES.find(c => c.id === storeCategory);
         console.log('Store category found:', storeCat);
         if (storeCat) {
-          // Clean up store category name (remove â”” prefix and trim)
-          const cleanStoreName = storeCat.name.replace(/^\s*â””\s*/, '').trim().toUpperCase();
+          // Clean up store category name
+          const cleanStoreName = storeCat.name.trim().toUpperCase();
           console.log('Clean store name:', cleanStoreName);
           if (STORE_TO_PRODUCT_CATEGORY[cleanStoreName]) {
             detectedEbayCatId = STORE_TO_PRODUCT_CATEGORY[cleanStoreName];
@@ -1850,7 +2013,7 @@ export default function ProListingBuilder() {
       }
     } catch (error) {
       console.error('SureDone error:', error);
-      alert(`âŒ Error: ${error.message}`);
+      alert(`[X] Error: ${error.message}`);
     }
     setIsSending(false);
   };
@@ -1995,7 +2158,7 @@ export default function ProListingBuilder() {
                       <p className="text-[10px] text-purple-600 mt-0.5">🏷️ {item.pass2FilledCount || 0} eBay specs filled</p>
                     )}
                     {item.pass2Status === 'filling' && (
-                      <p className="text-[10px] text-purple-500 mt-0.5 animate-pulse">â³ Filling eBay specs...</p>
+                      <p className="text-[10px] text-purple-500 mt-0.5 animate-pulse">⏳ Filling eBay specs...</p>
                     )}
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-1 rounded ml-2">
@@ -2036,7 +2199,7 @@ export default function ProListingBuilder() {
                     )}
                     {selected.pass2Status === 'filling' && (
                       <span className="text-sm px-2 py-1 rounded bg-purple-100 text-purple-600 animate-pulse">
-                        â³ Filling eBay specs...
+                        ⏳ Filling eBay specs...
                       </span>
                     )}
                   </div>
@@ -2122,18 +2285,14 @@ export default function ProListingBuilder() {
                       <label className="block text-sm font-semibold mb-2">eBay Store Category 1</label>
                       <select value={selected.ebayStoreCategoryId || ''} onChange={e => updateField(selected.id, 'ebayStoreCategoryId', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm">
                         <option value="">Select...</option>
-                        {EBAY_STORE_CATEGORIES.map(cat => (
-                          <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
+                        {renderStoreCategoryOptions()}
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm font-semibold mb-2">eBay Store Category 2</label>
                       <select value={selected.ebayStoreCategoryId2 || ''} onChange={e => updateField(selected.id, 'ebayStoreCategoryId2', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm">
                         <option value="">Select...</option>
-                        {EBAY_STORE_CATEGORIES.map(cat => (
-                          <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
+                        {renderStoreCategoryOptions()}
                       </select>
                     </div>
                   </div>
@@ -2166,7 +2325,7 @@ export default function ProListingBuilder() {
                         <span className="font-semibold text-purple-800">
                           🏷️ eBay Item Specifics
                           {selected.pass2Status === 'filling' && (
-                            <span className="ml-2 text-sm text-purple-600 animate-pulse">â³ AI filling...</span>
+                            <span className="ml-2 text-sm text-purple-600 animate-pulse">⏳ AI filling...</span>
                           )}
                           {selected.pass2Status === 'complete' && (
                             <span className="ml-2 text-sm text-green-600">

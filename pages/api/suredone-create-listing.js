@@ -6,38 +6,54 @@
 // 2. Legacy/human-readable keys like "horsepower"  ->  maps to "ratedloadhp"
 // 3. eBay display names like "Rated Load (HP)"  ->  converts to "ratedloadhp"
 
+import fs from 'fs';
+import path from 'path';
+
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
 
-// Common brand ID mappings for BigCommerce
-const BRAND_IDS = {
-  'baldor': '92', 'allen bradley': '40', 'allen-bradley': '40', 'siemens': '46',
-  'omron': '39', 'smc': '56', 'festo': '44', 'keyence': '47', 'sick': '49',
-  'turck': '75', 'banner': '73', 'banner engineering': '73', 'mitsubishi': '158',
-  'fanuc': '118', 'yaskawa': '82', 'abb': '86', 'schneider': '52',
-  'schneider electric': '52', 'telemecanique': '52', 'square d': '141',
-  'parker': '89', 'rexroth': '87', 'bosch rexroth': '87', 'beckhoff': '76',
-  'rockwell': '40', 'rockwell automation': '40', 'ge': '88', 'general electric': '88',
-  'fuji': '84', 'fuji electric': '84', 'danfoss': '94', 'ckd': '157', 'iai': '150',
-  'oriental motor': '104', 'vickers': '137', 'eaton': '72', 'cutler hammer': '72',
-  'cutler-hammer': '72', 'phoenix contact': '50', 'wago': '50', 'pilz': '155',
-  'bihl+wiedemann': '97', 'bihl wiedemann': '97', 'b&r': '97', 'b&r automation': '97',
-  'weg': '95', 'marathon': '93', 'leeson': '91', 'teco': '96', 'reliance': '92',
-  // Bearings
-  'mcgill': '160', 'skf': '161', 'nsk': '162', 'ntn': '163', 'timken': '164',
-  'fag': '165', 'iko': '166', 'thk': '167', 'koyo': '168', 'pearl kooyo co': '168',
-  'pearl kooyo co.': '168', 'nachi': '169', 'rexnord': '170', 'link-belt': '171',
-  'dodge': '172', 'sealmaster': '173', 'browning': '174',
-  // Additional automation brands
-  'automation direct': '175', 'automationdirect': '175', 'idec': '176',
-  'red lion': '177', 'watlow': '178', 'eurotherm': '179', 'honeywell': '180',
-  'numatics': '181', 'norgren': '182', 'aventics': '183', 'ross': '184',
-  'asco': '185', 'mac': '186', 'bimba': '187', 'clippard': '188',
-  'danaher': '189', 'kollmorgen': '190', 'pacific scientific': '191',
-  'lenze': '192', 'sew eurodrive': '193', 'sew-eurodrive': '193',
-  'nord': '194', 'bonfiglioli': '195', 'sumitomo': '196',
-  'toshiba': '197', 'nidec': '198', 'regal': '199', 'us motors': '200',
-  'hubbell': '201', 'littelfuse': '202', 'bussmann': '203', 'mersen': '204'
+// =============================================================================
+// BIGCOMMERCE BRAND IDS - Loaded dynamically from bigcommerce_brands.json
+// =============================================================================
+// The JSON has 2,561 brands: { "brand_lower": { "name": "Brand", "id": "123" } }
+// Loaded once on cold start, cached for all subsequent requests
+let BRAND_DATA = null;
+
+function loadBrandData() {
+  if (BRAND_DATA) return BRAND_DATA;
+  try {
+    const jsonPath = path.join(process.cwd(), 'data', 'bigcommerce_brands.json');
+    const raw = fs.readFileSync(jsonPath, 'utf-8');
+    BRAND_DATA = JSON.parse(raw);
+    console.log(`Loaded ${Object.keys(BRAND_DATA).length} brands from bigcommerce_brands.json`);
+  } catch (e) {
+    console.error('Failed to load bigcommerce_brands.json:', e.message);
+    BRAND_DATA = {};
+  }
+  return BRAND_DATA;
+}
+
+// Alias map: common name variations -> the key used in bigcommerce_brands.json
+const BRAND_ALIASES = {
+  'allen-bradley': 'allen bradley',
+  'cutler-hammer': 'cutler hammer',
+  'sew-eurodrive': 'sew eurodrive',
+  'bosch rexroth': 'rexroth',
+  'schneider': 'schneider electric',
+  'fuji': 'fuji electric',
+  'ge': 'general electric',
+  'rockwell': 'rockwell automation',
+  'b&r automation': 'b&r',
+  'bihl+wiedemann': 'bihl wiedemann',
+  'bihl wiedemann': 'bihl+wiedemann',
+  'pearl kooyo co': 'pearl kooyo co.',
+  'bussmann': 'cooper bussmann',
+  'mac': 'mac valves',
+  'murr': 'murr elektronik',
+  'reliance': 'reliance electric',
+  'automationdirect': 'automation direct',
+  'banner': 'banner engineering',
+  'sew': 'sew eurodrive',
 };
 
 // BigCommerce multi-category mappings
@@ -169,76 +185,49 @@ const BIGCOMMERCE_CATEGORY_MAP = {
 // SUREDONE FIELD MAPPING FOR EBAY ITEM SPECIFICS
 // =============================================================================
 // SureDone has TWO types of eBay fields:
-//   1. INLINE fields: short names like "ratedloadhp", "baserpm", "enclosuretype"
-//       ->  These map directly to eBay Recommended item specifics
-//   2. PREFIX fields: "ebayitemspecifics" + name like "ebayitemspecificsacphase"  
-//       ->  These ALSO map to eBay Recommended but need the prefix
+//   1. NATIVE fields: SureDone column headers like "ratedloadhp", "borediameter"
+//       ->  These map automatically to eBay Recommended item specifics
+//       ->  Send as inline (short name) ONLY
+//   2. PREFIX fields: "ebayitemspecifics" + name like "ebayitemspecificswidth"
+//       ->  These map to eBay Recommended via SureDone's prefix system
+//       ->  ANY field NOT in SureDone's native headers MUST use this format
+//       ->  Without the prefix, SureDone creates a DYNAMIC custom field!
 //
-// Some specs only work with the prefix. We must send BOTH where applicable.
+// CRITICAL: If a field is NOT in SUREDONE_NATIVE_FIELDS below, it MUST get the
+// "ebayitemspecifics" prefix. Otherwise SureDone creates a Dynamic field that
+// does NOT fill the eBay Recommended item specific slot.
 // =============================================================================
 
-// Fields that work as INLINE (short name) in SureDone  ->  eBay Recommended
-const INLINE_FIELDS = new Set([
-  // Motors - confirmed inline in SureDone headers
+// Fields confirmed as SureDone native column headers
+// These work inline AND auto-map to eBay Recommended item specifics
+// ONLY add to this list if verified in SureDone's actual export headers
+const SUREDONE_NATIVE_FIELDS = new Set([
+  // Motor fields - confirmed SureDone native headers
   'ratedloadhp', 'baserpm', 'nominalratedinputvoltage', 'actualratedinputvoltage',
   'fullloadamps', 'enclosuretype', 'mountingtype', 'currenttype', 'shaftdiameter',
   'reversiblenonreversible', 'dcstatorwindingtype', 'ratedfullloadtorque',
   'numberofpoles', 'numberofphases', 'motortype', 'insulationclass', 'nemadesignletter',
   'stallcurrent', 'noloadrpm',
-  // Sensors
+  // Sensor fields - confirmed SureDone native headers
   'sensingrange', 'operatingdistance', 'sensortype', 'outputtype',
-  // Pneumatic/Hydraulic
+  // Pneumatic/Hydraulic - confirmed SureDone native headers
   'borediameter', 'strokelength', 'cylindertype', 'maxpsi', 'ratedpressure',
   'maximumpressure', 'maximumflowrate', 'hydraulicpumptype', 'pumpaction',
   'centrifugalpumptype',
-  // PLC/HMI/Communication
+  // PLC/HMI - confirmed SureDone native headers
   'communicationstandard',
-  // Circuit Breakers/Relays/Contactors
+  // Circuit Breaker/Relay - confirmed SureDone native headers
   'coilvoltage', 'currentrating', 'voltagerating',
-  // Bearings
-  'bearingtype', 'outerdiameter', 'width', 'sealtype', 'material',
-  'precisionrating', 'bearingseries',
-  // General
-  'countryoforigin', 'model', 'mpn', 'voltage', 'amperage', 'frequency', 'phase',
-  'horsepower', 'frame', 'rpm', 'kva', 'shaftdiameter',
-  // Additional fields found needed
-  'outputcurrent', 'outputpower', 'outputvoltage', 'inputvoltagerange',
-  'interruptingrating', 'breakertype', 'tripcurve', 'frametype',
-  'auxiliarycontacts', 'contactconfiguration', 'contactrating',
-  'operatingpressure', 'portsize', 'roddiameter', 'flowrate',
-  'displacement', 'rotation', 'gearratio', 'outputtorque', 'inputspeed', 'outputspeed',
-  'resolution', 'stepangle', 'holdingtorque', 'ratedcurrent', 'leadwires',
-  'peakcurrent', 'axiscount', 'microsteppingresolution',
-  'kvarating', 'primaryvoltage', 'secondaryvoltage', 'transformertype',
-  'horsepowerrating', 'kwrating', 'outputfrequencyrange',
-  'controllerplatform', 'numberofiopoints', 'memorysize', 'programmingmethod',
-  'moduletype', 'numberofchannels', 'displayresolution',
-  'safetyrating', 'inputtype', 'numberofcontacts',
-  'loadcurrentrating', 'loadvoltagerating', 'controlvoltage',
-  'outputconfiguration', 'housingmaterial', 'housingdiameter', 'connectiontype',
-  'sensingmethod', 'lightsource',
-  'pressurerange', 'pressuretype', 'outputsignal', 'processconnection', 'accuracy',
-  'thermocouplegrade', 'rtdtype', 'temperaturerange', 'probelength', 'probediameter',
-  'flowtype', 'pipesize',
-  'encodertype',
-  'beamspacing', 'protectedheight', 'numberofbeams', 'responsetime',
-  'spooltype', 'actuationtype', 'valvetype', 'bodymaterial',
-  'fusetype', 'fusesize', 'timedelay',
-  'metertype', 'measurementrange', 'panelcutout',
-  'timertype', 'timerange',
-  'actuatortype', 'operatortype', 'contactblocks', 'color', 'operatingvoltage',
-  'controlmethod', 'feedbacktype', 'controltype',
-  'startertype', 'overloadrange',
-  'magneticpiston', 'sockettype', 'zerocrossswitching',
-  'gearboxtype', 'shaftorientation',
-  'fusedunfused', 'alarmnumberofoutputs',
-  'ratedtorque', 'ratedspeed', 'ratedpower', 'encodertype', 'braketype',
-  'sensingdistance', 'maxpressure', 'power'
+  // General - confirmed SureDone native headers
+  // NOTE: countryoforigin is NOT here - it needs both inline + prefix (special handler below)
+  'model', 'mpn',
 ]);
 
-// Fields that REQUIRE "ebayitemspecifics" prefix in SureDone  ->  eBay Recommended
-// Key = the clean field name, Value = the exact SureDone header name
-const PREFIX_FIELDS = {
+// PREFIX OVERRIDES: When the eBay field name differs from the canonical name
+// Key = canonical name, Value = exact ebayitemspecifics field for SureDone
+// For fields NOT here, we auto-generate: "ebayitemspecifics" + canonical
+const PREFIX_OVERRIDES = {
+  // Motor overrides (eBay field name differs from canonical)
   'acphase': 'ebayitemspecificsacphase',
   'servicefactor': 'ebayitemspecificsservicefactor',
   'acfrequencyrating': 'ebayitemspecificsacfrequencyrating',
@@ -262,113 +251,14 @@ const PREFIX_FIELDS = {
   'numberofports': 'ebayitemspecificsnumberofports',
   'cylinderaction': 'ebayitemspecificscylinderaction',
   'boresize': 'ebayitemspecificsboresize',
-  'countryoforigin': 'ebayitemspecificscountryoforigin',
-  'features': 'ebayitemspecificsfeatures',
-  // Bearings
-  'bearingtype': 'ebayitemspecificsbearingstype',
-  'outerdiameter': 'ebayitemspecificsoutsidediameter',
+  // Bearing overrides (eBay uses different names than canonical)
+  'bearingtype': 'ebayitemspecificsbearingstype',       // "Bearings Type" not "Bearing Type"
+  'outerdiameter': 'ebayitemspecificsoutsidediameter',   // "Outside Diameter" not "Outer"
   'outsidediameter': 'ebayitemspecificsoutsidediameter',
-  'width': 'ebayitemspecificswidth',
-  'sealtype': 'ebayitemspecificssealtype',
-  'material': 'ebayitemspecificsmaterial',
-  'precisionrating': 'ebayitemspecificsprecisionrating',
-  'bearingseries': 'ebayitemspecificsbearingseries',
-  // Mounting
-  'mountingstyle': 'ebayitemspecificsmountingstyle',
-  // Power
-  'power': 'ebayitemspecificspower',
-  'outputpower': 'ebayitemspecificsoutputpower',
-  'ratedpower': 'ebayitemspecificsratedpower',
-  // Servo/Stepper specific
-  'ratedtorque': 'ebayitemspecificsratedtorque',
-  'ratedspeed': 'ebayitemspecificsratedspeed',
-  'encodertype': 'ebayitemspecificsencodertype',
-  'braketype': 'ebayitemspecificsbraketype',
-  'stepangle': 'ebayitemspecificsstepangle',
-  'holdingtorque': 'ebayitemspecificsholdingtorque',
-  // VFD specific
-  'horsepowerrating': 'ebayitemspecificshorsepowerrating',
-  'kwrating': 'ebayitemspecificskwrating',
-  'outputfrequencyrange': 'ebayitemspecificsoutputfrequencyrange',
-  // Circuit breaker specific
-  'interruptingrating': 'ebayitemspecificsinterruptingrating',
-  'breakertype': 'ebayitemspecificsbreakertype',
-  'tripcurve': 'ebayitemspecificstripcurve',
-  'frametype': 'ebayitemspecificsframetype',
-  // Contactor/Starter specific
-  'auxiliarycontacts': 'ebayitemspecificsauxiliarycontacts',
-  'iecrating': 'ebayitemspecificsiecrating',
-  'startertype': 'ebayitemspecificsstartertype',
-  'overloadrange': 'ebayitemspecificsoverloadrange',
-  // Relay specific
-  'contactconfiguration': 'ebayitemspecificscontactconfiguration',
-  'contactrating': 'ebayitemspecificscontactrating',
-  'sockettype': 'ebayitemspecificssockettype',
-  'safetyrating': 'ebayitemspecificssafetyrating',
-  'loadcurrentrating': 'ebayitemspecificsloadcurrentrating',
-  'loadvoltagerating': 'ebayitemspecificsloadvoltagerating',
-  'controlvoltage': 'ebayitemspecificscontrolvoltage',
-  // Sensor specific
-  'sensingmethod': 'ebayitemspecificssensingmethod',
-  'sensingdistance': 'ebayitemspecificssensingdistance',
-  'lightsource': 'ebayitemspecificslightsource',
-  'outputconfiguration': 'ebayitemspecificsoutputconfiguration',
-  'housingmaterial': 'ebayitemspecificshousingmaterial',
-  'housingdiameter': 'ebayitemspecificshousingdiameter',
-  'connectiontype': 'ebayitemspecificsconnectiontype',
-  // Pressure/Temp/Flow sensor specific
-  'pressurerange': 'ebayitemspecificspressurerange',
-  'pressuretype': 'ebayitemspecificspressuretype',
-  'outputsignal': 'ebayitemspecificsoutputsignal',
-  'processconnection': 'ebayitemspecificsprocessconnection',
-  'thermocouplegrade': 'ebayitemspecificsthermocouplegrade',
-  'rtdtype': 'ebayitemspecificsrtdtype',
-  'temperaturerange': 'ebayitemspecificstemperaturerange',
-  'flowtype': 'ebayitemspecificsflowtype',
-  // Encoder specific
-  'resolution': 'ebayitemspecificsresolution',
-  // Transformer specific
-  'kvarating': 'ebayitemspecificskvarating',
-  'primaryvoltage': 'ebayitemspecificsprimaryvoltage',
-  'secondaryvoltage': 'ebayitemspecificssecondaryvoltage',
-  'transformertype': 'ebayitemspecificstransformertype',
-  // Gearbox specific
-  'gearboxtype': 'ebayitemspecificsgearboxtype',
-  'gearratio': 'ebayitemspecificsgearratio',
-  'outputtorque': 'ebayitemspecificsoutputtorque',
-  'shaftorientation': 'ebayitemspecificsshaftorientation',
-  // Valve specific
-  'valvetype': 'ebayitemspecificsvalvetype',
-  'actuationtype': 'ebayitemspecificsactuationtype',
-  'bodymaterial': 'ebayitemspecificsbodymaterial',
-  'spooltype': 'ebayitemspecificsspooltype',
-  // Hydraulic pump specific
-  'pumptype': 'ebayitemspecificspumptype',
-  'displacement': 'ebayitemspecificsdisplacement',
-  // Safety specific
-  'beamspacing': 'ebayitemspecificsbeamspacing',
-  'protectedheight': 'ebayitemspecificsprotectedheight',
-  'numberofbeams': 'ebayitemspecificsnumberofbeams',
-  'responsetime': 'ebayitemspecificsresponsetime',
-  // Switch specific
-  'actuatortype': 'ebayitemspecificsactuatortype',
-  'operatortype': 'ebayitemspecificsoperatortype',
-  'contactblocks': 'ebayitemspecificscontactblocks',
-  // Fuse specific
-  'fusetype': 'ebayitemspecificsfusetype',
-  'fusesize': 'ebayitemspecificsfusesize',
-  'timedelay': 'ebayitemspecificstimedelay',
-  // PLC specific
-  'controllerplatform': 'ebayitemspecificscontrollerplatform',
-  'numberofiopoints': 'ebayitemspecificsnumberofiopoints',
-  'moduletype': 'ebayitemspecificsmoduletype',
-  'numberofchannels': 'ebayitemspecificsnumberofchannels',
-  // Additional
-  'controlmethod': 'ebayitemspecificscontrolmethod',
-  'feedbacktype': 'ebayitemspecificsfeedbacktype',
-  'controltype': 'ebayitemspecificscontroltype',
-  'magneticpiston': 'ebayitemspecificsmagneticpiston',
-  'fusedunfused': 'ebayitemspecificsfusedunfused'
+  // Country of origin also needs prefix for eBay
+  'countryoforigin': 'ebayitemspecificscountryoforigin',
+  // Features
+  'features': 'ebayitemspecificsfeatures',
 };
 
 // Master mapping: AI key variations  ->  canonical clean field name
@@ -873,7 +763,8 @@ const SPEC_KEY_MAP = {
 
 // Fields to SKIP - already handled by core form fields
 const SKIP_SPEC_KEYS = new Set([
-  'brand', 'mpn', 'model', 'manufacturer', 'upc', 'condition', 'type'
+  'brand', 'mpn', 'model', 'manufacturer', 'upc', 'condition', 'type',
+  'countryoforigin'  // Handled by special handler that sends both inline + prefix
 ]);
 
 // =============================================================================
@@ -890,25 +781,27 @@ function resolveSpecField(key) {
   // Skip fields already handled elsewhere
   if (SKIP_SPEC_KEYS.has(keyClean)) return null;
 
-  // Find the canonical field name
+  // Find the canonical field name via SPEC_KEY_MAP
   const canonical = SPEC_KEY_MAP[keyLower] || SPEC_KEY_MAP[keyClean] || SPEC_KEY_MAP[keyUnderscore] || keyClean;
 
-  // Build result: which SureDone fields to send
+  // Build result: determine HOW to send this field to SureDone
   const result = { canonical };
 
-  // Check if this field has an inline version
-  if (INLINE_FIELDS.has(canonical)) {
-    result.inline = canonical;
+  // Check if this is a SureDone native column header
+  // Native fields work inline and auto-map to eBay Recommended
+  if (SUREDONE_NATIVE_FIELDS.has(canonical)) {
+    result.native = canonical;
   }
 
-  // Check if this field needs the ebayitemspecifics prefix
-  if (PREFIX_FIELDS[canonical]) {
-    result.prefix = PREFIX_FIELDS[canonical];
-  }
-
-  // If neither matched, try sending as inline (SureDone may accept it)
-  if (!result.inline && !result.prefix) {
-    result.inline = canonical;
+  // Generate the prefix version for eBay item specifics:
+  // 1. Check PREFIX_OVERRIDES for fields where eBay name differs
+  // 2. Auto-generate "ebayitemspecifics" + canonical for everything else
+  if (PREFIX_OVERRIDES[canonical]) {
+    result.prefix = PREFIX_OVERRIDES[canonical];
+  } else {
+    // Auto-generate prefix for any non-native field
+    // (also generate for native fields that need to go to eBay)
+    result.prefix = 'ebayitemspecifics' + canonical;
   }
 
   return result;
@@ -959,16 +852,29 @@ function capitalizeBrand(brandName) {
 
 function getBrandId(brandName) {
   if (!brandName) return null;
+  const brands = loadBrandData();
   const brandLower = brandName.toLowerCase().trim();
-  if (BRAND_IDS[brandLower]) return BRAND_IDS[brandLower];
 
+  // Direct lookup in JSON
+  if (brands[brandLower] && brands[brandLower].id) {
+    return brands[brandLower].id;
+  }
+
+  // Check aliases
+  const aliasKey = BRAND_ALIASES[brandLower];
+  if (aliasKey && brands[aliasKey] && brands[aliasKey].id) {
+    return brands[aliasKey].id;
+  }
+
+  // Fuzzy: clean special chars and try again
   const brandClean = brandLower.replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
-  for (const [key, id] of Object.entries(BRAND_IDS)) {
+  for (const [key, data] of Object.entries(brands)) {
     const keyClean = key.replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
     if (keyClean === brandClean || brandClean.includes(keyClean) || keyClean.includes(brandClean)) {
-      return id;
+      return data.id;
     }
   }
+  console.log(`[!] Brand not found in BigCommerce: "${brandName}"`);
   return null;
 }
 
@@ -1215,60 +1121,59 @@ export default async function handler(req, res) {
           continue;
         }
 
-        const { canonical, inline, prefix } = resolved;
+        const { canonical, native, prefix } = resolved;
 
-        // PRIORITY ORDER for sending specs to SureDone:
-        // 1. PREFIX first: "ebayitemspecifics..." is the most reliable path to eBay
-        //    This ensures fields like bearingtype -> ebayitemspecificsbearingstype work
-        // 2. INLINE second: For SureDone-native fields WITHOUT a prefix mapping
-        //    (e.g., ratedloadhp, baserpm - fields SureDone knows natively)
-        // 3. FALLBACK: Try inline for anything else
-        // NEVER send both (that creates Dynamic duplicates in SureDone).
-        if (prefix && !fieldsSet.has(prefix)) {
-          // Preferred: field has a known ebayitemspecifics prefix mapping
+        // FIELD ROUTING:
+        // - NATIVE fields (SureDone column headers): send inline - they auto-map to eBay
+        // - ALL other fields: send with "ebayitemspecifics" prefix - required for eBay Recommended
+        // - Never send a non-native field inline (creates Dynamic custom field in SureDone!)
+        if (native && !fieldsSet.has(native)) {
+          // SureDone native column header - inline works and maps to eBay Recommended
+          formData.append(native, value);
+          fieldsSet.add(native);
+          fieldsSet.add(prefix);      // Mark prefix too so Pass 2 won't duplicate
+          fieldsSet.add(canonical);
+          specsCount++;
+          console.log(`  [OK] NATIVE: "${key}" -> ${native} = "${value}"`);
+        } else if (prefix && !fieldsSet.has(prefix)) {
+          // Non-native field - MUST use ebayitemspecifics prefix for eBay Recommended
           formData.append(prefix, value);
           fieldsSet.add(prefix);
-          // Track inline name too so Pass 2 won't duplicate
-          if (inline) fieldsSet.add(inline);
+          fieldsSet.add(canonical);
+          if (native) fieldsSet.add(native); // Prevent inline duplicate
           specsCount++;
           console.log(`  [OK] PREFIX: "${key}" -> ${prefix} = "${value}"`);
-        } else if (inline && INLINE_FIELDS.has(inline) && !fieldsSet.has(inline)) {
-          // SureDone-native field without prefix mapping (or prefix already set)
-          formData.append(inline, value);
-          fieldsSet.add(inline);
-          specsCount++;
-          console.log(`  [OK] INLINE: "${key}" -> ${inline} = "${value}"`);
-        } else if (inline && !fieldsSet.has(inline)) {
-          // Fallback: field not in INLINE_FIELDS or PREFIX_FIELDS, try inline anyway
-          formData.append(inline, value);
-          fieldsSet.add(inline);
-          specsCount++;
-          console.log(`  [OK] FALLBACK INLINE: "${key}" -> ${inline} = "${value}"`);
-        }
-
-        if (!inline && !prefix) {
-          console.log(`  [!] NO MAPPING: "${key}"  ->  "${canonical}" (sent as-is)`);
-          if (!fieldsSet.has(canonical)) {
-            formData.append(canonical, value);
-            fieldsSet.add(canonical);
-            specsCount++;
-          }
+        } else {
+          console.log(`  [SKIP] Already set: "${key}" (canonical: ${canonical})`);
         }
       }
     }
 
-    // Handle country of origin from top-level
-    if (product.countryOfOrigin && !fieldsSet.has('countryoforigin')) {
-      formData.append('countryoforigin', product.countryOfOrigin);
-      fieldsSet.add('countryoforigin');
-      specsCount++;
-      console.log(`  [OK] countryOfOrigin  ->  countryoforigin = "${product.countryOfOrigin}"`);
+    // Handle country of origin - SPECIAL: needs both inline (SureDone/BigCommerce) AND prefix (eBay)
+    // Check multiple sources for the value
+    const countryValue = product.countryOfOrigin 
+      || (product.specifications && (product.specifications.countryoforigin || product.specifications.Countryoforigin || product.specifications.countryOfOrigin || product.specifications.country_of_origin))
+      || 'United States';
+    if (countryValue && countryValue !== 'N/A' && countryValue !== 'Unknown') {
+      if (!fieldsSet.has('countryoforigin')) {
+        formData.append('countryoforigin', countryValue);
+        fieldsSet.add('countryoforigin');
+        specsCount++;
+        console.log(`  [OK] countryOfOrigin INLINE -> countryoforigin = "${countryValue}"`);
+      }
+      const coPrefix = 'ebayitemspecificscountryoforigin';
+      if (!fieldsSet.has(coPrefix)) {
+        formData.append(coPrefix, countryValue);
+        fieldsSet.add(coPrefix);
+        specsCount++;
+        console.log(`  [OK] countryOfOrigin PREFIX -> ${coPrefix} = "${countryValue}"`);
+      }
     }
 
     // ==========================================================================
     // PASS 2: EBAY ITEM SPECIFICS (AI-filled from Taxonomy API)
     // These come with inline field names from auto-fill-ebay-specifics.js
-    // Some fields require prefix to work in SureDone, so we check PREFIX_FIELDS
+    // Fields require "ebayitemspecifics" prefix unless they are SureDone native columns
     // Only adds fields that weren't already set by Pass 1 spec processing
     // ==========================================================================
     if (product.ebayItemSpecificsForSuredone && typeof product.ebayItemSpecificsForSuredone === 'object') {
@@ -1282,28 +1187,41 @@ export default async function handler(req, res) {
 
         // Skip brand/mpn  --  already handled above
         if (fieldName === 'brand' || fieldName === 'mpn' || fieldName === 'ebayitemspecificsbrand' || fieldName === 'ebayitemspecificsmpn') continue;
+        // Skip model - already handled as SureDone native field
+        if (fieldName === 'model' || fieldName === 'ebayitemspecificsmodel') continue;
 
         // Determine the correct SureDone field name:
-        // If the field is in PREFIX_FIELDS, use the prefix version
-        // Otherwise use the inline name as-is
-        const prefixVersion = PREFIX_FIELDS[fieldName];
-        const actualFieldName = prefixVersion || fieldName;
+        // 1. If already has "ebayitemspecifics" prefix, use as-is
+        // 2. If in PREFIX_OVERRIDES, use the override
+        // 3. Otherwise auto-generate "ebayitemspecifics" + fieldName
+        let actualFieldName;
+        if (fieldName.startsWith('ebayitemspecifics')) {
+          actualFieldName = fieldName;
+        } else if (PREFIX_OVERRIDES[fieldName]) {
+          actualFieldName = PREFIX_OVERRIDES[fieldName];
+        } else if (SUREDONE_NATIVE_FIELDS.has(fieldName)) {
+          // For native fields in Pass 2, still send as native (they auto-map to eBay)
+          actualFieldName = fieldName;
+        } else {
+          // Auto-generate prefix for non-native fields
+          actualFieldName = 'ebayitemspecifics' + fieldName;
+        }
 
-        // Only add if not already set by Pass 1 (check both inline and prefix)
+        // Only add if not already set by Pass 1 (check both original and target)
         if (!fieldsSet.has(fieldName) && !fieldsSet.has(actualFieldName)) {
           formData.append(actualFieldName, value);
           fieldsSet.add(actualFieldName);
           fieldsSet.add(fieldName); // Track both to prevent future dupes
           specsCount++;
           pass2Count++;
-          if (prefixVersion) {
-            console.log(`  [OK] PASS2 PREFIX: ${fieldName}  ->  ${actualFieldName} = "${value}"`);
+          if (actualFieldName !== fieldName) {
+            console.log(`  [OK] PASS2 PREFIX: ${fieldName} -> ${actualFieldName} = "${value}"`);
           } else {
-            console.log(`  [OK] PASS2 INLINE: ${fieldName} = "${value}"`);
+            console.log(`  [OK] PASS2 NATIVE: ${fieldName} = "${value}"`);
           }
         } else {
           pass2Skipped++;
-          console.log(`  [SKIP] PASS2 SKIP (already set): ${fieldName}`);
+          console.log(`  [SKIP] PASS2 (already set): ${fieldName}`);
         }
       }
       console.log(`Pass 2: Added ${pass2Count} new fields, skipped ${pass2Skipped} (already set by Pass 1)`);

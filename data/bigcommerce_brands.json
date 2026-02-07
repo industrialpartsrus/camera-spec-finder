@@ -10222,5 +10222,25 @@
   "hellermanntyton": {
     "name": "HellermannTyton",
     "id": "5853"
+  },
+  "guardair": {
+    "name": "GuardAir",
+    "id": "5856"
+  },
+  "hi performance products": {
+    "name": "Hi Performance Products",
+    "id": "5854"
+  },
+  "idem": {
+    "name": "IDEM",
+    "id": "5855"
+  },
+  "jet": {
+    "name": "Jet",
+    "id": "5857"
+  },
+  "pearl kooyo co.": {
+    "name": "Pearl Kooyo Co.",
+    "id": "5858"
   }
 }
