@@ -592,170 +592,170 @@ const SHIPPING_PROFILES = [
 // Complete list from eBay Store - Updated January 2025
 const EBAY_STORE_CATEGORIES = [
   // Top Level - All Products
-  { id: '23399313015', name: 'â˜… ALL PRODUCTS', level: 1 },
+  { id: '23399313015', name: '★ ALL PRODUCTS', level: 1 },
   
   // Assembly Tools
   { id: '11495474015', name: 'ASSEMBLY TOOLS', level: 1 },
   
   // Automation Control
   { id: '5384028015', name: 'AUTOMATION CONTROL', level: 1 },
-  { id: '6686264015', name: '  â”” HMI', level: 2 },
-  { id: '18373835', name: '  â”” I/O BOARDS', level: 2 },
-  { id: '5404089015', name: '  â”” PLC', level: 2 },
-  { id: '2242362015', name: '  â”” POWER SUPPLY', level: 2 },
+  { id: '6686264015', name: '  └ HMI', level: 2 },
+  { id: '18373835', name: '  └ I/O BOARDS', level: 2 },
+  { id: '5404089015', name: '  └ PLC', level: 2 },
+  { id: '2242362015', name: '  └ POWER SUPPLY', level: 2 },
   
   // Bearings
   { id: '6690505015', name: 'BEARINGS', level: 1 },
-  { id: '4173714015', name: '  â”” BALL', level: 2 },
-  { id: '4173170015', name: '  â”” CAM FOLLOWER', level: 2 },
-  { id: '4173165015', name: '  â”” FLANGE BEARINGS', level: 2 },
-  { id: '4173713015', name: '  â”” LINEAR', level: 2 },
-  { id: '4173171015', name: '  â”” NEEDLE', level: 2 },
-  { id: '4173166015', name: '  â”” PILLOW BLOCK', level: 2 },
-  { id: '4173168015', name: '  â”” ROLLER', level: 2 },
-  { id: '4173167015', name: '  â”” TAPERED', level: 2 },
-  { id: '4173169015', name: '  â”” THRUST', level: 2 },
+  { id: '4173714015', name: '  └ BALL', level: 2 },
+  { id: '4173170015', name: '  └ CAM FOLLOWER', level: 2 },
+  { id: '4173165015', name: '  └ FLANGE BEARINGS', level: 2 },
+  { id: '4173713015', name: '  └ LINEAR', level: 2 },
+  { id: '4173171015', name: '  └ NEEDLE', level: 2 },
+  { id: '4173166015', name: '  └ PILLOW BLOCK', level: 2 },
+  { id: '4173168015', name: '  └ ROLLER', level: 2 },
+  { id: '4173167015', name: '  └ TAPERED', level: 2 },
+  { id: '4173169015', name: '  └ THRUST', level: 2 },
   
   // Computers
   { id: '19438754015', name: 'COMPUTERS & ACCESSORIES', level: 1 },
   
   // Electrical
   { id: '393385015', name: 'ELECTRICAL', level: 1 },
-  { id: '5634105015', name: '  â”” CIRCUIT BREAKERS', level: 2 },
-  { id: '20338717', name: '  â”” DISCONNECTS', level: 2 },
-  { id: '18373801', name: '  â”” ENCLOSURES', level: 2 },
-  { id: '18373807', name: '  â”” FUSES & HOLDERS', level: 2 },
-  { id: '5634104015', name: '  â”” TRANSFORMERS', level: 2 },
+  { id: '5634105015', name: '  └ CIRCUIT BREAKERS', level: 2 },
+  { id: '20338717', name: '  └ DISCONNECTS', level: 2 },
+  { id: '18373801', name: '  └ ENCLOSURES', level: 2 },
+  { id: '18373807', name: '  └ FUSES & HOLDERS', level: 2 },
+  { id: '5634104015', name: '  └ TRANSFORMERS', level: 2 },
   
   // Filtration
   { id: '2343161015', name: 'FILTRATION', level: 1 },
-  { id: '2343164015', name: '  â”” AIR FILTER', level: 2 },
-  { id: '2343166015', name: '  â”” COOLANT FILTER', level: 2 },
-  { id: '2343163015', name: '  â”” HYDRAULIC FILTER', level: 2 },
-  { id: '2343165015', name: '  â”” OIL FILTER', level: 2 },
-  { id: '2343162015', name: '  â”” WATER FILTER', level: 2 },
+  { id: '2343164015', name: '  └ AIR FILTER', level: 2 },
+  { id: '2343166015', name: '  └ COOLANT FILTER', level: 2 },
+  { id: '2343163015', name: '  └ HYDRAULIC FILTER', level: 2 },
+  { id: '2343165015', name: '  └ OIL FILTER', level: 2 },
+  { id: '2343162015', name: '  └ WATER FILTER', level: 2 },
   
   // HVAC
   { id: '17167473', name: 'HVAC', level: 1 },
-  { id: '2457873015', name: '  â”” CHILLERS', level: 2 },
-  { id: '2457884015', name: '  â”” FANS', level: 2 },
+  { id: '2457873015', name: '  └ CHILLERS', level: 2 },
+  { id: '2457884015', name: '  └ FANS', level: 2 },
   
   // Hydraulics
   { id: '6689962015', name: 'HYDRAULICS', level: 1 },
-  { id: '6696063015', name: '  â”” HYDRAULIC ACCUMULATORS', level: 2 },
-  { id: '6696062015', name: '  â”” HYDRAULIC ACTUATORS', level: 2 },
-  { id: '6696061015', name: '  â”” HYDRAULIC CYLINDERS', level: 2 },
-  { id: '6696064015', name: '  â”” HYDRAULIC PUMPS', level: 2 },
-  { id: '6696060015', name: '  â”” HYDRAULIC VALVES', level: 2 },
+  { id: '6696063015', name: '  └ HYDRAULIC ACCUMULATORS', level: 2 },
+  { id: '6696062015', name: '  └ HYDRAULIC ACTUATORS', level: 2 },
+  { id: '6696061015', name: '  └ HYDRAULIC CYLINDERS', level: 2 },
+  { id: '6696064015', name: '  └ HYDRAULIC PUMPS', level: 2 },
+  { id: '6696060015', name: '  └ HYDRAULIC VALVES', level: 2 },
   
   // Industrial Control
   { id: '6688149015', name: 'INDUSTRIAL CONTROL', level: 1 },
-  { id: '2242359015', name: '  â”” CONTROL RELAYS', level: 2 },
-  { id: '1856435015', name: '  â”” CORD SETS', level: 2 },
-  { id: '18373799', name: '  â”” COUNTERS', level: 2 },
-  { id: '4173756015', name: '  â”” E-STOP SWITCHES', level: 2 },
-  { id: '4173739015', name: '  â”” FOOT SWITCHES', level: 2 },
-  { id: '1484016015', name: '  â”” GAUGES', level: 2 },
-  { id: '4173737015', name: '  â”” ILLUMINATED BUTTONS', level: 2 },
-  { id: '4173758015', name: '  â”” JOYSTICKS', level: 2 },
-  { id: '4173738015', name: '  â”” KEY SWITCHES', level: 2 },
-  { id: '4173745015', name: '  â”” LIMIT SWITCHES', level: 2 },
-  { id: '2464037015', name: '  â”” MACHINE SAFETY', level: 2 },
-  { id: '4173736015', name: '  â”” MAINTAINED BUTTONS', level: 2 },
-  { id: '4173752015', name: '  â”” MICRO SWITCHES', level: 2 },
-  { id: '4173735015', name: '  â”” MOMENTARY BUTTONS', level: 2 },
-  { id: '2348910015', name: '  â”” MOTOR CONTROLS', level: 2 },
-  { id: '4173743015', name: '  â”” PALM OPERATED BUTTONS', level: 2 },
-  { id: '5634088015', name: '  â”” PANEL METERS', level: 2 },
-  { id: '2464042015', name: '  â”” PILOT LIGHTS', level: 2 },
-  { id: '4173757015', name: '  â”” POTENTIOMETERS', level: 2 },
-  { id: '1484009015', name: '  â”” PRESSURE CONTROLS', level: 2 },
-  { id: '4173742015', name: '  â”” SELECTOR SWITCHES', level: 2 },
-  { id: '6327053015', name: '  â”” SOUND MODULES', level: 2 },
-  { id: '6690583015', name: '  â”” STACK LIGHTS', level: 2 },
-  { id: '2461872015', name: '  â”” TEMPERATURE CONTROLS', level: 2 },
-  { id: '18373798', name: '  â”” TIMERS', level: 2 },
-  { id: '18373834', name: '  â”” TRANSDUCERS', level: 2 },
-  { id: '5634089015', name: '  â”” TRANSMITTERS', level: 2 },
+  { id: '2242359015', name: '  └ CONTROL RELAYS', level: 2 },
+  { id: '1856435015', name: '  └ CORD SETS', level: 2 },
+  { id: '18373799', name: '  └ COUNTERS', level: 2 },
+  { id: '4173756015', name: '  └ E-STOP SWITCHES', level: 2 },
+  { id: '4173739015', name: '  └ FOOT SWITCHES', level: 2 },
+  { id: '1484016015', name: '  └ GAUGES', level: 2 },
+  { id: '4173737015', name: '  └ ILLUMINATED BUTTONS', level: 2 },
+  { id: '4173758015', name: '  └ JOYSTICKS', level: 2 },
+  { id: '4173738015', name: '  └ KEY SWITCHES', level: 2 },
+  { id: '4173745015', name: '  └ LIMIT SWITCHES', level: 2 },
+  { id: '2464037015', name: '  └ MACHINE SAFETY', level: 2 },
+  { id: '4173736015', name: '  └ MAINTAINED BUTTONS', level: 2 },
+  { id: '4173752015', name: '  └ MICRO SWITCHES', level: 2 },
+  { id: '4173735015', name: '  └ MOMENTARY BUTTONS', level: 2 },
+  { id: '2348910015', name: '  └ MOTOR CONTROLS', level: 2 },
+  { id: '4173743015', name: '  └ PALM OPERATED BUTTONS', level: 2 },
+  { id: '5634088015', name: '  └ PANEL METERS', level: 2 },
+  { id: '2464042015', name: '  └ PILOT LIGHTS', level: 2 },
+  { id: '4173757015', name: '  └ POTENTIOMETERS', level: 2 },
+  { id: '1484009015', name: '  └ PRESSURE CONTROLS', level: 2 },
+  { id: '4173742015', name: '  └ SELECTOR SWITCHES', level: 2 },
+  { id: '6327053015', name: '  └ SOUND MODULES', level: 2 },
+  { id: '6690583015', name: '  └ STACK LIGHTS', level: 2 },
+  { id: '2461872015', name: '  └ TEMPERATURE CONTROLS', level: 2 },
+  { id: '18373798', name: '  └ TIMERS', level: 2 },
+  { id: '18373834', name: '  └ TRANSDUCERS', level: 2 },
+  { id: '5634089015', name: '  └ TRANSMITTERS', level: 2 },
   
   // Motion Control
   { id: '6686262015', name: 'MOTION CONTROL', level: 1 },
-  { id: '1802953015', name: '  â”” ENCODERS', level: 2 },
-  { id: '393390015', name: '  â”” SERVO DRIVES', level: 2 },
+  { id: '1802953015', name: '  └ ENCODERS', level: 2 },
+  { id: '393390015', name: '  └ SERVO DRIVES', level: 2 },
   
   // Pneumatics
   { id: '6689961015', name: 'PNEUMATICS', level: 1 },
-  { id: '2461878015', name: '  â”” ACTUATORS', level: 2 },
-  { id: '2461873015', name: '  â”” CYLINDERS', level: 2 },
-  { id: '2461877015', name: '  â”” DRYERS', level: 2 },
-  { id: '2461880015', name: '  â”” FILTERS', level: 2 },
-  { id: '6699359015', name: '  â”” GRIPPER', level: 2 },
-  { id: '2461876015', name: '  â”” LUBRICATORS', level: 2 },
-  { id: '6690373015', name: '  â”” MUFFLER', level: 2 },
-  { id: '6699358015', name: '  â”” NIPPER', level: 2 },
-  { id: '2461874015', name: '  â”” PNEUMATIC VALVES', level: 2 },
-  { id: '2461875015', name: '  â”” REGULATORS', level: 2 },
+  { id: '2461878015', name: '  └ ACTUATORS', level: 2 },
+  { id: '2461873015', name: '  └ CYLINDERS', level: 2 },
+  { id: '2461877015', name: '  └ DRYERS', level: 2 },
+  { id: '2461880015', name: '  └ FILTERS', level: 2 },
+  { id: '6699359015', name: '  └ GRIPPER', level: 2 },
+  { id: '2461876015', name: '  └ LUBRICATORS', level: 2 },
+  { id: '6690373015', name: '  └ MUFFLER', level: 2 },
+  { id: '6699358015', name: '  └ NIPPER', level: 2 },
+  { id: '2461874015', name: '  └ PNEUMATIC VALVES', level: 2 },
+  { id: '2461875015', name: '  └ REGULATORS', level: 2 },
   
   // Power Transmission
   { id: '17167474', name: 'POWER TRANSMISSION', level: 1 },
-  { id: '6690432015', name: '  â”” BALL SCREWS', level: 2 },
-  { id: '6688333015', name: '  â”” BELTS', level: 2 },
-  { id: '6688331015', name: '  â”” BRAKES', level: 2 },
-  { id: '393386015', name: '  â”” CLUTCHES', level: 2 },
-  { id: '17167471', name: '  â”” ELECTRIC MOTORS', level: 2 },
-  { id: '6688332015', name: '  â”” GEAR REDUCERS', level: 2 },
-  { id: '6690433015', name: '  â”” LINEAR ACTUATORS', level: 2 },
-  { id: '6690434015', name: '  â”” LINEAR RAILS', level: 2 },
-  { id: '6688335015', name: '  â”” ROLLER CHAINS', level: 2 },
-  { id: '393389015', name: '  â”” SERVO MOTORS', level: 2 },
-  { id: '6688334015', name: '  â”” SPROCKETS', level: 2 },
+  { id: '6690432015', name: '  └ BALL SCREWS', level: 2 },
+  { id: '6688333015', name: '  └ BELTS', level: 2 },
+  { id: '6688331015', name: '  └ BRAKES', level: 2 },
+  { id: '393386015', name: '  └ CLUTCHES', level: 2 },
+  { id: '17167471', name: '  └ ELECTRIC MOTORS', level: 2 },
+  { id: '6688332015', name: '  └ GEAR REDUCERS', level: 2 },
+  { id: '6690433015', name: '  └ LINEAR ACTUATORS', level: 2 },
+  { id: '6690434015', name: '  └ LINEAR RAILS', level: 2 },
+  { id: '6688335015', name: '  └ ROLLER CHAINS', level: 2 },
+  { id: '393389015', name: '  └ SERVO MOTORS', level: 2 },
+  { id: '6688334015', name: '  └ SPROCKETS', level: 2 },
   
   // Pumps
   { id: '6689959015', name: 'PUMPS', level: 1 },
-  { id: '6689968015', name: '  â”” CENTRIFUGAL PUMP', level: 2 },
-  { id: '6689971015', name: '  â”” CONDENSATE PUMP', level: 2 },
-  { id: '6689969015', name: '  â”” DIAPHRAGM PUMP', level: 2 },
-  { id: '6689966015', name: '  â”” HYDRAULIC PUMP', level: 2 },
-  { id: '6689970015', name: '  â”” METERING PUMP', level: 2 },
-  { id: '6689967015', name: '  â”” VACUUM PUMP', level: 2 },
+  { id: '6689968015', name: '  └ CENTRIFUGAL PUMP', level: 2 },
+  { id: '6689971015', name: '  └ CONDENSATE PUMP', level: 2 },
+  { id: '6689969015', name: '  └ DIAPHRAGM PUMP', level: 2 },
+  { id: '6689966015', name: '  └ HYDRAULIC PUMP', level: 2 },
+  { id: '6689970015', name: '  └ METERING PUMP', level: 2 },
+  { id: '6689967015', name: '  └ VACUUM PUMP', level: 2 },
   
   // Sensing Devices
   { id: '6686267015', name: 'SENSING DEVICES', level: 1 },
-  { id: '6690176015', name: '  â”” BARCODE SCANNERS', level: 2 },
-  { id: '4173796015', name: '  â”” COLOR SENSORS', level: 2 },
-  { id: '4173797015', name: '  â”” CURRENT SENSORS', level: 2 },
-  { id: '5785856015', name: '  â”” FIBER OPTIC SENSORS', level: 2 },
-  { id: '4173798015', name: '  â”” FLOW SENSORS', level: 2 },
-  { id: '2479732015', name: '  â”” LASER SENSORS', level: 2 },
-  { id: '4173792015', name: '  â”” LEVEL SENSORS', level: 2 },
-  { id: '393379015', name: '  â”” LIGHT CURTAINS', level: 2 },
-  { id: '4173799015', name: '  â”” LIGHT SENSORS', level: 2 },
-  { id: '5634087015', name: '  â”” LINEAR SENSORS', level: 2 },
-  { id: '5436340015', name: '  â”” LOAD CELLS', level: 2 },
-  { id: '4173793015', name: '  â”” PHOTOELECTRIC SENSORS', level: 2 },
-  { id: '6690386015', name: '  â”” PRESSURE SENSORS', level: 2 },
-  { id: '4173791015', name: '  â”” PROXIMITY SENSORS', level: 2 },
-  { id: '6695702015', name: '  â”” RFID READER', level: 2 },
-  { id: '6690556015', name: '  â”” TEMPERATURE SENSORS', level: 2 },
+  { id: '6690176015', name: '  └ BARCODE SCANNERS', level: 2 },
+  { id: '4173796015', name: '  └ COLOR SENSORS', level: 2 },
+  { id: '4173797015', name: '  └ CURRENT SENSORS', level: 2 },
+  { id: '5785856015', name: '  └ FIBER OPTIC SENSORS', level: 2 },
+  { id: '4173798015', name: '  └ FLOW SENSORS', level: 2 },
+  { id: '2479732015', name: '  └ LASER SENSORS', level: 2 },
+  { id: '4173792015', name: '  └ LEVEL SENSORS', level: 2 },
+  { id: '393379015', name: '  └ LIGHT CURTAINS', level: 2 },
+  { id: '4173799015', name: '  └ LIGHT SENSORS', level: 2 },
+  { id: '5634087015', name: '  └ LINEAR SENSORS', level: 2 },
+  { id: '5436340015', name: '  └ LOAD CELLS', level: 2 },
+  { id: '4173793015', name: '  └ PHOTOELECTRIC SENSORS', level: 2 },
+  { id: '6690386015', name: '  └ PRESSURE SENSORS', level: 2 },
+  { id: '4173791015', name: '  └ PROXIMITY SENSORS', level: 2 },
+  { id: '6695702015', name: '  └ RFID READER', level: 2 },
+  { id: '6690556015', name: '  └ TEMPERATURE SENSORS', level: 2 },
   
   // Speed Controls
   { id: '6686272015', name: 'SPEED CONTROLS', level: 1 },
-  { id: '2242358015', name: '  â”” AC DRIVE', level: 2 },
-  { id: '6688299015', name: '  â”” DC DRIVE', level: 2 },
+  { id: '2242358015', name: '  └ AC DRIVE', level: 2 },
+  { id: '6688299015', name: '  └ DC DRIVE', level: 2 },
   
   // Valves
   { id: '6690464015', name: 'VALVES', level: 1 },
-  { id: '6690466015', name: '  â”” BALL VALVES', level: 2 },
-  { id: '6690465015', name: '  â”” BUTTERFLY VALVES', level: 2 },
-  { id: '6690467015', name: '  â”” CHECK VALVES', level: 2 },
-  { id: '6690474015', name: '  â”” FLOAT VALVES', level: 2 },
-  { id: '6690469015', name: '  â”” GAS VALVES', level: 2 },
-  { id: '6690472015', name: '  â”” GLOBE VALVES', level: 2 },
-  { id: '6690470015', name: '  â”” LOCKOUT VALVES', level: 2 },
-  { id: '6690486015', name: '  â”” PRESSURE RELIEF', level: 2 },
-  { id: '6690471015', name: '  â”” PROPORTIONAL VALVES', level: 2 },
-  { id: '6690468015', name: '  â”” SOLENOID VALVES', level: 2 },
-  { id: '6690473015', name: '  â”” STEAM VALVES', level: 2 },
+  { id: '6690466015', name: '  └ BALL VALVES', level: 2 },
+  { id: '6690465015', name: '  └ BUTTERFLY VALVES', level: 2 },
+  { id: '6690467015', name: '  └ CHECK VALVES', level: 2 },
+  { id: '6690474015', name: '  └ FLOAT VALVES', level: 2 },
+  { id: '6690469015', name: '  └ GAS VALVES', level: 2 },
+  { id: '6690472015', name: '  └ GLOBE VALVES', level: 2 },
+  { id: '6690470015', name: '  └ LOCKOUT VALVES', level: 2 },
+  { id: '6690486015', name: '  └ PRESSURE RELIEF', level: 2 },
+  { id: '6690471015', name: '  └ PROPORTIONAL VALVES', level: 2 },
+  { id: '6690468015', name: '  └ SOLENOID VALVES', level: 2 },
+  { id: '6690473015', name: '  └ STEAM VALVES', level: 2 },
   
   // Other
   { id: '1', name: 'Other Items', level: 1 }
@@ -1483,8 +1483,8 @@ export default function ProListingBuilder() {
         const storeCat = EBAY_STORE_CATEGORIES.find(c => c.id === storeCategory);
         console.log('Store category found:', storeCat);
         if (storeCat) {
-          // Clean up store category name (remove â”” prefix and trim)
-          const cleanStoreName = storeCat.name.replace(/^\s*â””\s*/, '').trim().toUpperCase();
+          // Clean up store category name (remove └ prefix and trim)
+          const cleanStoreName = storeCat.name.replace(/^\s*└\s*/, '').trim().toUpperCase();
           console.log('Clean store name:', cleanStoreName);
           if (STORE_TO_PRODUCT_CATEGORY[cleanStoreName]) {
             detectedEbayCatId = STORE_TO_PRODUCT_CATEGORY[cleanStoreName];
@@ -1603,8 +1603,8 @@ export default function ProListingBuilder() {
     try {
       await updateDoc(doc(db, 'products', itemId), { status: 'searching' });
       
-      // Use consolidated v3 API: AI detection + field guides + web search + corrected category IDs
-      const response = await fetch('/api/search-product', {
+      // Use v2 API that fetches eBay item specifics from Taxonomy API
+      const response = await fetch('/api/search-product-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brand: item.brand, partNumber: item.partNumber })
@@ -1665,8 +1665,8 @@ export default function ProListingBuilder() {
 
       // =================================================================
       // PASS 2: AUTO-FILL EBAY ITEM SPECIFICS
-      // Fires automatically after Pass 1 â€” no button needed
-      // Uses eBay Taxonomy aspects + Pass 1 specs â†’ AI fills all fields
+      // Fires automatically after Pass 1 — no button needed
+      // Uses eBay Taxonomy aspects + Pass 1 specs → AI fills all fields
       // =================================================================
       if (data._ebayAspects && data._ebayAspects.all?.length > 0) {
         console.log('=== AUTO-TRIGGERING PASS 2 ===');
@@ -1801,7 +1801,7 @@ export default function ProListingBuilder() {
         if (!response.ok || !responseData.success) {
           throw new Error(responseData.error || 'Failed to update listing');
         }
-        alert(`âœ… Successfully updated in SureDone!\n\nSKU: ${item.originalSku}\n\n${item.title}`);
+        alert(`✅ Successfully updated in SureDone!\n\nSKU: ${item.originalSku}\n\n${item.title}`);
         
       } else {
         // CREATE new listing
@@ -1846,11 +1846,11 @@ export default function ProListingBuilder() {
 
         const responseData = await response.json();
         if (!response.ok) throw new Error(responseData.error || 'Failed to create listing');
-        alert(`âœ… Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
+        alert(`✅ Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
       }
     } catch (error) {
       console.error('SureDone error:', error);
-      alert(`âŒ Error: ${error.message}`);
+      alert(`❌ Error: ${error.message}`);
     }
     setIsSending(false);
   };
@@ -1890,10 +1890,10 @@ export default function ProListingBuilder() {
       <div className="bg-white border-b px-6 py-4">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-2xl font-bold">Pro Listing Builder ðŸš€</h1>
+            <h1 className="text-2xl font-bold">Pro Listing Builder 🚀</h1>
             <p className="text-sm text-gray-600">
-              Logged in: <span className="font-semibold">{userName}</span> â€¢ 
-              <span className="text-green-600 ml-2">â— Live Sync</span>
+              Logged in: <span className="font-semibold">{userName}</span> • 
+              <span className="text-green-600 ml-2">● Live Sync</span>
             </p>
           </div>
           {/* Toggle Compare Panel Button */}
@@ -1992,10 +1992,10 @@ export default function ProListingBuilder() {
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
                     {item.productCategory && <p className="text-xs text-blue-600 mt-1">{item.productCategory}</p>}
                     {item.pass2Status === 'complete' && (
-                      <p className="text-[10px] text-purple-600 mt-0.5">ðŸ·ï¸ {item.pass2FilledCount || 0} eBay specs filled</p>
+                      <p className="text-[10px] text-purple-600 mt-0.5">🏷️ {item.pass2FilledCount || 0} eBay specs filled</p>
                     )}
                     {item.pass2Status === 'filling' && (
-                      <p className="text-[10px] text-purple-500 mt-0.5 animate-pulse">â³ Filling eBay specs...</p>
+                      <p className="text-[10px] text-purple-500 mt-0.5 animate-pulse">⏳ Filling eBay specs...</p>
                     )}
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-1 rounded ml-2">
@@ -2031,12 +2031,12 @@ export default function ProListingBuilder() {
                     {selected.productCategory && <span className="text-sm px-2 py-1 rounded bg-blue-100 text-blue-700">{selected.productCategory}</span>}
                     {selected.pass2Status === 'complete' && (
                       <span className="text-sm px-2 py-1 rounded bg-purple-100 text-purple-700">
-                        ðŸ·ï¸ {selected.pass2FilledCount}/{selected.pass2TotalCount} eBay specs
+                        🏷️ {selected.pass2FilledCount}/{selected.pass2TotalCount} eBay specs
                       </span>
                     )}
                     {selected.pass2Status === 'filling' && (
                       <span className="text-sm px-2 py-1 rounded bg-purple-100 text-purple-600 animate-pulse">
-                        â³ Filling eBay specs...
+                        ⏳ Filling eBay specs...
                       </span>
                     )}
                   </div>
@@ -2089,7 +2089,7 @@ export default function ProListingBuilder() {
                     </div>
                     {selected.ebayCategoryId && EBAY_CATEGORY_TAXONOMY[selected.ebayCategoryId] && (
                       <p className="text-xs text-green-700 mt-2 p-2 bg-green-50 rounded border border-green-200">
-                        ðŸ“¦ <strong>Full eBay Path:</strong> {EBAY_CATEGORY_TAXONOMY[selected.ebayCategoryId].path}
+                        📦 <strong>Full eBay Path:</strong> {EBAY_CATEGORY_TAXONOMY[selected.ebayCategoryId].path}
                       </p>
                     )}
                     <details className="mt-2">
@@ -2141,7 +2141,7 @@ export default function ProListingBuilder() {
                   {/* Specifications */}
                   <div className="border rounded-lg overflow-hidden">
                     <button onClick={() => setShowSpecs(!showSpecs)} className="w-full px-4 py-3 bg-blue-50 flex justify-between items-center hover:bg-blue-100 transition">
-                      <span className="font-semibold text-blue-800">ðŸ“‹ Specifications ({Object.keys(selected.specifications || {}).length} fields)</span>
+                      <span className="font-semibold text-blue-800">📋 Specifications ({Object.keys(selected.specifications || {}).length} fields)</span>
                       {showSpecs ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </button>
                     {showSpecs && selected.specifications && Object.keys(selected.specifications).length > 0 && (
@@ -2164,17 +2164,17 @@ export default function ProListingBuilder() {
                     <div className="border rounded-lg overflow-hidden">
                       <button onClick={() => setShowEbaySpecifics(!showEbaySpecifics)} className="w-full px-4 py-3 bg-purple-50 flex justify-between items-center hover:bg-purple-100 transition">
                         <span className="font-semibold text-purple-800">
-                          ðŸ·ï¸ eBay Item Specifics
+                          🏷️ eBay Item Specifics
                           {selected.pass2Status === 'filling' && (
-                            <span className="ml-2 text-sm text-purple-600 animate-pulse">â³ AI filling...</span>
+                            <span className="ml-2 text-sm text-purple-600 animate-pulse">⏳ AI filling...</span>
                           )}
                           {selected.pass2Status === 'complete' && (
                             <span className="ml-2 text-sm text-green-600">
-                              âœ“ {selected.pass2FilledCount || 0}/{selected.pass2TotalCount || 0} filled
+                              ✓ {selected.pass2FilledCount || 0}/{selected.pass2TotalCount || 0} filled
                             </span>
                           )}
                           {selected.pass2Status === 'error' && (
-                            <span className="ml-2 text-sm text-red-600">âš  Error</span>
+                            <span className="ml-2 text-sm text-red-600">⚠ Error</span>
                           )}
                         </span>
                         {showEbaySpecifics ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -2438,7 +2438,7 @@ export default function ProListingBuilder() {
                   <button onClick={() => sendToSureDone(selected.id)} disabled={isSending || !selected.title || !selected.price}
                     className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     {isSending ? <><Loader className="w-5 h-5 animate-spin" /> Sending...</> : 
-                      selected.isEditingExisting ? 'ðŸ“ Update in SureDone' : 'ðŸš€ Send to SureDone'}
+                      selected.isEditingExisting ? '📝 Update in SureDone' : '🚀 Send to SureDone'}
                   </button>
                 </div>
               )}
@@ -2456,7 +2456,7 @@ export default function ProListingBuilder() {
                   <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                   <p className="text-red-600 font-semibold text-lg">Error Processing Item</p>
                   <p className="text-red-500 mt-2">{selected.error}</p>
-                  <button onClick={() => processItem(selected.id)} className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">ðŸ”„ Retry</button>
+                  <button onClick={() => processItem(selected.id)} className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">🔄 Retry</button>
                 </div>
               )}
             </div>
