@@ -2,9 +2,9 @@
 // Complete SureDone integration with UPC, BigCommerce multi-category, comprehensive eBay item specifics
 // 
 // HANDLES BOTH FORMATS:
-// 1. AI returns lowercase fields like "ratedloadhp" → passes through directly
-// 2. Legacy/human-readable keys like "horsepower" → maps to "ratedloadhp"
-// 3. eBay display names like "Rated Load (HP)" → converts to "ratedloadhp"
+// 1. AI returns lowercase fields like "ratedloadhp"  ->  passes through directly
+// 2. Legacy/human-readable keys like "horsepower"  ->  maps to "ratedloadhp"
+// 3. eBay display names like "Rated Load (HP)"  ->  converts to "ratedloadhp"
 
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
@@ -22,7 +22,22 @@ const BRAND_IDS = {
   'oriental motor': '104', 'vickers': '137', 'eaton': '72', 'cutler hammer': '72',
   'cutler-hammer': '72', 'phoenix contact': '50', 'wago': '50', 'pilz': '155',
   'bihl+wiedemann': '97', 'bihl wiedemann': '97', 'b&r': '97', 'b&r automation': '97',
-  'weg': '95', 'marathon': '93', 'leeson': '91', 'teco': '96', 'reliance': '92'
+  'weg': '95', 'marathon': '93', 'leeson': '91', 'teco': '96', 'reliance': '92',
+  // Bearings
+  'mcgill': '160', 'skf': '161', 'nsk': '162', 'ntn': '163', 'timken': '164',
+  'fag': '165', 'iko': '166', 'thk': '167', 'koyo': '168', 'pearl kooyo co': '168',
+  'pearl kooyo co.': '168', 'nachi': '169', 'rexnord': '170', 'link-belt': '171',
+  'dodge': '172', 'sealmaster': '173', 'browning': '174',
+  // Additional automation brands
+  'automation direct': '175', 'automationdirect': '175', 'idec': '176',
+  'red lion': '177', 'watlow': '178', 'eurotherm': '179', 'honeywell': '180',
+  'numatics': '181', 'norgren': '182', 'aventics': '183', 'ross': '184',
+  'asco': '185', 'mac': '186', 'bimba': '187', 'clippard': '188',
+  'danaher': '189', 'kollmorgen': '190', 'pacific scientific': '191',
+  'lenze': '192', 'sew eurodrive': '193', 'sew-eurodrive': '193',
+  'nord': '194', 'bonfiglioli': '195', 'sumitomo': '196',
+  'toshiba': '197', 'nidec': '198', 'regal': '199', 'us motors': '200',
+  'hubbell': '201', 'littelfuse': '202', 'bussmann': '203', 'mersen': '204'
 };
 
 // BigCommerce multi-category mappings
@@ -77,6 +92,76 @@ const BIGCOMMERCE_CATEGORY_MAP = {
   'Gearbox': ['23', '26', '36'],
   'Bearings': ['23', '26', '43'],
   'Bearing': ['23', '26', '43'],
+  'Needle Bearing': ['23', '26', '43'],
+  'Ball Bearing': ['23', '26', '43'],
+  'Roller Bearing': ['23', '26', '43'],
+  'Cam Follower': ['23', '26', '43'],
+  'Linear Bearing': ['23', '26', '43'],
+  'Pillow Block': ['23', '26', '43'],
+  'Tapered Roller Bearing': ['23', '26', '43'],
+  'Thrust Bearing': ['23', '26', '43'],
+  'Flange Bearing': ['23', '26', '43'],
+  // Motor Starters
+  'Motor Starters': ['23', '49', '50'],
+  'Motor Starter': ['23', '49', '50'],
+  // Stepper Motors/Drives
+  'Stepper Motors': ['23', '19', '54'],
+  'Stepper Motor': ['23', '19', '54'],
+  'Stepper Drives': ['23', '19', '32'],
+  'Stepper Drive': ['23', '19', '32'],
+  // DC Drives
+  'DC Drives': ['23', '33', '34'],
+  'DC Drive': ['23', '33', '34'],
+  'SCR Controller': ['23', '33', '34'],
+  // Solid State Relays
+  'Solid State Relays': ['23', '49', '96'],
+  'Solid State Relay': ['23', '49', '96'],
+  // Temperature Controllers
+  'Temperature Controllers': ['23', '22', '71'],
+  'Temperature Controller': ['23', '22', '71'],
+  // Pressure Sensors
+  'Pressure Sensors': ['23', '22', '42'],
+  'Pressure Sensor': ['23', '22', '42'],
+  'Pressure Transducer': ['23', '22', '42'],
+  // Temperature Sensors
+  'Temperature Sensors': ['23', '22', '42'],
+  'Temperature Sensor': ['23', '22', '42'],
+  'Thermocouple': ['23', '22', '42'],
+  'RTD': ['23', '22', '42'],
+  // Flow Sensors
+  'Flow Sensors': ['23', '22', '42'],
+  'Flow Sensor': ['23', '22', '42'],
+  'Flow Meter': ['23', '22', '42'],
+  // Disconnect Switches
+  'Disconnect Switches': ['23', '20', '44'],
+  'Disconnect Switch': ['23', '20', '44'],
+  // Fuses
+  'Fuses': ['23', '20', '44'],
+  'Fuse': ['23', '20', '44'],
+  // Panel Meters
+  'Panel Meters': ['23', '22', '71'],
+  'Panel Meter': ['23', '22', '71'],
+  // Timers
+  'Timers': ['23', '49', '51'],
+  'Timer': ['23', '49', '51'],
+  // Limit Switches
+  'Limit Switches': ['23', '22', '42'],
+  'Limit Switch': ['23', '22', '42'],
+  // Pushbuttons
+  'Pushbuttons': ['23', '49', '51'],
+  'Pushbutton': ['23', '49', '51'],
+  // Safety Controllers
+  'Safety Controllers': ['23', '22', '71'],
+  'Safety Controller': ['23', '22', '71'],
+  // Solenoid Valves
+  'Solenoid Valves': ['23', '46', '68'],
+  'Solenoid Valve': ['23', '46', '68'],
+  // Hydraulic Cylinders
+  'Hydraulic Cylinders': ['23', '84', '94'],
+  'Hydraulic Cylinder': ['23', '84', '94'],
+  // Hydraulic Motors
+  'Hydraulic Motors': ['23', '84', '94'],
+  'Hydraulic Motor': ['23', '84', '94'],
   'Unknown': ['23']
 };
 
@@ -85,14 +170,14 @@ const BIGCOMMERCE_CATEGORY_MAP = {
 // =============================================================================
 // SureDone has TWO types of eBay fields:
 //   1. INLINE fields: short names like "ratedloadhp", "baserpm", "enclosuretype"
-//      → These map directly to eBay Recommended item specifics
+//       ->  These map directly to eBay Recommended item specifics
 //   2. PREFIX fields: "ebayitemspecifics" + name like "ebayitemspecificsacphase"  
-//      → These ALSO map to eBay Recommended but need the prefix
+//       ->  These ALSO map to eBay Recommended but need the prefix
 //
 // Some specs only work with the prefix. We must send BOTH where applicable.
 // =============================================================================
 
-// Fields that work as INLINE (short name) in SureDone → eBay Recommended
+// Fields that work as INLINE (short name) in SureDone  ->  eBay Recommended
 const INLINE_FIELDS = new Set([
   // Motors - confirmed inline in SureDone headers
   'ratedloadhp', 'baserpm', 'nominalratedinputvoltage', 'actualratedinputvoltage',
@@ -110,12 +195,48 @@ const INLINE_FIELDS = new Set([
   'communicationstandard',
   // Circuit Breakers/Relays/Contactors
   'coilvoltage', 'currentrating', 'voltagerating',
+  // Bearings
+  'bearingtype', 'outerdiameter', 'width', 'sealtype', 'material',
+  'precisionrating', 'bearingseries',
   // General
   'countryoforigin', 'model', 'mpn', 'voltage', 'amperage', 'frequency', 'phase',
-  'horsepower', 'frame', 'rpm', 'kva', 'shaftdiameter'
+  'horsepower', 'frame', 'rpm', 'kva', 'shaftdiameter',
+  // Additional fields found needed
+  'outputcurrent', 'outputpower', 'outputvoltage', 'inputvoltagerange',
+  'interruptingrating', 'breakertype', 'tripcurve', 'frametype',
+  'auxiliarycontacts', 'contactconfiguration', 'contactrating',
+  'operatingpressure', 'portsize', 'roddiameter', 'flowrate',
+  'displacement', 'rotation', 'gearratio', 'outputtorque', 'inputspeed', 'outputspeed',
+  'resolution', 'stepangle', 'holdingtorque', 'ratedcurrent', 'leadwires',
+  'peakcurrent', 'axiscount', 'microsteppingresolution',
+  'kvarating', 'primaryvoltage', 'secondaryvoltage', 'transformertype',
+  'horsepowerrating', 'kwrating', 'outputfrequencyrange',
+  'controllerplatform', 'numberofiopoints', 'memorysize', 'programmingmethod',
+  'moduletype', 'numberofchannels', 'displayresolution',
+  'safetyrating', 'inputtype', 'numberofcontacts',
+  'loadcurrentrating', 'loadvoltagerating', 'controlvoltage',
+  'outputconfiguration', 'housingmaterial', 'housingdiameter', 'connectiontype',
+  'sensingmethod', 'lightsource',
+  'pressurerange', 'pressuretype', 'outputsignal', 'processconnection', 'accuracy',
+  'thermocouplegrade', 'rtdtype', 'temperaturerange', 'probelength', 'probediameter',
+  'flowtype', 'pipesize',
+  'encodertype',
+  'beamspacing', 'protectedheight', 'numberofbeams', 'responsetime',
+  'spooltype', 'actuationtype', 'valvetype', 'bodymaterial',
+  'fusetype', 'fusesize', 'timedelay',
+  'metertype', 'measurementrange', 'panelcutout',
+  'timertype', 'timerange',
+  'actuatortype', 'operatortype', 'contactblocks', 'color', 'operatingvoltage',
+  'controlmethod', 'feedbacktype', 'controltype',
+  'startertype', 'overloadrange',
+  'magneticpiston', 'sockettype', 'zerocrossswitching',
+  'gearboxtype', 'shaftorientation',
+  'fusedunfused', 'alarmnumberofoutputs',
+  'ratedtorque', 'ratedspeed', 'ratedpower', 'encodertype', 'braketype',
+  'sensingdistance', 'maxpressure', 'power'
 ]);
 
-// Fields that REQUIRE "ebayitemspecifics" prefix in SureDone → eBay Recommended
+// Fields that REQUIRE "ebayitemspecifics" prefix in SureDone  ->  eBay Recommended
 // Key = the clean field name, Value = the exact SureDone header name
 const PREFIX_FIELDS = {
   'acphase': 'ebayitemspecificsacphase',
@@ -142,10 +263,115 @@ const PREFIX_FIELDS = {
   'cylinderaction': 'ebayitemspecificscylinderaction',
   'boresize': 'ebayitemspecificsboresize',
   'countryoforigin': 'ebayitemspecificscountryoforigin',
-  'features': 'ebayitemspecificsfeatures'
+  'features': 'ebayitemspecificsfeatures',
+  // Bearings
+  'bearingtype': 'ebayitemspecificsbearingstype',
+  'outerdiameter': 'ebayitemspecificsoutsidediameter',
+  'outsidediameter': 'ebayitemspecificsoutsidediameter',
+  'width': 'ebayitemspecificswidth',
+  'sealtype': 'ebayitemspecificssealtype',
+  'material': 'ebayitemspecificsmaterial',
+  'precisionrating': 'ebayitemspecificsprecisionrating',
+  'bearingseries': 'ebayitemspecificsbearingseries',
+  // Mounting
+  'mountingstyle': 'ebayitemspecificsmountingstyle',
+  // Power
+  'power': 'ebayitemspecificspower',
+  'outputpower': 'ebayitemspecificsoutputpower',
+  'ratedpower': 'ebayitemspecificsratedpower',
+  // Servo/Stepper specific
+  'ratedtorque': 'ebayitemspecificsratedtorque',
+  'ratedspeed': 'ebayitemspecificsratedspeed',
+  'encodertype': 'ebayitemspecificsencodertype',
+  'braketype': 'ebayitemspecificsbraketype',
+  'stepangle': 'ebayitemspecificsstepangle',
+  'holdingtorque': 'ebayitemspecificsholdingtorque',
+  // VFD specific
+  'horsepowerrating': 'ebayitemspecificshorsepowerrating',
+  'kwrating': 'ebayitemspecificskwrating',
+  'outputfrequencyrange': 'ebayitemspecificsoutputfrequencyrange',
+  // Circuit breaker specific
+  'interruptingrating': 'ebayitemspecificsinterruptingrating',
+  'breakertype': 'ebayitemspecificsbreakertype',
+  'tripcurve': 'ebayitemspecificstripcurve',
+  'frametype': 'ebayitemspecificsframetype',
+  // Contactor/Starter specific
+  'auxiliarycontacts': 'ebayitemspecificsauxiliarycontacts',
+  'iecrating': 'ebayitemspecificsiecrating',
+  'startertype': 'ebayitemspecificsstartertype',
+  'overloadrange': 'ebayitemspecificsoverloadrange',
+  // Relay specific
+  'contactconfiguration': 'ebayitemspecificscontactconfiguration',
+  'contactrating': 'ebayitemspecificscontactrating',
+  'sockettype': 'ebayitemspecificssockettype',
+  'safetyrating': 'ebayitemspecificssafetyrating',
+  'loadcurrentrating': 'ebayitemspecificsloadcurrentrating',
+  'loadvoltagerating': 'ebayitemspecificsloadvoltagerating',
+  'controlvoltage': 'ebayitemspecificscontrolvoltage',
+  // Sensor specific
+  'sensingmethod': 'ebayitemspecificssensingmethod',
+  'sensingdistance': 'ebayitemspecificssensingdistance',
+  'lightsource': 'ebayitemspecificslightsource',
+  'outputconfiguration': 'ebayitemspecificsoutputconfiguration',
+  'housingmaterial': 'ebayitemspecificshousingmaterial',
+  'housingdiameter': 'ebayitemspecificshousingdiameter',
+  'connectiontype': 'ebayitemspecificsconnectiontype',
+  // Pressure/Temp/Flow sensor specific
+  'pressurerange': 'ebayitemspecificspressurerange',
+  'pressuretype': 'ebayitemspecificspressuretype',
+  'outputsignal': 'ebayitemspecificsoutputsignal',
+  'processconnection': 'ebayitemspecificsprocessconnection',
+  'thermocouplegrade': 'ebayitemspecificsthermocouplegrade',
+  'rtdtype': 'ebayitemspecificsrtdtype',
+  'temperaturerange': 'ebayitemspecificstemperaturerange',
+  'flowtype': 'ebayitemspecificsflowtype',
+  // Encoder specific
+  'resolution': 'ebayitemspecificsresolution',
+  // Transformer specific
+  'kvarating': 'ebayitemspecificskvarating',
+  'primaryvoltage': 'ebayitemspecificsprimaryvoltage',
+  'secondaryvoltage': 'ebayitemspecificssecondaryvoltage',
+  'transformertype': 'ebayitemspecificstransformertype',
+  // Gearbox specific
+  'gearboxtype': 'ebayitemspecificsgearboxtype',
+  'gearratio': 'ebayitemspecificsgearratio',
+  'outputtorque': 'ebayitemspecificsoutputtorque',
+  'shaftorientation': 'ebayitemspecificsshaftorientation',
+  // Valve specific
+  'valvetype': 'ebayitemspecificsvalvetype',
+  'actuationtype': 'ebayitemspecificsactuationtype',
+  'bodymaterial': 'ebayitemspecificsbodymaterial',
+  'spooltype': 'ebayitemspecificsspooltype',
+  // Hydraulic pump specific
+  'pumptype': 'ebayitemspecificspumptype',
+  'displacement': 'ebayitemspecificsdisplacement',
+  // Safety specific
+  'beamspacing': 'ebayitemspecificsbeamspacing',
+  'protectedheight': 'ebayitemspecificsprotectedheight',
+  'numberofbeams': 'ebayitemspecificsnumberofbeams',
+  'responsetime': 'ebayitemspecificsresponsetime',
+  // Switch specific
+  'actuatortype': 'ebayitemspecificsactuatortype',
+  'operatortype': 'ebayitemspecificsoperatortype',
+  'contactblocks': 'ebayitemspecificscontactblocks',
+  // Fuse specific
+  'fusetype': 'ebayitemspecificsfusetype',
+  'fusesize': 'ebayitemspecificsfusesize',
+  'timedelay': 'ebayitemspecificstimedelay',
+  // PLC specific
+  'controllerplatform': 'ebayitemspecificscontrollerplatform',
+  'numberofiopoints': 'ebayitemspecificsnumberofiopoints',
+  'moduletype': 'ebayitemspecificsmoduletype',
+  'numberofchannels': 'ebayitemspecificsnumberofchannels',
+  // Additional
+  'controlmethod': 'ebayitemspecificscontrolmethod',
+  'feedbacktype': 'ebayitemspecificsfeedbacktype',
+  'controltype': 'ebayitemspecificscontroltype',
+  'magneticpiston': 'ebayitemspecificsmagneticpiston',
+  'fusedunfused': 'ebayitemspecificsfusedunfused'
 };
 
-// Master mapping: AI key variations → canonical clean field name
+// Master mapping: AI key variations  ->  canonical clean field name
 const SPEC_KEY_MAP = {
   // === HORSEPOWER ===
   'horsepower': 'ratedloadhp',
@@ -209,10 +435,12 @@ const SPEC_KEY_MAP = {
   'insulationclass': 'insulationclass',
 
   // === MOTOR TYPE ===
+  // NOTE: 'type' is intentionally NOT mapped here - it goes to usertype field instead
+  // Only explicit motor type fields should map to acmotortype
   'motor_type': 'acmotortype',
   'motortype': 'acmotortype',
   'acmotortype': 'acmotortype',
-  'type': 'acmotortype',
+  'ac_motor_type': 'acmotortype',
 
   // === NEMA ===
   'nema_design': 'nemadesignletter',
@@ -336,12 +564,316 @@ const SPEC_KEY_MAP = {
   'voltage_rating': 'voltagerating',
   'voltagerating': 'voltagerating',
   'nema_size': 'nemasize',
-  'nemasize': 'nemasize'
+  'nemasize': 'nemasize',
+
+  // === BEARINGS ===
+  'bearing_type': 'bearingtype',
+  'bearings_type': 'bearingtype',
+  'bearingtype': 'bearingtype',
+  'bearingstype': 'bearingtype',
+  'outer_diameter': 'outerdiameter',
+  'outerdiameter': 'outerdiameter',
+  'outside_diameter': 'outerdiameter',
+  'outsidediameter': 'outerdiameter',
+  'od': 'outerdiameter',
+  'width': 'width',
+  'bearing_width': 'width',
+  'seal_type': 'sealtype',
+  'sealtype': 'sealtype',
+  'seal': 'sealtype',
+  'material': 'material',
+  'bearing_material': 'material',
+  'precision_rating': 'precisionrating',
+  'precisionrating': 'precisionrating',
+  'precision': 'precisionrating',
+  'bearing_series': 'bearingseries',
+  'bearingseries': 'bearingseries',
+  'series': 'bearingseries',
+
+  // === POWER / WATTAGE ===
+  'power': 'power',
+  'wattage': 'power',
+  'watts': 'power',
+  'output_power': 'outputpower',
+  'outputpower': 'outputpower',
+  'rated_power': 'ratedpower',
+  'ratedpower': 'ratedpower',
+
+  // === MOUNTING STYLE ===
+  'mounting_style': 'mountingstyle',
+  'mountingstyle': 'mountingstyle',
+  'mount_style': 'mountingstyle',
+
+  // === FEATURES ===
+  'features': 'features',
+  'feature': 'features',
+
+  // === SERVO MOTORS ===
+  'rated_torque': 'ratedtorque',
+  'ratedtorque': 'ratedtorque',
+  'rated_speed': 'ratedspeed',
+  'ratedspeed': 'ratedspeed',
+  'encoder_type': 'encodertype',
+  'encodertype': 'encodertype',
+  'brake_type': 'braketype',
+  'braketype': 'braketype',
+  'brake': 'braketype',
+
+  // === STEPPER MOTORS ===
+  'step_angle': 'stepangle',
+  'stepangle': 'stepangle',
+  'holding_torque': 'holdingtorque',
+  'holdingtorque': 'holdingtorque',
+  'rated_current': 'ratedcurrent',
+  'ratedcurrent': 'ratedcurrent',
+  'lead_wires': 'leadwires',
+  'leadwires': 'leadwires',
+
+  // === VFD / DRIVES ===
+  'hp_rating': 'horsepowerrating',
+  'horsepowerrating': 'horsepowerrating',
+  'kw_rating': 'kwrating',
+  'kwrating': 'kwrating',
+  'kw': 'kwrating',
+  'output_current': 'outputcurrent',
+  'outputcurrent': 'outputcurrent',
+  'peak_current': 'peakcurrent',
+  'peakcurrent': 'peakcurrent',
+  'output_frequency_range': 'outputfrequencyrange',
+  'outputfrequencyrange': 'outputfrequencyrange',
+  'output_voltage': 'outputvoltage',
+  'outputvoltage': 'outputvoltage',
+  'control_method': 'controlmethod',
+  'controlmethod': 'controlmethod',
+  'feedback_type': 'feedbacktype',
+  'feedbacktype': 'feedbacktype',
+  'axis_count': 'axiscount',
+  'axiscount': 'axiscount',
+  'microstepping_resolution': 'microsteppingresolution',
+  'microsteppingresolution': 'microsteppingresolution',
+
+  // === CIRCUIT BREAKERS ===
+  'interrupting_rating': 'interruptingrating',
+  'interruptingrating': 'interruptingrating',
+  'aic': 'interruptingrating',
+  'breaker_type': 'breakertype',
+  'breakertype': 'breakertype',
+  'trip_curve': 'tripcurve',
+  'tripcurve': 'tripcurve',
+  'frame_type': 'frametype',
+  'frametype': 'frametype',
+
+  // === CONTACTORS / STARTERS ===
+  'auxiliary_contacts': 'auxiliarycontacts',
+  'auxiliarycontacts': 'auxiliarycontacts',
+  'aux_contacts': 'auxiliarycontacts',
+  'iec_rating': 'iecrating',
+  'iecrating': 'iecrating',
+  'starter_type': 'startertype',
+  'startertype': 'startertype',
+  'overload_range': 'overloadrange',
+  'overloadrange': 'overloadrange',
+
+  // === RELAYS ===
+  'contact_configuration': 'contactconfiguration',
+  'contactconfiguration': 'contactconfiguration',
+  'contact_rating': 'contactrating',
+  'contactrating': 'contactrating',
+  'socket_type': 'sockettype',
+  'sockettype': 'sockettype',
+  'safety_rating': 'safetyrating',
+  'safetyrating': 'safetyrating',
+  'sil': 'safetyrating',
+  'load_current': 'loadcurrentrating',
+  'loadcurrentrating': 'loadcurrentrating',
+  'load_voltage': 'loadvoltagerating',
+  'loadvoltagerating': 'loadvoltagerating',
+  'control_voltage': 'controlvoltage',
+  'controlvoltage': 'controlvoltage',
+  'zero_cross': 'zerocrossswitching',
+  'zerocrossswitching': 'zerocrossswitching',
+
+  // === SENSORS (expanded) ===
+  'sensing_method': 'sensingmethod',
+  'sensingmethod': 'sensingmethod',
+  'sensing_distance': 'sensingdistance',
+  'sensingdistance': 'sensingdistance',
+  'light_source': 'lightsource',
+  'lightsource': 'lightsource',
+  'output_configuration': 'outputconfiguration',
+  'outputconfiguration': 'outputconfiguration',
+  'housing_material': 'housingmaterial',
+  'housingmaterial': 'housingmaterial',
+  'housing_diameter': 'housingdiameter',
+  'housingdiameter': 'housingdiameter',
+  'connection_type': 'connectiontype',
+  'connectiontype': 'connectiontype',
+  'connector_type': 'connectiontype',
+
+  // === PRESSURE / TEMP / FLOW SENSORS ===
+  'pressure_range': 'pressurerange',
+  'pressurerange': 'pressurerange',
+  'pressure_type': 'pressuretype',
+  'pressuretype': 'pressuretype',
+  'output_signal': 'outputsignal',
+  'outputsignal': 'outputsignal',
+  'process_connection': 'processconnection',
+  'processconnection': 'processconnection',
+  'thermocouple_grade': 'thermocouplegrade',
+  'thermocouplegrade': 'thermocouplegrade',
+  'rtd_type': 'rtdtype',
+  'rtdtype': 'rtdtype',
+  'temperature_range': 'temperaturerange',
+  'temperaturerange': 'temperaturerange',
+  'probe_length': 'probelength',
+  'probelength': 'probelength',
+  'probe_diameter': 'probediameter',
+  'probediameter': 'probediameter',
+  'flow_type': 'flowtype',
+  'flowtype': 'flowtype',
+  'pipe_size': 'pipesize',
+  'pipesize': 'pipesize',
+
+  // === ENCODERS ===
+  'encoder_type': 'encodertype',
+  'resolution': 'resolution',
+  'ppr': 'resolution',
+  'pulses_per_revolution': 'resolution',
+
+  // === TRANSFORMERS ===
+  'kva': 'kvarating',
+  'kva_rating': 'kvarating',
+  'kvarating': 'kvarating',
+  'primary_voltage': 'primaryvoltage',
+  'primaryvoltage': 'primaryvoltage',
+  'secondary_voltage': 'secondaryvoltage',
+  'secondaryvoltage': 'secondaryvoltage',
+  'transformer_type': 'transformertype',
+  'transformertype': 'transformertype',
+
+  // === GEARBOXES ===
+  'gearbox_type': 'gearboxtype',
+  'gearboxtype': 'gearboxtype',
+  'gear_ratio': 'gearratio',
+  'gearratio': 'gearratio',
+  'ratio': 'gearratio',
+  'output_torque': 'outputtorque',
+  'outputtorque': 'outputtorque',
+  'input_speed': 'inputspeed',
+  'inputspeed': 'inputspeed',
+  'output_speed': 'outputspeed',
+  'outputspeed': 'outputspeed',
+  'shaft_orientation': 'shaftorientation',
+  'shaftorientation': 'shaftorientation',
+
+  // === VALVES (Solenoid, Hydraulic) ===
+  'valve_type': 'valvetype',
+  'valvetype': 'valvetype',
+  'actuation_type': 'actuationtype',
+  'actuationtype': 'actuationtype',
+  'body_material': 'bodymaterial',
+  'bodymaterial': 'bodymaterial',
+  'spool_type': 'spooltype',
+  'spooltype': 'spooltype',
+  'max_pressure': 'maxpressure',
+  'maxpressure': 'maxpressure',
+
+  // === HYDRAULIC PUMPS ===
+  'pump_type': 'pumptype',
+  'pumptype': 'pumptype',
+  'displacement': 'displacement',
+  'rotation': 'rotation',
+
+  // === SAFETY (Light Curtains) ===
+  'beam_spacing': 'beamspacing',
+  'beamspacing': 'beamspacing',
+  'protected_height': 'protectedheight',
+  'protectedheight': 'protectedheight',
+  'number_of_beams': 'numberofbeams',
+  'numberofbeams': 'numberofbeams',
+  'response_time': 'responsetime',
+  'responsetime': 'responsetime',
+
+  // === SWITCHES (Limit, Pushbutton, Disconnect) ===
+  'actuator_type': 'actuatortype',
+  'actuatortype': 'actuatortype',
+  'operator_type': 'operatortype',
+  'operatortype': 'operatortype',
+  'contact_blocks': 'contactblocks',
+  'contactblocks': 'contactblocks',
+  'color': 'color',
+  'operating_voltage': 'operatingvoltage',
+  'operatingvoltage': 'operatingvoltage',
+  'fused_unfused': 'fusedunfused',
+  'fusedunfused': 'fusedunfused',
+
+  // === FUSES ===
+  'fuse_type': 'fusetype',
+  'fusetype': 'fusetype',
+  'fuse_size': 'fusesize',
+  'fusesize': 'fusesize',
+  'time_delay': 'timedelay',
+  'timedelay': 'timedelay',
+
+  // === PLC / HMI ===
+  'controller_platform': 'controllerplatform',
+  'controllerplatform': 'controllerplatform',
+  'platform': 'controllerplatform',
+  'number_of_io_points': 'numberofiopoints',
+  'numberofiopoints': 'numberofiopoints',
+  'io_points': 'numberofiopoints',
+  'memory_size': 'memorysize',
+  'memorysize': 'memorysize',
+  'memory': 'memorysize',
+  'programming_method': 'programmingmethod',
+  'programmingmethod': 'programmingmethod',
+  'module_type': 'moduletype',
+  'moduletype': 'moduletype',
+  'number_of_channels': 'numberofchannels',
+  'numberofchannels': 'numberofchannels',
+  'channels': 'numberofchannels',
+  'display_resolution': 'displayresolution',
+  'displayresolution': 'displayresolution',
+
+  // === TEMPERATURE CONTROLLERS ===
+  'control_type': 'controltype',
+  'controltype': 'controltype',
+  'input_type': 'inputtype',
+  'inputtype': 'inputtype',
+  'panel_cutout': 'panelcutout',
+  'panelcutout': 'panelcutout',
+  'alarm_outputs': 'alarmnumberofoutputs',
+  'alarmnumberofoutputs': 'alarmnumberofoutputs',
+
+  // === TIMERS ===
+  'timer_type': 'timertype',
+  'timertype': 'timertype',
+  'time_range': 'timerange',
+  'timerange': 'timerange',
+
+  // === PANEL METERS ===
+  'meter_type': 'metertype',
+  'metertype': 'metertype',
+  'measurement_range': 'measurementrange',
+  'measurementrange': 'measurementrange',
+
+  // === PNEUMATIC ===
+  'magnetic_piston': 'magneticpiston',
+  'magneticpiston': 'magneticpiston',
+  'rod_diameter': 'roddiameter',
+  'roddiameter': 'roddiameter',
+  'operating_pressure': 'operatingpressure',
+  'operatingpressure': 'operatingpressure',
+  'port_size': 'portsize',
+  'portsize': 'portsize',
+
+  // === ACCURACY ===
+  'accuracy': 'accuracy'
 };
 
 // Fields to SKIP - already handled by core form fields
 const SKIP_SPEC_KEYS = new Set([
-  'brand', 'mpn', 'model', 'manufacturer', 'upc', 'condition'
+  'brand', 'mpn', 'model', 'manufacturer', 'upc', 'condition', 'type'
 ]);
 
 // =============================================================================
@@ -550,8 +1082,8 @@ export default async function handler(req, res) {
     const userType = generateUserType(categoryKey, product.specifications || {}, aiProductType);
 
     console.log('=== FIELD FORMATTING ===');
-    console.log('Brand:', product.brand, '→', brandFormatted);
-    console.log('MPN:', product.partNumber, '→', mpnFormatted);
+    console.log('Brand:', product.brand, ' -> ', brandFormatted);
+    console.log('MPN:', product.partNumber, ' -> ', mpnFormatted);
     console.log('Category:', categoryKey);
     console.log('UserType:', userType);
 
@@ -658,7 +1190,7 @@ export default async function handler(req, res) {
     }
 
     // ==========================================================================
-    // PROCESS SPECIFICATIONS → EBAY ITEM SPECIFICS
+    // PROCESS SPECIFICATIONS  ->  EBAY ITEM SPECIFICS
     // Sends BOTH inline AND ebayitemspecifics-prefix versions where needed
     // ==========================================================================
     console.log('=== PROCESSING SPECIFICATIONS ===');
@@ -685,33 +1217,37 @@ export default async function handler(req, res) {
 
         const { canonical, inline, prefix } = resolved;
 
-        // Send inline version if available and not already set
-        // For fields that exist in INLINE_FIELDS, send inline name only.
-        // For fields that ONLY exist in PREFIX_FIELDS, send prefix name only.
+        // PRIORITY ORDER for sending specs to SureDone:
+        // 1. PREFIX first: "ebayitemspecifics..." is the most reliable path to eBay
+        //    This ensures fields like bearingtype -> ebayitemspecificsbearingstype work
+        // 2. INLINE second: For SureDone-native fields WITHOUT a prefix mapping
+        //    (e.g., ratedloadhp, baserpm - fields SureDone knows natively)
+        // 3. FALLBACK: Try inline for anything else
         // NEVER send both (that creates Dynamic duplicates in SureDone).
-        if (inline && INLINE_FIELDS.has(inline) && !fieldsSet.has(inline)) {
+        if (prefix && !fieldsSet.has(prefix)) {
+          // Preferred: field has a known ebayitemspecifics prefix mapping
+          formData.append(prefix, value);
+          fieldsSet.add(prefix);
+          // Track inline name too so Pass 2 won't duplicate
+          if (inline) fieldsSet.add(inline);
+          specsCount++;
+          console.log(`  [OK] PREFIX: "${key}" -> ${prefix} = "${value}"`);
+        } else if (inline && INLINE_FIELDS.has(inline) && !fieldsSet.has(inline)) {
+          // SureDone-native field without prefix mapping (or prefix already set)
           formData.append(inline, value);
           fieldsSet.add(inline);
           specsCount++;
-          console.log(`  ✓ INLINE: "${key}" → ${inline} = "${value}"`);
-        } else if (prefix && !fieldsSet.has(prefix)) {
-          // Field requires prefix to reach eBay Recommended section
-          formData.append(prefix, value);
-          fieldsSet.add(prefix);
-          // Also track the inline name so Pass 2 won't duplicate
-          if (inline) fieldsSet.add(inline);
-          specsCount++;
-          console.log(`  ✓ PREFIX-ONLY: "${key}" → ${prefix} = "${value}"`);
+          console.log(`  [OK] INLINE: "${key}" -> ${inline} = "${value}"`);
         } else if (inline && !fieldsSet.has(inline)) {
           // Fallback: field not in INLINE_FIELDS or PREFIX_FIELDS, try inline anyway
           formData.append(inline, value);
           fieldsSet.add(inline);
           specsCount++;
-          console.log(`  ✓ FALLBACK INLINE: "${key}" → ${inline} = "${value}"`);
+          console.log(`  [OK] FALLBACK INLINE: "${key}" -> ${inline} = "${value}"`);
         }
 
         if (!inline && !prefix) {
-          console.log(`  ⚠ NO MAPPING: "${key}" → "${canonical}" (sent as-is)`);
+          console.log(`  [!] NO MAPPING: "${key}"  ->  "${canonical}" (sent as-is)`);
           if (!fieldsSet.has(canonical)) {
             formData.append(canonical, value);
             fieldsSet.add(canonical);
@@ -726,7 +1262,7 @@ export default async function handler(req, res) {
       formData.append('countryoforigin', product.countryOfOrigin);
       fieldsSet.add('countryoforigin');
       specsCount++;
-      console.log(`  ✓ countryOfOrigin → countryoforigin = "${product.countryOfOrigin}"`);
+      console.log(`  [OK] countryOfOrigin  ->  countryoforigin = "${product.countryOfOrigin}"`);
     }
 
     // ==========================================================================
@@ -744,7 +1280,7 @@ export default async function handler(req, res) {
         // Skip empty/null/N/A values
         if (!value || value === 'null' || value === null || value === 'N/A' || value === 'Unknown') continue;
 
-        // Skip brand/mpn — already handled above
+        // Skip brand/mpn  --  already handled above
         if (fieldName === 'brand' || fieldName === 'mpn' || fieldName === 'ebayitemspecificsbrand' || fieldName === 'ebayitemspecificsmpn') continue;
 
         // Determine the correct SureDone field name:
@@ -761,13 +1297,13 @@ export default async function handler(req, res) {
           specsCount++;
           pass2Count++;
           if (prefixVersion) {
-            console.log(`  ✓ PASS2 PREFIX: ${fieldName} → ${actualFieldName} = "${value}"`);
+            console.log(`  [OK] PASS2 PREFIX: ${fieldName}  ->  ${actualFieldName} = "${value}"`);
           } else {
-            console.log(`  ✓ PASS2 INLINE: ${fieldName} = "${value}"`);
+            console.log(`  [OK] PASS2 INLINE: ${fieldName} = "${value}"`);
           }
         } else {
           pass2Skipped++;
-          console.log(`  ⊘ PASS2 SKIP (already set): ${fieldName}`);
+          console.log(`  [SKIP] PASS2 SKIP (already set): ${fieldName}`);
         }
       }
       console.log(`Pass 2: Added ${pass2Count} new fields, skipped ${pass2Skipped} (already set by Pass 1)`);

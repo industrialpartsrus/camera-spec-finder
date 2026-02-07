@@ -1665,8 +1665,8 @@ export default function ProListingBuilder() {
 
       // =================================================================
       // PASS 2: AUTO-FILL EBAY ITEM SPECIFICS
-      // Fires automatically after Pass 1 â€” no button needed
-      // Uses eBay Taxonomy aspects + Pass 1 specs â†’ AI fills all fields
+      // Fires automatically after Pass 1 — no button needed
+      // Uses eBay Taxonomy aspects + Pass 1 specs → AI fills all fields
       // =================================================================
       if (data._ebayAspects && data._ebayAspects.all?.length > 0) {
         console.log('=== AUTO-TRIGGERING PASS 2 ===');
@@ -1801,7 +1801,7 @@ export default function ProListingBuilder() {
         if (!response.ok || !responseData.success) {
           throw new Error(responseData.error || 'Failed to update listing');
         }
-        alert(`âœ… Successfully updated in SureDone!\n\nSKU: ${item.originalSku}\n\n${item.title}`);
+        alert(`✅ Successfully updated in SureDone!\n\nSKU: ${item.originalSku}\n\n${item.title}`);
         
       } else {
         // CREATE new listing
@@ -1846,7 +1846,7 @@ export default function ProListingBuilder() {
 
         const responseData = await response.json();
         if (!response.ok) throw new Error(responseData.error || 'Failed to create listing');
-        alert(`âœ… Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
+        alert(`✅ Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
       }
     } catch (error) {
       console.error('SureDone error:', error);
@@ -1890,10 +1890,10 @@ export default function ProListingBuilder() {
       <div className="bg-white border-b px-6 py-4">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-2xl font-bold">Pro Listing Builder ðŸš€</h1>
+            <h1 className="text-2xl font-bold">Pro Listing Builder 🚀</h1>
             <p className="text-sm text-gray-600">
-              Logged in: <span className="font-semibold">{userName}</span> â€¢ 
-              <span className="text-green-600 ml-2">â— Live Sync</span>
+              Logged in: <span className="font-semibold">{userName}</span> • 
+              <span className="text-green-600 ml-2">● Live Sync</span>
             </p>
           </div>
           {/* Toggle Compare Panel Button */}
@@ -1992,7 +1992,7 @@ export default function ProListingBuilder() {
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
                     {item.productCategory && <p className="text-xs text-blue-600 mt-1">{item.productCategory}</p>}
                     {item.pass2Status === 'complete' && (
-                      <p className="text-[10px] text-purple-600 mt-0.5">ðŸ·ï¸ {item.pass2FilledCount || 0} eBay specs filled</p>
+                      <p className="text-[10px] text-purple-600 mt-0.5">🏷️ {item.pass2FilledCount || 0} eBay specs filled</p>
                     )}
                     {item.pass2Status === 'filling' && (
                       <p className="text-[10px] text-purple-500 mt-0.5 animate-pulse">â³ Filling eBay specs...</p>
@@ -2031,7 +2031,7 @@ export default function ProListingBuilder() {
                     {selected.productCategory && <span className="text-sm px-2 py-1 rounded bg-blue-100 text-blue-700">{selected.productCategory}</span>}
                     {selected.pass2Status === 'complete' && (
                       <span className="text-sm px-2 py-1 rounded bg-purple-100 text-purple-700">
-                        ðŸ·ï¸ {selected.pass2FilledCount}/{selected.pass2TotalCount} eBay specs
+                        🏷️ {selected.pass2FilledCount}/{selected.pass2TotalCount} eBay specs
                       </span>
                     )}
                     {selected.pass2Status === 'filling' && (
@@ -2089,7 +2089,7 @@ export default function ProListingBuilder() {
                     </div>
                     {selected.ebayCategoryId && EBAY_CATEGORY_TAXONOMY[selected.ebayCategoryId] && (
                       <p className="text-xs text-green-700 mt-2 p-2 bg-green-50 rounded border border-green-200">
-                        ðŸ“¦ <strong>Full eBay Path:</strong> {EBAY_CATEGORY_TAXONOMY[selected.ebayCategoryId].path}
+                        📦 <strong>Full eBay Path:</strong> {EBAY_CATEGORY_TAXONOMY[selected.ebayCategoryId].path}
                       </p>
                     )}
                     <details className="mt-2">
@@ -2141,7 +2141,7 @@ export default function ProListingBuilder() {
                   {/* Specifications */}
                   <div className="border rounded-lg overflow-hidden">
                     <button onClick={() => setShowSpecs(!showSpecs)} className="w-full px-4 py-3 bg-blue-50 flex justify-between items-center hover:bg-blue-100 transition">
-                      <span className="font-semibold text-blue-800">ðŸ“‹ Specifications ({Object.keys(selected.specifications || {}).length} fields)</span>
+                      <span className="font-semibold text-blue-800">📋 Specifications ({Object.keys(selected.specifications || {}).length} fields)</span>
                       {showSpecs ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </button>
                     {showSpecs && selected.specifications && Object.keys(selected.specifications).length > 0 && (
@@ -2164,17 +2164,17 @@ export default function ProListingBuilder() {
                     <div className="border rounded-lg overflow-hidden">
                       <button onClick={() => setShowEbaySpecifics(!showEbaySpecifics)} className="w-full px-4 py-3 bg-purple-50 flex justify-between items-center hover:bg-purple-100 transition">
                         <span className="font-semibold text-purple-800">
-                          ðŸ·ï¸ eBay Item Specifics
+                          🏷️ eBay Item Specifics
                           {selected.pass2Status === 'filling' && (
                             <span className="ml-2 text-sm text-purple-600 animate-pulse">â³ AI filling...</span>
                           )}
                           {selected.pass2Status === 'complete' && (
                             <span className="ml-2 text-sm text-green-600">
-                              âœ“ {selected.pass2FilledCount || 0}/{selected.pass2TotalCount || 0} filled
+                              ✔ {selected.pass2FilledCount || 0}/{selected.pass2TotalCount || 0} filled
                             </span>
                           )}
                           {selected.pass2Status === 'error' && (
-                            <span className="ml-2 text-sm text-red-600">âš  Error</span>
+                            <span className="ml-2 text-sm text-red-600">⚠ Error</span>
                           )}
                         </span>
                         {showEbaySpecifics ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -2438,7 +2438,7 @@ export default function ProListingBuilder() {
                   <button onClick={() => sendToSureDone(selected.id)} disabled={isSending || !selected.title || !selected.price}
                     className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     {isSending ? <><Loader className="w-5 h-5 animate-spin" /> Sending...</> : 
-                      selected.isEditingExisting ? 'ðŸ“ Update in SureDone' : 'ðŸš€ Send to SureDone'}
+                      selected.isEditingExisting ? '📝 Update in SureDone' : '🚀 Send to SureDone'}
                   </button>
                 </div>
               )}
@@ -2456,7 +2456,7 @@ export default function ProListingBuilder() {
                   <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                   <p className="text-red-600 font-semibold text-lg">Error Processing Item</p>
                   <p className="text-red-500 mt-2">{selected.error}</p>
-                  <button onClick={() => processItem(selected.id)} className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">ðŸ”„ Retry</button>
+                  <button onClick={() => processItem(selected.id)} className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">🔄 Retry</button>
                 </div>
               )}
             </div>
