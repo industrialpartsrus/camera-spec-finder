@@ -5,6 +5,11 @@
 // Called automatically after Pass 1 completes.
 // Takes the eBay aspects (from Taxonomy API) + Pass 1 specs → AI fills all fields.
 // Returns both UI format (for display/editing) and SureDone-ready format.
+//
+// CRITICAL FIX (2026-02-07): When AI uses web_search, the response has multiple
+// content blocks. The JSON answer is in the LAST text block, not the first.
+// Previous code: response.content?.[0]?.text  ← WRONG (gets "Let me search...")
+// Fixed code: finds last text block in response.content array
 // =============================================================================
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -19,12 +24,30 @@ const SKIP_FIELDS = new Set([
 
 // Fields the AI should aggressively fill with standard industry values
 const AGGRESSIVE_FILL_HINTS = {
+  // Motor fields
   'Current Type': 'Determine from product type: AC motors/VFDs = "AC", DC motors = "DC", servo motors check specs',
   'Mounting Type': 'Common values: Foot Mount, Flange Mount, C-Face, DIN Rail, Panel Mount, Wall Mount',
   'Country/Region of Manufacture': 'Use known specs or infer from brand origin. Common: USA, Japan, Germany, China, Mexico, Switzerland',
   'Shaft Orientation': 'Usually "Horizontal" for standard motors unless specs say otherwise',
   'Power Source': 'Electric, Hydraulic, Pneumatic, Battery, or Manual based on product type',
-  'Number of Phases': 'Derive from phase spec: single phase = "1", three phase = "3"'
+  'Number of Phases': 'Derive from phase spec: single phase = "1", three phase = "3"',
+  // Bearing fields
+  'Bearings Type': 'Match exactly: Cam Follower, Needle Bearing, Ball Bearing, Roller Bearing, Thrust Bearing, Pillow Block etc.',
+  'Stud Type': 'Infer from model series: CFH/CF = Heavy Stud, CYR = Yoke, CR = Standard Stud. Values: Standard, Heavy, Yoke',
+  'Face Design': 'Infer from model suffix: S = Screwdriver Slot, B = Hex Socket, no suffix = No Drive. Values: Screwdriver Slot, Hex Socket, No Drive',
+  'Roller Shape': 'Common values: Crowned, Cylindrical, Flat. Yoke rollers often Crowned, stud types often Cylindrical',
+  'Seal Type': 'Common values: Sealed, Open, Shielded. Infer from model suffix or standard for series',
+  'Material': 'Most industrial bearings: 52100 Bearing Steel, Chrome Steel, Stainless Steel. Infer from standard for series',
+  'Stud Diameter': 'Look up from model series specifications or catalog data',
+  'Stud Length': 'Look up from model series specifications or catalog data',
+  'Roller Diameter': 'Same as Outside Diameter for cam followers. Look up from model specs',
+  'Roller Width': 'Same as Overall Width for cam followers. Look up from model specs',
+  // Sensor fields
+  'Sensing Method': 'Inductive, Capacitive, Photoelectric, Through-Beam, Retro-Reflective, Diffuse based on sensor type',
+  'Output Type': 'NPN, PNP, Analog, Relay — check datasheet or infer from brand standards',
+  // Pneumatic/Hydraulic fields
+  'Thread Size': 'Look up from model specs — common: 1/4" NPT, 3/8" NPT, M5, G1/4',
+  'Operating Pressure': 'Look up max PSI from model specs',
 };
 
 export default async function handler(req, res) {
@@ -90,14 +113,16 @@ export default async function handler(req, res) {
 
     const prompt = `You are an expert industrial parts specialist filling in eBay item specifics for a product listing.
 
+FIRST: Search the web for "${brand} ${partNumber}" to find the manufacturer datasheet, distributor catalog page, or specification sheet. Use the actual specifications you find to fill in the eBay fields below. Look for specific dimensional data, materials, and technical values.
+
 PRODUCT: ${brand} ${partNumber}
 TYPE: ${productType || 'Unknown'}
 TITLE: ${title || ''}
 
-KNOWN SPECIFICATIONS FROM RESEARCH:
-${knownSpecsText || '  (No specifications available)'}
+KNOWN SPECIFICATIONS FROM INITIAL RESEARCH:
+${knownSpecsText || '  (No specifications available yet — web search is critical)'}
 
-YOUR TASK: Fill in values for these eBay item specifics fields. Be AGGRESSIVE about filling fields — use your deep knowledge of industrial products to infer standard values even when not explicitly stated in the specs.
+YOUR TASK: Fill in values for these eBay item specifics fields. Be AGGRESSIVE about filling fields — use web search results + your deep knowledge of industrial products to fill as many fields as possible.
 
 EBAY FIELDS TO FILL:
 ${fieldsList}
@@ -111,9 +136,12 @@ CRITICAL RULES:
    - If you know the brand's country of origin, fill Country/Region of Manufacture
    - If phase is "3", Number of Phases should be "3"
    - Infer Power Source from the product type (Electric for motors/drives, Pneumatic for air cylinders, etc.)
+   - For bearings: look up bore diameter, OD, width, stud dimensions from manufacturer catalogs
+   - For sensors: determine sensing method, output type, and operating specs from datasheets
 4. Set value to null ONLY if you truly cannot determine or reasonably infer it.
 5. DO NOT fill Brand or MPN — those are handled separately.
 6. Match the EXACT eBay field names in your response.
+7. For measurements, ALWAYS include units (e.g., "1.75 in" not just "1.75", "25 mm" not "25").
 
 Respond with ONLY valid JSON object (no markdown, no backticks), mapping each eBay field name to its value or null:
 {
@@ -121,29 +149,54 @@ Respond with ONLY valid JSON object (no markdown, no backticks), mapping each eB
   "Another Field": null
 }`;
 
-    console.log('Calling AI for Pass 2 fill...');
+    console.log('Calling AI for Pass 2 fill (with web search)...');
+    console.log(`Aspects to fill: ${relevantAspects.length}`);
     const startTime = Date.now();
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 3000,
+      max_tokens: 4096,
+      // Enable web search so AI can look up actual product specifications
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
       messages: [{ role: 'user', content: prompt }]
     });
 
     const elapsed = Date.now() - startTime;
     console.log(`AI response received in ${elapsed}ms`);
+    console.log(`Response content blocks: ${response.content?.length || 0}`);
 
-    const text = response.content?.[0]?.text || '';
+    // =========================================================================
+    // CRITICAL FIX: Extract the LAST text block from the response
+    // When Claude uses web_search, the response contains multiple content blocks:
+    //   [text, tool_use, tool_result, text, tool_use, tool_result, ..., text]
+    // The JSON answer is in the LAST text block, not the first one.
+    // Previous bug: response.content?.[0]?.text only got "Let me search..."
+    // =========================================================================
+    let text = '';
+    if (response.content && Array.isArray(response.content)) {
+      // Find ALL text blocks
+      const textBlocks = response.content.filter(block => block.type === 'text' && block.text);
+      if (textBlocks.length > 0) {
+        // Use the LAST text block — that's where the final JSON answer is
+        text = textBlocks[textBlocks.length - 1].text;
+        console.log(`Found ${textBlocks.length} text blocks, using last one (${text.length} chars)`);
+      }
+    }
+
     const jsonMatch = text.match(/\{[\s\S]*\}/);
 
     let filledValues = {};
     if (jsonMatch) {
       try {
         filledValues = JSON.parse(jsonMatch[0]);
+        console.log(`Parsed ${Object.keys(filledValues).length} fields from AI response`);
       } catch (e) {
         console.error('Failed to parse AI response:', e.message);
         console.error('Raw text:', text.substring(0, 500));
       }
+    } else {
+      console.error('No JSON found in AI response');
+      console.error('Full response text:', text.substring(0, 500));
     }
 
     // Build the response with both UI format and SureDone format
@@ -169,11 +222,10 @@ Respond with ONLY valid JSON object (no markdown, no backticks), mapping each eB
         multiValue: aspect.multiValue || false
       });
 
-      // Build SureDone payload — send INLINE ONLY (not prefix)
-      // Pass 1's existing dual-field logic in suredone-create-listing.js handles prefix versions
-      // Sending prefix here creates unwanted Dynamic (eBay only) duplicates
+      // Build SureDone payload using INLINE field names
+      // suredone-create-listing.js Pass 2 logic will correctly add the
+      // "ebayitemspecifics" prefix for non-native fields
       if (isValid) {
-        // Inline field only (for Recommended section in eBay)
         if (aspect.suredoneInlineField) {
           specificsForSuredone[aspect.suredoneInlineField] = value;
         }
@@ -197,6 +249,8 @@ Respond with ONLY valid JSON object (no markdown, no backticks), mapping each eB
       _meta: {
         productType,
         elapsed: `${elapsed}ms`,
+        webSearchUsed: response.content?.some(b => b.type === 'tool_use') || false,
+        textBlocksCount: response.content?.filter(b => b.type === 'text').length || 0,
         timestamp: new Date().toISOString()
       }
     });

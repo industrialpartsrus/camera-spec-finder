@@ -57,128 +57,258 @@ const BRAND_ALIASES = {
 };
 
 // BigCommerce multi-category mappings
+// BigCommerce multi-category mappings
+// Format: ['leaf_category', 'parent_category'] - most specific FIRST
+// BIGCOMMERCE CATEGORY MAPPINGS
+// IMPORTANT: BigCommerce expects category IDs separated by COMMAS, not asterisks
+// Format: "id1,id2,id3" — item appears in ALL these categories
+// ID 23 = "Shop All" is always included so items appear in the main catalog
 const BIGCOMMERCE_CATEGORY_MAP = {
-  'Electric Motors': ['23', '26', '30'],
-  'Electric Motor': ['23', '26', '30'],
-  'AC Motor': ['23', '26', '30'],
-  'DC Motor': ['23', '26', '30'],
-  'Induction Motor': ['23', '26', '30'],
-  'Servo Motors': ['23', '19', '54'],
-  'Servo Motor': ['23', '19', '54'],
-  'Servo Drives': ['23', '19', '32'],
-  'Servo Drive': ['23', '19', '32'],
-  'VFDs': ['23', '33', '34'],
-  'VFD': ['23', '33', '34'],
-  'Variable Frequency Drive': ['23', '33', '34'],
-  'PLCs': ['23', '18', '24'],
-  'PLC': ['23', '18', '24'],
-  'HMIs': ['23', '18', '27'],
-  'HMI': ['23', '18', '27'],
-  'Power Supplies': ['23', '18', '28'],
-  'Power Supply': ['23', '18', '28'],
-  'I/O Modules': ['23', '18', '61'],
-  'I/O Module': ['23', '18', '61'],
-  'Proximity Sensors': ['23', '22', '41'],
-  'Proximity Sensor': ['23', '22', '41'],
-  'Photoelectric Sensors': ['23', '22', '42'],
-  'Photoelectric Sensor': ['23', '22', '42'],
-  'Light Curtains': ['23', '22', '71'],
-  'Light Curtain': ['23', '22', '71'],
-  'Encoders': ['23', '19', '81'],
-  'Encoder': ['23', '19', '81'],
-  'Pneumatic Cylinders': ['23', '46', '47'],
-  'Pneumatic Cylinder': ['23', '46', '47'],
-  'Pneumatic Valves': ['23', '46', '68'],
-  'Pneumatic Valve': ['23', '46', '68'],
-  'Hydraulic Pumps': ['23', '84', '94'],
-  'Hydraulic Pump': ['23', '84', '94'],
-  'Hydraulic Valves': ['23', '84', '91'],
-  'Hydraulic Valve': ['23', '84', '91'],
-  'Circuit Breakers': ['23', '20', '44'],
-  'Circuit Breaker': ['23', '20', '44'],
-  'Contactors': ['23', '49', '50'],
-  'Contactor': ['23', '49', '50'],
-  'Safety Relays': ['23', '49', '96'],
-  'Safety Relay': ['23', '49', '96'],
-  'Control Relays': ['23', '49', '51'],
-  'Control Relay': ['23', '49', '51'],
-  'Transformers': ['23', '20', '37'],
-  'Transformer': ['23', '20', '37'],
-  'Gearboxes': ['23', '26', '36'],
-  'Gearbox': ['23', '26', '36'],
-  'Bearings': ['23', '26', '43'],
-  'Bearing': ['23', '26', '43'],
-  'Needle Bearing': ['23', '26', '43'],
-  'Ball Bearing': ['23', '26', '43'],
-  'Roller Bearing': ['23', '26', '43'],
-  'Cam Follower': ['23', '26', '43'],
-  'Linear Bearing': ['23', '26', '43'],
-  'Pillow Block': ['23', '26', '43'],
-  'Tapered Roller Bearing': ['23', '26', '43'],
-  'Thrust Bearing': ['23', '26', '43'],
-  'Flange Bearing': ['23', '26', '43'],
-  // Motor Starters
-  'Motor Starters': ['23', '49', '50'],
-  'Motor Starter': ['23', '49', '50'],
-  // Stepper Motors/Drives
-  'Stepper Motors': ['23', '19', '54'],
-  'Stepper Motor': ['23', '19', '54'],
-  'Stepper Drives': ['23', '19', '32'],
-  'Stepper Drive': ['23', '19', '32'],
-  // DC Drives
-  'DC Drives': ['23', '33', '34'],
-  'DC Drive': ['23', '33', '34'],
-  'SCR Controller': ['23', '33', '34'],
-  // Solid State Relays
-  'Solid State Relays': ['23', '49', '96'],
-  'Solid State Relay': ['23', '49', '96'],
-  // Temperature Controllers
-  'Temperature Controllers': ['23', '22', '71'],
-  'Temperature Controller': ['23', '22', '71'],
-  // Pressure Sensors
-  'Pressure Sensors': ['23', '22', '42'],
-  'Pressure Sensor': ['23', '22', '42'],
-  'Pressure Transducer': ['23', '22', '42'],
-  // Temperature Sensors
-  'Temperature Sensors': ['23', '22', '42'],
-  'Temperature Sensor': ['23', '22', '42'],
-  'Thermocouple': ['23', '22', '42'],
-  'RTD': ['23', '22', '42'],
-  // Flow Sensors
-  'Flow Sensors': ['23', '22', '42'],
-  'Flow Sensor': ['23', '22', '42'],
-  'Flow Meter': ['23', '22', '42'],
-  // Disconnect Switches
-  'Disconnect Switches': ['23', '20', '44'],
-  'Disconnect Switch': ['23', '20', '44'],
-  // Fuses
-  'Fuses': ['23', '20', '44'],
-  'Fuse': ['23', '20', '44'],
-  // Panel Meters
-  'Panel Meters': ['23', '22', '71'],
-  'Panel Meter': ['23', '22', '71'],
-  // Timers
-  'Timers': ['23', '49', '51'],
-  'Timer': ['23', '49', '51'],
-  // Limit Switches
-  'Limit Switches': ['23', '22', '42'],
-  'Limit Switch': ['23', '22', '42'],
-  // Pushbuttons
-  'Pushbuttons': ['23', '49', '51'],
-  'Pushbutton': ['23', '49', '51'],
-  // Safety Controllers
-  'Safety Controllers': ['23', '22', '71'],
-  'Safety Controller': ['23', '22', '71'],
-  // Solenoid Valves
-  'Solenoid Valves': ['23', '46', '68'],
-  'Solenoid Valve': ['23', '46', '68'],
-  // Hydraulic Cylinders
-  'Hydraulic Cylinders': ['23', '84', '94'],
-  'Hydraulic Cylinder': ['23', '84', '94'],
-  // Hydraulic Motors
-  'Hydraulic Motors': ['23', '84', '94'],
-  'Hydraulic Motor': ['23', '84', '94'],
-  'Unknown': ['23']
+  // Electric Motors: Shop All (23) + Power Transmission (26) + Motors (30)
+  'Electric Motors': '23,26,30',
+  'Electric Motor': '23,26,30',
+  'AC Motor': '23,26,30',
+  'DC Motor': '23,26,30',
+  'Induction Motor': '23,26,30',
+  'Gearmotor': '23,26,30',
+  'Gear Motor': '23,26,30',
+  // Servo Motors: Shop All (23) + Motion Control (19) + Servo Motors (54)
+  'Servo Motors': '23,19,54',
+  'Servo Motor': '23,19,54',
+  'AC Servo Motor': '23,19,54',
+  'DC Servo Motor': '23,19,54',
+  // Servo Drives: Shop All (23) + Motion Control (19) + Servo Drives (32)
+  'Servo Drives': '23,19,32',
+  'Servo Drive': '23,19,32',
+  'Servo Amplifier': '23,19,32',
+  // VFDs: Shop All (23) + Speed Controls (33) + AC Drive (34)
+  'VFDs': '23,33,34',
+  'VFD': '23,33,34',
+  'Variable Frequency Drive': '23,33,34',
+  'AC Drive': '23,33,34',
+  'Inverter': '23,33,34',
+  // DC Drives: Shop All (23) + Speed Controls (33) + DC Drive (35)
+  'DC Drives': '23,33,35',
+  'DC Drive': '23,33,35',
+  'SCR Controller': '23,33,35',
+  // PLCs: Shop All (23) + Automation Control (18) + PLC (24)
+  'PLCs': '23,18,24',
+  'PLC': '23,18,24',
+  'PLC Processor': '23,18,24',
+  'PLC CPU': '23,18,24',
+  'PLC Chassis': '23,18,24',
+  // PLC I/O: Shop All (23) + Automation Control (18) + I/O (61)
+  'I/O Modules': '23,18,61',
+  'I/O Module': '23,18,61',
+  'Communication Module': '23,18,61',
+  'Network Module': '23,18,61',
+  // PLC Power Supply: Shop All (23) + Automation Control (18) + Power Supply (28)
+  'PLC Power Supply': '23,18,28',
+  // HMIs: Shop All (23) + Automation Control (18) + HMI (27)
+  'HMIs': '23,18,27',
+  'HMI': '23,18,27',
+  'Touch Panel': '23,18,27',
+  'Operator Interface': '23,18,27',
+  'Touch Screen': '23,18,27',
+  // Power Supplies: Shop All (23) + Automation Control (18) + Power Supply (28)
+  'Power Supplies': '23,18,28',
+  'Power Supply': '23,18,28',
+  'Switching Power Supply': '23,18,28',
+  'DC Power Supply': '23,18,28',
+  // Proximity Sensors: Shop All (23) + Sensing Devices (22) + Proximity (41)
+  'Proximity Sensors': '23,22,41',
+  'Proximity Sensor': '23,22,41',
+  'Inductive Proximity Sensor': '23,22,41',
+  'Capacitive Proximity Sensor': '23,22,41',
+  'Inductive Sensor': '23,22,41',
+  // Photoelectric Sensors: Shop All (23) + Sensing Devices (22) + Photoelectric (42)
+  'Photoelectric Sensors': '23,22,42',
+  'Photoelectric Sensor': '23,22,42',
+  'Photo Sensor': '23,22,42',
+  // Fiber Optic Sensors: Shop All (23) + Sensing Devices (22) + Fiber Optic (78)
+  'Fiber Optic Sensor': '23,22,78',
+  // Pressure Sensors: Shop All (23) + Sensing Devices (22) + Pressure (116)
+  'Pressure Sensors': '23,22,116',
+  'Pressure Sensor': '23,22,116',
+  'Pressure Transducer': '23,22,116',
+  // Temperature Sensors: Shop All (23) + Sensing Devices (22) + Temperature (65)
+  'Temperature Sensors': '23,22,65',
+  'Temperature Sensor': '23,22,65',
+  'Thermocouple': '23,22,65',
+  'RTD': '23,22,65',
+  // Level Sensors: Shop All (23) + Sensing Devices (22) + Level (148)
+  'Level Sensor': '23,22,148',
+  // Ultrasonic Sensors: Shop All (23) + Sensing Devices (22) + Ultrasonic (115)
+  'Ultrasonic Sensor': '23,22,115',
+  // Flow Sensors: Shop All (23) + Sensing Devices (22) + Sensors (42)
+  'Flow Sensors': '23,22,42',
+  'Flow Sensor': '23,22,42',
+  'Flow Meter': '23,22,42',
+  // Light Curtains: Shop All (23) + Sensing Devices (22) + Light Curtains (71)
+  'Light Curtains': '23,22,71',
+  'Light Curtain': '23,22,71',
+  'Safety Light Curtain': '23,22,71',
+  // Barcode/RFID: Shop All (23) + Sensing Devices (22) + Barcode (124)
+  'Barcode Scanner': '23,22,124',
+  'Barcode Reader': '23,22,124',
+  'RFID Reader': '23,22,124',
+  // Encoders: Shop All (23) + Motion Control (19) + Encoders (81)
+  'Encoders': '23,19,81',
+  'Encoder': '23,19,81',
+  'Rotary Encoder': '23,19,81',
+  'Incremental Encoder': '23,19,81',
+  'Absolute Encoder': '23,19,81',
+  'Linear Encoder': '23,19,81',
+  'Resolver': '23,19,81',
+  // Pneumatic Cylinders: Shop All (23) + Pneumatics (46) + Cylinders (47)
+  'Pneumatic Cylinders': '23,46,47',
+  'Pneumatic Cylinder': '23,46,47',
+  'Air Cylinder': '23,46,47',
+  'Compact Cylinder': '23,46,47',
+  'Rodless Cylinder': '23,46,55',
+  'Guided Cylinder': '23,46,56',
+  // Pneumatic Valves: Shop All (23) + Pneumatics (46) + Valves (68)
+  'Pneumatic Valves': '23,46,68',
+  'Pneumatic Valve': '23,46,68',
+  'Manifold': '23,46,68',
+  // Pneumatic Grippers: Shop All (23) + Pneumatics (46) + Grippers (117)
+  'Pneumatic Gripper': '23,46,117',
+  // Pneumatic Regulators: Shop All (23) + Pneumatics (46) + Regulators (86)
+  'Air Regulator': '23,46,86',
+  'FRL': '23,46,86',
+  'Air Filter': '23,46,86',
+  // Solenoid Valves: Shop All (23) + Valves (74) + Solenoid (76)
+  'Solenoid Valves': '23,74,76',
+  'Solenoid Valve': '23,74,76',
+  // Hydraulic Cylinders: Shop All (23) + Hydraulics (84) + Cylinders (107)
+  'Hydraulic Cylinders': '23,84,107',
+  'Hydraulic Cylinder': '23,84,107',
+  // Hydraulic Valves: Shop All (23) + Hydraulics (84) + Control Valves (91)
+  'Hydraulic Valves': '23,84,91',
+  'Hydraulic Valve': '23,84,91',
+  // Hydraulic Pumps: Shop All (23) + Hydraulics (84) + Pumps (94)
+  'Hydraulic Pumps': '23,84,94',
+  'Hydraulic Pump': '23,84,94',
+  // Hydraulic Motors: Shop All (23) + Hydraulics (84) + Pumps (94)
+  'Hydraulic Motors': '23,84,94',
+  'Hydraulic Motor': '23,84,94',
+  // Circuit Breakers: Shop All (23) + Electrical (20) + Circuit Breakers (44)
+  'Circuit Breakers': '23,20,44',
+  'Circuit Breaker': '23,20,44',
+  // Disconnect Switches: Shop All (23) + Electrical (20) + Safety Switches (52)
+  'Disconnect Switches': '23,20,52',
+  'Disconnect Switch': '23,20,52',
+  'Disconnect': '23,20,52',
+  // Fuses: Shop All (23) + Electrical (20) + Fuses (38)
+  'Fuses': '23,20,38',
+  'Fuse': '23,20,38',
+  // Enclosures: Shop All (23) + Electrical (20) + Enclosures (45)
+  'Enclosure': '23,20,45',
+  // Contactors: Shop All (23) + Industrial Controls (49) + Motor Starters (50)
+  'Contactors': '23,49,50',
+  'Contactor': '23,49,50',
+  'Motor Starters': '23,49,50',
+  'Motor Starter': '23,49,50',
+  'Soft Starter': '23,49,50',
+  // Safety Relays: Shop All (23) + Industrial Controls (49) + Safety (96)
+  'Safety Relays': '23,49,96',
+  'Safety Relay': '23,49,96',
+  'Safety Controller': '23,49,96',
+  // Safety Interlocks: Shop All (23) + Industrial Controls (49) + Safety Interlocks (79)
+  'Safety Interlock': '23,49,79',
+  // Control Relays: Shop All (23) + Industrial Controls (49) + Control Relays (51)
+  'Control Relays': '23,49,51',
+  'Control Relay': '23,49,51',
+  'Relay': '23,49,51',
+  // Solid State Relays: Shop All (23) + Industrial Controls (49) + Relays (66)
+  'Solid State Relays': '23,49,66',
+  'Solid State Relay': '23,49,66',
+  // Overload Relays: Shop All (23) + Industrial Controls (49) + Motor Starters (50)
+  'Overload Relay': '23,49,50',
+  // Transformers: Shop All (23) + Electrical (20) + Transformers (37)
+  'Transformers': '23,20,37',
+  'Transformer': '23,20,37',
+  // Gearboxes: Shop All (23) + Power Transmission (26) + Gear Reducer (36)
+  'Gearboxes': '23,26,36',
+  'Gearbox': '23,26,36',
+  'Gear Reducer': '23,26,36',
+  // Bearings: Shop All (23) + Power Transmission (26) + Bearings (43)
+  'Bearings': '23,26,43',
+  'Bearing': '23,26,43',
+  'Needle Bearing': '23,26,43',
+  'Roller Bearing': '23,26,43',
+  'Cam Follower': '23,26,43',
+  'Cam Followers': '23,26,43',
+  'Thrust Bearing': '23,26,43',
+  // Ball Bearings: more specific subcategory (67)
+  'Ball Bearing': '23,26,67',
+  // Linear Bearings: specific subcategory (70)
+  'Linear Bearing': '23,26,70',
+  // Tapered Roller Bearings: specific subcategory (72)
+  'Tapered Roller Bearing': '23,26,72',
+  'Tapered Roller Bearings': '23,26,72',
+  // Flange Bearings: specific subcategory (80)
+  'Flange Bearing': '23,26,80',
+  // Pillow Block Bearings: specific subcategory (92)
+  'Pillow Block': '23,26,92',
+  'Pillow Block Bearing': '23,26,92',
+  // Brakes & Clutches: Shop All (23) + Power Transmission (26) + Brakes (73)
+  'Brake': '23,26,73',
+  'Clutch': '23,26,73',
+  // Linear Actuators: Shop All (23) + Power Transmission (26) + Linear Actuators (101)
+  'Linear Actuator': '23,26,101',
+  'Ball Screw': '23,26,101',
+  'Linear Guide': '23,26,101',
+  'Linear Rail': '23,26,101',
+  // Stepper Motors: Shop All (23) + Motion Control (19) + Servo Motors (54)
+  'Stepper Motors': '23,19,54',
+  'Stepper Motor': '23,19,54',
+  // Stepper Drives: Shop All (23) + Motion Control (19) + Servo Drives (32)
+  'Stepper Drives': '23,19,32',
+  'Stepper Drive': '23,19,32',
+  // Temperature Controllers: Shop All (23) + Industrial Controls (49) + Temp Controllers (63)
+  'Temperature Controllers': '23,49,63',
+  'Temperature Controller': '23,49,63',
+  'PID Controller': '23,49,63',
+  // Timers/Counters: Shop All (23) + Industrial Controls (49) + Timers (62)
+  'Timers': '23,49,62',
+  'Timer': '23,49,62',
+  'Counter': '23,49,62',
+  'Time Delay Relay': '23,49,62',
+  // Limit Switches: Shop All (23) + Industrial Controls (49) + Limit Switches (58)
+  'Limit Switches': '23,49,58',
+  'Limit Switch': '23,49,58',
+  'Micro Switch': '23,49,58',
+  // Pushbuttons: Shop All (23) + Industrial Controls (49) + Pushbuttons (64)
+  'Pushbuttons': '23,49,64',
+  'Pushbutton': '23,49,64',
+  'Push Button': '23,49,64',
+  'Selector Switch': '23,49,64',
+  // Panel Meters: Shop All (23) + Sensing Devices (22) + Meters/Controllers
+  'Panel Meters': '23,22,71',
+  'Panel Meter': '23,22,71',
+  // Pumps: Shop All (23) + Pumps (82)
+  'Centrifugal Pump': '23,82,111',
+  'Diaphragm Pump': '23,82,93',
+  'Vacuum Pump': '23,82,83',
+  'Metering Pump': '23,82,110',
+  // Valves (non-pneumatic/hydraulic): Shop All (23) + Valves (74)
+  'Ball Valve': '23,74,75',
+  'Butterfly Valve': '23,74,95',
+  'Check Valve': '23,74,121',
+  'Gate Valve': '23,74,119',
+  'Globe Valve': '23,74',
+  'Relief Valve': '23,74,112',
+  'Control Valve': '23,74,114',
+  // Robots: Shop All (23) + Industrial Robots (39)
+  'Robot': '23,39',
+  'Robotic': '23,39',
+  // Lighting Ballasts: (147)
+  'Lighting Ballast': '23,147',
+  // Machinery: Used Machinery (21)
+  'Machinery': '23,21',
+  // Unknown / Fallback: Shop All only
+  'Unknown': '23'
 };
 
 // =============================================================================
@@ -479,6 +609,35 @@ const SPEC_KEY_MAP = {
   'bearing_series': 'bearingseries',
   'bearingseries': 'bearingseries',
   'series': 'bearingseries',
+
+  // === CAM FOLLOWERS (specific bearing subtype) ===
+  'stud_diameter': 'studdiameter',
+  'studdiameter': 'studdiameter',
+  'stud_length': 'studlength',
+  'studlength': 'studlength',
+  'stud_type': 'studtype',
+  'studtype': 'studtype',
+  'roller_diameter': 'rollerdiameter',
+  'rollerdiameter': 'rollerdiameter',
+  'roller_width': 'rollerwidth',
+  'rollerwidth': 'rollerwidth',
+  'roller_shape': 'rollershape',
+  'rollershape': 'rollershape',
+  'face_design': 'facedesign',
+  'facedesign': 'facedesign',
+  'dynamic_load_rating': 'dynamicloadrating',
+  'dynamicloadrating': 'dynamicloadrating',
+  'dynamic_load': 'dynamicloadrating',
+  'static_load_rating': 'staticloadrating',
+  'staticloadrating': 'staticloadrating',
+  'static_load': 'staticloadrating',
+  'load_rating': 'dynamicloadrating',
+  'loadrating': 'dynamicloadrating',
+  'cage_type': 'cagetype',
+  'cagetype': 'cagetype',
+  'number_of_rows': 'numberofrows',
+  'numberofrows': 'numberofrows',
+  'overall_width': 'width',
 
   // === POWER / WATTAGE ===
   'power': 'power',
@@ -977,11 +1136,44 @@ export default async function handler(req, res) {
 
     // === GET BIGCOMMERCE MULTI-CATEGORIES ===
     const categoryKey = product.productCategory || 'Unknown';
-    const categoryLookup = Object.keys(BIGCOMMERCE_CATEGORY_MAP).find(
-      k => k.toLowerCase() === categoryKey.toLowerCase()
-    ) || 'Unknown';
-    const bigcommerceCategories = BIGCOMMERCE_CATEGORY_MAP[categoryLookup] || BIGCOMMERCE_CATEGORY_MAP['Unknown'];
-    const bigcommerceCategoriesStr = bigcommerceCategories.join('*');
+    
+    // Smart category lookup: handles plurals, singular/plural mismatches, and partial matches
+    function findBigCommerceCategory(key) {
+      const keyLower = key.toLowerCase().trim();
+      const mapKeys = Object.keys(BIGCOMMERCE_CATEGORY_MAP);
+      
+      // 1. Exact match (case-insensitive)
+      let match = mapKeys.find(k => k.toLowerCase() === keyLower);
+      if (match) return match;
+      
+      // 2. Try stripping trailing 's' (plural → singular)
+      if (keyLower.endsWith('s')) {
+        const singular = keyLower.slice(0, -1);
+        match = mapKeys.find(k => k.toLowerCase() === singular);
+        if (match) return match;
+        // Also try stripping 'es' (e.g., "Switches" → "Switch")
+        if (keyLower.endsWith('es')) {
+          const singularEs = keyLower.slice(0, -2);
+          match = mapKeys.find(k => k.toLowerCase() === singularEs);
+          if (match) return match;
+        }
+      }
+      
+      // 3. Try adding 's' (singular → plural)
+      match = mapKeys.find(k => k.toLowerCase() === keyLower + 's');
+      if (match) return match;
+      
+      // 4. Try partial match (key starts with or contains search term)
+      match = mapKeys.find(k => k.toLowerCase().startsWith(keyLower));
+      if (match) return match;
+      match = mapKeys.find(k => keyLower.startsWith(k.toLowerCase()));
+      if (match) return match;
+      
+      return 'Unknown';
+    }
+    
+    const categoryLookup = findBigCommerceCategory(categoryKey);
+    const bigcommerceCategoriesStr = BIGCOMMERCE_CATEGORY_MAP[categoryLookup] || BIGCOMMERCE_CATEGORY_MAP['Unknown'];
 
     // === GENERATE USERTYPE ===
     const aiProductType = product.usertype || product.specifications?.type || null;
@@ -999,7 +1191,20 @@ export default async function handler(req, res) {
     formData.append('identifier', 'guid');
     formData.append('guid', sku);
     formData.append('sku', sku);
-    formData.append('title', product.title);
+    // Clean title: remove any condition words the AI may have added
+    // Condition is determined by the USER in the Pro UI, not by AI
+    const conditionWords = /\b(Used|New|Refurbished|NIB|NOS|NIP|New In Box|New Open Box|For Parts|Not Working|Surplus|Pre-Owned)\b/gi;
+    let cleanTitle = (product.title || `${product.brand} ${product.partNumber}`).replace(conditionWords, '').replace(/\s{2,}/g, ' ').trim();
+    // Also clean trailing/leading punctuation left behind
+    cleanTitle = cleanTitle.replace(/^[\s,\-]+|[\s,\-]+$/g, '').trim();
+    
+    // Append user-selected condition to title ONLY IF the user explicitly passed it
+    // The Pro UI should handle adding condition to the title when the user selects it,
+    // so the user sees the full title (with condition) before submitting.
+    // If product.appendConditionToTitle is true, the Pro UI already added it to the title.
+    // We do NOT auto-append here — the user needs to see and approve the title first.
+    
+    formData.append('title', cleanTitle);
 
     // === SKIP AUTO-PUSH TO CHANNELS ===
     formData.append('ebayskip', '1');
@@ -1056,7 +1261,7 @@ export default async function handler(req, res) {
     formData.append('bigcommercewarranty', WARRANTY_TEXT);
     formData.append('bigcommerceisvisible', 'on');
     formData.append('bigcommercechannels', '1');
-    formData.append('bigcommercepagetitle', product.title);
+    formData.append('bigcommercepagetitle', cleanTitle);
     formData.append('bigcommercempn', mpnFormatted);
 
     if (bigcommerceBrandId) formData.append('bigcommercebrandid', bigcommerceBrandId);
