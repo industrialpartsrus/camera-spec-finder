@@ -19,171 +19,170 @@ const BRAND_IDS = {
 };
 
 // BigCommerce category mappings - FROM bigcommerce_categories.json
-// Format: JSON array string '["shopAll","parent","child","leaf"]'
-// Shop All (23) is ALWAYS the first element
+// Format: JSON array string '["parent","child","leaf"]'
 const BIGCOMMERCE_CATEGORIES = {
   // Motors - Power Transmission -> Electric Motors
-  'Electric Motor': '["23","26","30"]',
-  'AC Motor': '["23","26","30"]',
-  'Induction Motor': '["23","26","30"]',
-  'DC Motor': '["23","26","30"]',
-  'Gearmotor': '["23","26","30"]',
-  'Gear Motor': '["23","26","30"]',
-  'Stepper Motor': '["23","26","30"]',
+  'Electric Motor': '["26","30"]',
+  'AC Motor': '["26","30"]',
+  'Induction Motor': '["26","30"]',
+  'DC Motor': '["26","30"]',
+  'Gearmotor': '["26","30"]',
+  'Gear Motor': '["26","30"]',
+  'Stepper Motor': '["26","30"]',
 
   // Servo Motors - Motion Control -> Servo Motors
-  'Servo Motor': '["23","19","54"]',
-  'AC Servo Motor': '["23","19","54"]',
-  'DC Servo Motor': '["23","19","54"]',
+  'Servo Motor': '["19","54"]',
+  'AC Servo Motor': '["19","54"]',
+  'DC Servo Motor': '["19","54"]',
 
   // Servo Drives - Motion Control -> Servo Drives & Amplifiers
-  'Servo Drive': '["23","19","32"]',
-  'Servo Amplifier': '["23","19","32"]',
+  'Servo Drive': '["19","32"]',
+  'Servo Amplifier': '["19","32"]',
 
   // VFDs - Speed Controls -> AC Drive
-  'VFD': '["23","33","34"]',
-  'Variable Frequency Drive': '["23","33","34"]',
-  'AC Drive': '["23","33","34"]',
-  'Inverter': '["23","33","34"]',
+  'VFD': '["33","34"]',
+  'Variable Frequency Drive': '["33","34"]',
+  'AC Drive': '["33","34"]',
+  'Inverter': '["33","34"]',
 
   // DC Drives - Speed Controls -> DC Drive
-  'DC Drive': '["23","33","35"]',
+  'DC Drive': '["33","35"]',
 
   // Stepper Drives
-  'Stepper Drive': '["23","19","32"]',
+  'Stepper Drive': '["19","32"]',
 
   // PLCs - Automation Control -> PLC
-  'PLC': '["23","18","24"]',
-  'PLC Processor': '["23","18","24"]',
-  'PLC CPU': '["23","18","24"]',
-  'PLC Chassis': '["23","18","24"]',
+  'PLC': '["18","24"]',
+  'PLC Processor': '["18","24"]',
+  'PLC CPU': '["18","24"]',
+  'PLC Chassis': '["18","24"]',
 
   // PLC I/O - Automation Control -> I/O Boards
-  'PLC I/O Module': '["23","18","61"]',
-  'I/O Module': '["23","18","61"]',
-  'Communication Module': '["23","18","61"]',
+  'PLC I/O Module': '["18","61"]',
+  'I/O Module': '["18","61"]',
+  'Communication Module': '["18","61"]',
 
   // PLC Power Supply - Automation Control -> Power Supply
-  'PLC Power Supply': '["23","18","28"]',
-  'Power Supply': '["23","18","28"]',
-  'Industrial Power Supply': '["23","18","28"]',
+  'PLC Power Supply': '["18","28"]',
+  'Power Supply': '["18","28"]',
+  'Industrial Power Supply': '["18","28"]',
 
   // HMI - Automation Control -> HMI
-  'HMI': '["23","18","27"]',
-  'Touch Panel': '["23","18","27"]',
-  'Operator Interface': '["23","18","27"]',
+  'HMI': '["18","27"]',
+  'Touch Panel': '["18","27"]',
+  'Operator Interface': '["18","27"]',
 
   // Proximity Sensors - Sensing Devices -> Proximity Sensors
-  'Proximity Sensor': '["23","22","41"]',
-  'Inductive Proximity Sensor': '["23","22","41"]',
-  'Capacitive Proximity Sensor': '["23","22","41"]',
-  'Inductive Sensor': '["23","22","41"]',
+  'Proximity Sensor': '["22","41"]',
+  'Inductive Proximity Sensor': '["22","41"]',
+  'Capacitive Proximity Sensor': '["22","41"]',
+  'Inductive Sensor': '["22","41"]',
 
   // Photoelectric Sensors - Sensing Devices -> Photoelectric Sensors
-  'Photoelectric Sensor': '["23","22","42"]',
-  'Photo Sensor': '["23","22","42"]',
+  'Photoelectric Sensor': '["22","42"]',
+  'Photo Sensor': '["22","42"]',
 
   // Fiber Optic Sensors - Sensing Devices -> Fiber Optic Sensors
-  'Fiber Optic Sensor': '["23","22","78"]',
+  'Fiber Optic Sensor': '["22","78"]',
 
   // Pressure Sensors - Sensing Devices -> Pressure Sensors
-  'Pressure Sensor': '["23","22","116"]',
-  'Pressure Transducer': '["23","22","116"]',
+  'Pressure Sensor': '["22","116"]',
+  'Pressure Transducer': '["22","116"]',
 
   // Temperature Sensors - Sensing Devices -> Temperature Sensors
-  'Temperature Sensor': '["23","22","65"]',
-  'Thermocouple': '["23","22","65"]',
+  'Temperature Sensor': '["22","65"]',
+  'Thermocouple': '["22","65"]',
 
   // Level Sensors - Sensing Devices -> Level Sensors
-  'Level Sensor': '["23","22","148"]',
+  'Level Sensor': '["22","148"]',
 
   // Ultrasonic Sensors - Sensing Devices -> Ultrasonic Sensors
-  'Ultrasonic Sensor': '["23","22","115"]',
+  'Ultrasonic Sensor': '["22","115"]',
 
   // Light Curtains - Sensing Devices -> Light Curtains
-  'Light Curtain': '["23","22","71"]',
-  'Safety Light Curtain': '["23","22","71"]',
+  'Light Curtain': '["22","71"]',
+  'Safety Light Curtain': '["22","71"]',
 
   // Barcode Scanners - Sensing Devices -> Barcode Scanners
-  'Barcode Scanner': '["23","22","124"]',
-  'Barcode Reader': '["23","22","124"]',
+  'Barcode Scanner': '["22","124"]',
+  'Barcode Reader': '["22","124"]',
 
   // Encoders - Motion Control -> Encoders
-  'Encoder': '["23","19","81"]',
-  'Rotary Encoder': '["23","19","81"]',
-  'Linear Encoder': '["23","19","81"]',
+  'Encoder': '["19","81"]',
+  'Rotary Encoder': '["19","81"]',
+  'Linear Encoder': '["19","81"]',
 
   // Safety Relays - Industrial Controls -> Safety Relays
-  'Safety Relay': '["23","49","96"]',
-  'Safety Controller': '["23","49","96"]',
+  'Safety Relay': '["49","96"]',
+  'Safety Controller': '["49","96"]',
 
   // Pneumatic Cylinders - Pneumatics -> Cylinders
-  'Pneumatic Cylinder': '["23","46","47"]',
-  'Air Cylinder': '["23","46","47"]',
+  'Pneumatic Cylinder': '["46","47"]',
+  'Air Cylinder': '["46","47"]',
 
   // Pneumatic Valves - Pneumatics -> Valves & Manifolds
-  'Pneumatic Valve': '["23","46","68"]',
-  'Solenoid Valve': '["23","74","76"]',
+  'Pneumatic Valve': '["46","68"]',
+  'Solenoid Valve': '["74","76"]',
 
   // Pneumatic Grippers - Pneumatics -> Grippers
-  'Pneumatic Gripper': '["23","46","117"]',
+  'Pneumatic Gripper': '["46","117"]',
 
   // Pneumatic Regulators - Pneumatics -> Regulators
-  'Air Regulator': '["23","46","86"]',
+  'Air Regulator': '["46","86"]',
 
   // Hydraulic Cylinders - Hydraulics -> Cylinders
-  'Hydraulic Cylinder': '["23","84","107"]',
+  'Hydraulic Cylinder': '["84","107"]',
 
   // Hydraulic Valves - Hydraulics -> Control Valves
-  'Hydraulic Valve': '["23","84","91"]',
+  'Hydraulic Valve': '["84","91"]',
 
   // Hydraulic Pumps - Hydraulics -> Pumps
-  'Hydraulic Pump': '["23","84","94"]',
+  'Hydraulic Pump': '["84","94"]',
 
   // Circuit Breakers - Electrical -> Circuit Breakers
-  'Circuit Breaker': '["23","20","44"]',
+  'Circuit Breaker': '["20","44"]',
 
   // Contactors - Industrial Controls -> Motor Starters
-  'Contactor': '["23","49","50"]',
-  'Motor Starter': '["23","49","50"]',
+  'Contactor': '["49","50"]',
+  'Motor Starter': '["49","50"]',
 
   // Transformers - Electrical -> Transformers
-  'Transformer': '["23","20","37"]',
+  'Transformer': '["20","37"]',
 
   // Relays - Industrial Controls -> Relays
-  'Relay': '["23","49","66"]',
-  'Control Relay': '["23","49","51"]',
-  'Solid State Relay': '["23","49","66"]',
+  'Relay': '["49","66"]',
+  'Control Relay': '["49","51"]',
+  'Solid State Relay': '["49","66"]',
 
   // Bearings - Power Transmission -> Bearings (-> subtypes)
-  'Bearing': '["23","26","43"]',
-  'Ball Bearing': '["23","26","43","67"]',
-  'Linear Bearing': '["23","26","43","70"]',
-  'Pillow Block Bearing': '["23","26","43","92"]',
-  'Tapered Roller Bearing': '["23","26","43","72"]',
-  'Flange Bearing': '["23","26","43","80"]',
-  'Cam Follower': '["23","26","43"]',
-  'Roller Bearing': '["23","26","43"]',
+  'Bearing': '["26","43"]',
+  'Ball Bearing': '["26","43","67"]',
+  'Linear Bearing': '["26","43","70"]',
+  'Pillow Block Bearing': '["26","43","92"]',
+  'Tapered Roller Bearing': '["26","43","72"]',
+  'Flange Bearing': '["26","43","80"]',
+  'Cam Follower': '["26","43"]',
+  'Roller Bearing': '["26","43"]',
 
   // Gear Reducers - Power Transmission -> Gear Reducer
-  'Gearbox': '["23","26","36"]',
-  'Gear Reducer': '["23","26","36"]',
+  'Gearbox': '["26","36"]',
+  'Gear Reducer': '["26","36"]',
 
   // Limit Switches - Industrial Controls -> Limit Switches
-  'Limit Switch': '["23","49","58"]',
+  'Limit Switch': '["49","58"]',
 
   // Push Buttons - Industrial Controls -> Push Buttons & Switches
-  'Push Button': '["23","49","64"]',
+  'Push Button': '["49","64"]',
 
   // Timers - Industrial Controls -> Timers & Counters
-  'Timer': '["23","49","62"]',
-  'Counter': '["23","49","62"]',
+  'Timer': '["49","62"]',
+  'Counter': '["49","62"]',
 
   // Temperature Controllers - Industrial Controls -> Temperature Controllers
-  'Temperature Controller': '["23","49","63"]',
+  'Temperature Controller': '["49","63"]',
 
   // Default
-  'Industrial Equipment': '["23"]'
+  'Industrial Equipment': '[]'
 };
 
 // Default profiles
@@ -322,7 +321,7 @@ export default async function handler(req, res) {
     const mpnFormatted = listing.partNumber.toUpperCase();
     const modelFormatted = (listing.model || listing.partNumber).toUpperCase();
     const bigcommerceBrandId = getBrandId(listing.brand);
-    const bigcommerceCategories = BIGCOMMERCE_CATEGORIES[listing.productType] || '["23"]';
+    const bigcommerceCategories = BIGCOMMERCE_CATEGORIES[listing.productType] || '[]';
     const keywords = generateKeywords(listing);
 
     console.log('BigCommerce Categories:', bigcommerceCategories);
