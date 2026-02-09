@@ -15,11 +15,43 @@ const fs = require('fs');
 const API_BASE = 'https://camera-spec-finder.vercel.app/api/ebay/get-category-aspects';
 const DB_FILE = './ebay-category-aspects.json';
 
-// Categories to fetch (your top 25)
+// Categories to fetch - master list of all IDs used across the app
+// Includes: master-fields.js CATEGORY_CONFIG, search-product-v2.js, get-category-specifics.js
 const CATEGORIES_TO_FETCH = [
-  '184027', '26261', '57520', '184148', '181732', '260823', '185134',
-  '78191', '36328', '181714', '65452', '65459', '181709', '124603',
-  '65464', '181750', '109614', '181925', '78192', '181682', '42894'
+  // Already fetched (in ebay-category-aspects.json)
+  '181732', // Electric Motors (General Purpose Motors)
+  '124603', // Servo Motors
+  '78191',  // Servo Drives & Amplifiers
+  '78192',  // VFDs / AC Drives
+  '181708', // PLCs (Processors/Controllers)
+  '181709', // HMIs & Operator Panels
+  '185134', // Circuit Breakers
+  '65464',  // Safety Relays
+  '181750', // Bearings (Ball & Roller)
+  '184027', // Pneumatic/Hydraulic Cylinders
+  '26261',  // Industrial Controls
+  '57520',  // Sensors (general)
+  '184148', // Valves (general)
+  '260823', // Electrical/Fuses
+  '36328',  // Test Equipment / Relays
+  '181714', // PLC I/O Modules
+  '65452',  // Gearmotors / Gearboxes
+  '65459',  // Proximity Sensors (Linear Motion)
+  '109614', // Light Towers/Stack Lights
+  '181925', // Power Supplies
+  '181682', // Industrial Timers / Contactors
+  '42894',  // Variable Frequency Drives (alt)
+  // Missing - need to fetch
+  '183089', // Proximity & Photoelectric Sensors (master-fields.js, get-category-specifics.js)
+  '183088', // Light Curtains (master-fields.js, get-category-specifics.js)
+  '185006', // Pneumatic Cylinders (get-category-specifics.js)
+  '185005', // Pneumatic Valves (get-category-specifics.js)
+  '115598', // Hydraulic Pumps (get-category-specifics.js)
+  '115596', // Hydraulic Valves (get-category-specifics.js)
+  '181680', // Contactors / IEC & NEMA (master-fields.js, get-category-specifics.js)
+  '42017',  // Power Supplies (get-category-specifics.js)
+  '116922', // Transformers (get-category-specifics.js)
+  '181681', // Motor Starters (get-category-specifics.js)
 ];
 
 function fetchCategory(categoryId) {

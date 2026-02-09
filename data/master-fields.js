@@ -491,7 +491,7 @@ export const MASTER_FIELDS = {
       return `${match[1]} ${hasInch ? 'in' : 'mm'}`;
     },
     ebayFields: {
-      'Bearings': 'ebayitemspecificsinnerdiameter'
+      'Bearings': 'ebayitemspecificsborediameter'
     }
   },
 
@@ -504,7 +504,7 @@ export const MASTER_FIELDS = {
       return `${match[1]} ${hasInch ? 'in' : 'mm'}`;
     },
     ebayFields: {
-      'Bearings': 'ebayitemspecificsouterdiameter'
+      'Bearings': 'ebayitemspecificsoutsidediameter'
     }
   },
 
@@ -559,7 +559,7 @@ export const CATEGORY_CONFIG = {
   },
   
   'Servo Motors': {
-    ebayCategoryId: '181731',
+    ebayCategoryId: '124603',
     ebayStoreCategoryId: '393389015',
     bigcommerceCategoryId: '54',
     requiredFields: ['brand', 'voltage'],
@@ -568,7 +568,7 @@ export const CATEGORY_CONFIG = {
   },
   
   'Servo Drives': {
-    ebayCategoryId: '181731',
+    ebayCategoryId: '78191',
     ebayStoreCategoryId: '393390015',
     bigcommerceCategoryId: '32',
     requiredFields: ['brand', 'input_voltage'],
@@ -577,7 +577,7 @@ export const CATEGORY_CONFIG = {
   },
   
   'VFDs': {
-    ebayCategoryId: '118126',
+    ebayCategoryId: '78192',
     ebayStoreCategoryId: '2242358015',
     bigcommerceCategoryId: '34',
     requiredFields: ['brand', 'input_voltage', 'horsepower'],
@@ -586,7 +586,7 @@ export const CATEGORY_CONFIG = {
   },
   
   'PLCs': {
-    ebayCategoryId: '181336',
+    ebayCategoryId: '181708',
     ebayStoreCategoryId: '5404089015',
     bigcommerceCategoryId: '24',
     requiredFields: ['brand'],
@@ -595,7 +595,7 @@ export const CATEGORY_CONFIG = {
   },
   
   'HMIs': {
-    ebayCategoryId: '181336',
+    ebayCategoryId: '181709',
     ebayStoreCategoryId: '6686264015',
     bigcommerceCategoryId: '27',
     requiredFields: ['brand'],
@@ -631,16 +631,16 @@ export const CATEGORY_CONFIG = {
   },
   
   'Pneumatic Cylinders': {
-    ebayCategoryId: '185006',
+    ebayCategoryId: '184027',
     ebayStoreCategoryId: '2461873015',
     bigcommerceCategoryId: '47',
     requiredFields: ['brand', 'bore_diameter', 'stroke_length'],
     recommendedFields: ['port_size', 'max_pressure', 'mounting_type'],
     optionalFields: []
   },
-  
+
   'Pneumatic Valves': {
-    ebayCategoryId: '185005',
+    ebayCategoryId: '260291',
     ebayStoreCategoryId: '2461874015',
     bigcommerceCategoryId: '68',
     requiredFields: ['brand'],
@@ -649,16 +649,16 @@ export const CATEGORY_CONFIG = {
   },
   
   'Hydraulic Pumps': {
-    ebayCategoryId: '115598',
+    ebayCategoryId: '184101',
     ebayStoreCategoryId: '6696064015',
     bigcommerceCategoryId: '94',
     requiredFields: ['brand'],
     recommendedFields: ['flow_rate', 'max_pressure'],
     optionalFields: ['voltage', 'horsepower']
   },
-  
+
   'Hydraulic Valves': {
-    ebayCategoryId: '115596',
+    ebayCategoryId: '184113',
     ebayStoreCategoryId: '6696060015',
     bigcommerceCategoryId: '91',
     requiredFields: ['brand'],
@@ -667,7 +667,7 @@ export const CATEGORY_CONFIG = {
   },
   
   'Circuit Breakers': {
-    ebayCategoryId: '116862',
+    ebayCategoryId: '185134',
     ebayStoreCategoryId: '5634105015',
     bigcommerceCategoryId: '44',
     requiredFields: ['brand', 'amperage', 'voltage'],
@@ -676,7 +676,7 @@ export const CATEGORY_CONFIG = {
   },
   
   'Contactors': {
-    ebayCategoryId: '181336',
+    ebayCategoryId: '181680',
     ebayStoreCategoryId: '2348910015',
     bigcommerceCategoryId: '50',
     requiredFields: ['brand', 'coil_voltage'],
@@ -685,7 +685,7 @@ export const CATEGORY_CONFIG = {
   },
   
   'Safety Relays': {
-    ebayCategoryId: '116856',
+    ebayCategoryId: '65464',
     ebayStoreCategoryId: '2464037015',
     bigcommerceCategoryId: '96',
     requiredFields: ['brand'],
@@ -694,12 +694,12 @@ export const CATEGORY_CONFIG = {
   },
   
   'Bearings': {
-    ebayCategoryId: '101353',
+    ebayCategoryId: '181750',
     ebayStoreCategoryId: '6690505015',
     bigcommerceCategoryId: '43',
     requiredFields: ['brand'],
-    recommendedFields: ['bearing_type', 'inner_diameter', 'outer_diameter'],
-    optionalFields: []
+    recommendedFields: ['bearing_type', 'inner_diameter', 'outer_diameter', 'width', 'material'],
+    optionalFields: ['seal_type']
   }
 };
 

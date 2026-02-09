@@ -67,8 +67,8 @@ const EBAY_CATEGORIES = {
   // Safety
   'Light Curtain': { id: '183088', name: 'Light Curtains' },
   'Safety Light Curtain': { id: '183088', name: 'Light Curtains' },
-  'Safety Relay': { id: '116856', name: 'Safety Relays' },
-  'Safety Controller': { id: '116856', name: 'Safety Relays' },
+  'Safety Relay': { id: '65464', name: 'Safety Relays' },
+  'Safety Controller': { id: '65464', name: 'Safety Relays' },
   
   // Encoders
   'Encoder': { id: '65455', name: 'Rotary Encoders' },
@@ -77,23 +77,23 @@ const EBAY_CATEGORIES = {
   'Absolute Encoder': { id: '65455', name: 'Rotary Encoders' },
   'Linear Encoder': { id: '65455', name: 'Linear Encoders' },
   
-  // Pneumatics - from CATEGORY_CONFIG
-  'Pneumatic Cylinder': { id: '185006', name: 'Pneumatic Cylinders' },
-  'Air Cylinder': { id: '185006', name: 'Pneumatic Cylinders' },
-  'Pneumatic Valve': { id: '185005', name: 'Pneumatic Valves' },
-  'Solenoid Valve': { id: '185005', name: 'Solenoid Valves' },
-  'Pneumatic Gripper': { id: '185006', name: 'Pneumatic Grippers' },
-  'Pneumatic Actuator': { id: '185006', name: 'Pneumatic Actuators' },
-  'Air Regulator': { id: '185005', name: 'Air Regulators' },
-  
-  // Hydraulics - from CATEGORY_CONFIG
-  'Hydraulic Cylinder': { id: '185006', name: 'Hydraulic Cylinders' },
-  'Hydraulic Valve': { id: '115596', name: 'Hydraulic Valves' },
-  'Hydraulic Pump': { id: '115598', name: 'Hydraulic Pumps' },
-  'Hydraulic Motor': { id: '115598', name: 'Hydraulic Motors' },
+  // Pneumatics - corrected to valid eBay leaf categories
+  'Pneumatic Cylinder': { id: '184027', name: 'Hydraulic & Pneumatic Cylinders' },
+  'Air Cylinder': { id: '184027', name: 'Hydraulic & Pneumatic Cylinders' },
+  'Pneumatic Valve': { id: '260291', name: 'Solenoid Valves & Coils' },
+  'Solenoid Valve': { id: '260291', name: 'Solenoid Valves & Coils' },
+  'Pneumatic Gripper': { id: '184027', name: 'Hydraulic & Pneumatic Cylinders' },
+  'Pneumatic Actuator': { id: '184027', name: 'Hydraulic & Pneumatic Cylinders' },
+  'Air Regulator': { id: '260291', name: 'Solenoid Valves & Coils' },
+
+  // Hydraulics - corrected to valid eBay leaf categories
+  'Hydraulic Cylinder': { id: '184027', name: 'Hydraulic & Pneumatic Cylinders' },
+  'Hydraulic Valve': { id: '184113', name: 'Hydraulic Directional Control Valves' },
+  'Hydraulic Pump': { id: '184101', name: 'Hydraulic Pumps' },
+  'Hydraulic Motor': { id: '184101', name: 'Hydraulic Pumps' },
   
   // Electrical - from CATEGORY_CONFIG
-  'Circuit Breaker': { id: '116862', name: 'Circuit Breakers' },
+  'Circuit Breaker': { id: '185134', name: 'Circuit Breakers' },
   'Contactor': { id: '181680', name: 'Contactors' },
   'Motor Starter': { id: '181681', name: 'Motor Starters' },
   'Transformer': { id: '116922', name: 'Transformers' },
@@ -102,9 +102,9 @@ const EBAY_CATEGORIES = {
   'Solid State Relay': { id: '65454', name: 'Solid State Relays' },
   
   // Bearings - from CATEGORY_CONFIG
-  'Bearing': { id: '101353', name: 'Bearings' },
-  'Ball Bearing': { id: '101353', name: 'Ball Bearings' },
-  'Linear Bearing': { id: '101353', name: 'Linear Bearings' },
+  'Bearing': { id: '181750', name: 'Ball & Roller Bearings' },
+  'Ball Bearing': { id: '181750', name: 'Ball & Roller Bearings' },
+  'Linear Bearing': { id: '181750', name: 'Linear Bearings' },
   
   // Power Transmission
   'Gearbox': { id: '181772', name: 'Gearboxes' },
