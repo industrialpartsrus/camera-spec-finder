@@ -1766,8 +1766,8 @@ export default function ProListingBuilder() {
     try {
       await updateDoc(doc(db, 'products', itemId), { status: 'searching' });
       
-      // Use consolidated v3 API: AI detection + field guides + web search + corrected category IDs
-      const response = await fetch('/api/search-product', {
+      // v2 API: AI detection + eBay category/store mapping + eBay aspects lookup
+      const response = await fetch('/api/search-product-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brand: item.brand, partNumber: item.partNumber })

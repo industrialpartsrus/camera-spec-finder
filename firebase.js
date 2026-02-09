@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
@@ -11,8 +11,8 @@ const firebaseConfig = {
   appId: "1:862939642767:web:7f056f12e67f7be5d329fa"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase (prevent duplicate app error during SSR/prerendering)
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 // Initialize Firestore
 export const db = getFirestore(app);
