@@ -950,11 +950,22 @@ export default async function handler(req, res) {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }]
     });
 
     // Extract the JSON from AI response
-    const text = response.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
+    // When AI uses web_search, the response has multiple content blocks:
+    //   [text, tool_use, tool_result, text, tool_use, tool_result, ..., text]
+    // The JSON answer is in the LAST text block, not the first.
+    let text = '';
+    if (response.content && Array.isArray(response.content)) {
+      const textBlocks = response.content.filter(b => b.type === 'text' && b.text);
+      if (textBlocks.length > 0) {
+        text = textBlocks[textBlocks.length - 1].text;
+        console.log(`Found ${textBlocks.length} text blocks, using last one (${text.length} chars)`);
+      }
+    }
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     
     if (!jsonMatch) {
