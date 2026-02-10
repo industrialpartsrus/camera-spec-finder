@@ -1827,51 +1827,19 @@ export default function ProListingBuilder() {
       await updateDoc(doc(db, 'products', itemId), updateData);
 
       // =================================================================
-      // PASS 2: AUTO-FILL EBAY ITEM SPECIFICS
-      // Fires automatically after Pass 1 — no button needed
-      // Uses eBay Taxonomy aspects + Pass 1 specs → AI fills all fields
+      // PASS 2 + PASS 3: Auto-fill eBay specifics, then revise title/desc
+      // Uses reusable runPass2() which auto-triggers runPass3()
       // =================================================================
       if (data._ebayAspects && data._ebayAspects.all?.length > 0) {
-        console.log('=== AUTO-TRIGGERING PASS 2 ===');
-        console.log(`${data._ebayAspects.all.length} eBay aspects available`);
-        
-        try {
-          await updateDoc(doc(db, 'products', itemId), { pass2Status: 'filling' });
-          
-          const pass2Response = await fetch('/api/v2/auto-fill-ebay-specifics', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              brand: item.brand,
-              partNumber: item.partNumber,
-              productType: product.productType || data._metadata?.detectedCategory || '',
-              title: product.title || `${item.brand} ${item.partNumber}`,
-              ebayAspects: data._ebayAspects,
-              pass1Specs: data._resolvedSpecs || product.specifications || {}
-            })
-          });
-
-          if (pass2Response.ok) {
-            const pass2Data = await pass2Response.json();
-            if (pass2Data.success && pass2Data.data) {
-              console.log(`Pass 2 filled ${pass2Data.data.filledCount}/${pass2Data.data.totalCount} eBay fields`);
-              
-              await updateDoc(doc(db, 'products', itemId), {
-                ebayItemSpecifics: pass2Data.data.specificsForUI || [],
-                ebayItemSpecificsForSuredone: pass2Data.data.specificsForSuredone || {},
-                pass2Status: 'complete',
-                pass2FilledCount: pass2Data.data.filledCount || 0,
-                pass2TotalCount: pass2Data.data.totalCount || 0
-              });
-            }
-          } else {
-            console.error('Pass 2 API error:', pass2Response.status);
-            await updateDoc(doc(db, 'products', itemId), { pass2Status: 'error' });
-          }
-        } catch (pass2Error) {
-          console.error('Pass 2 error:', pass2Error);
-          await updateDoc(doc(db, 'products', itemId), { pass2Status: 'error' });
-        }
+        const updatedItem = {
+          ...item,
+          title: product.title || `${item.brand} ${item.partNumber}`,
+          productCategory: product.productType || data._metadata?.detectedCategory || '',
+          description: product.description || '',
+          shortDescription: product.shortDescription || '',
+          specifications: data._resolvedSpecs || product.specifications || {}
+        };
+        await runPass2(itemId, updatedItem, data._ebayAspects);
       }
     } catch (error) {
       console.error('Processing error:', error);
@@ -1903,6 +1871,127 @@ export default function ProListingBuilder() {
         conditionNotes: CONDITION_NOTES[conditionValue]
       });
     } catch (error) { console.error('Error updating condition:', error); }
+  };
+
+  // =================================================================
+  // PASS 2: Reusable eBay Item Specifics fill
+  // Called from: processItemById (initial search) AND category override
+  // =================================================================
+  const runPass2 = async (itemId, item, ebayAspects) => {
+    try {
+      console.log('=== RUNNING PASS 2 ===');
+      console.log(`${ebayAspects.all?.length || 0} eBay aspects available`);
+      await updateDoc(doc(db, 'products', itemId), { pass2Status: 'filling', categoryOverrideMessage: '' });
+
+      const pass2Response = await fetch('/api/v2/auto-fill-ebay-specifics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brand: item.brand,
+          partNumber: item.partNumber,
+          productType: item.productCategory || '',
+          title: item.title || `${item.brand} ${item.partNumber}`,
+          ebayAspects: ebayAspects,
+          pass1Specs: item.specifications || {}
+        })
+      });
+
+      if (pass2Response.ok) {
+        const pass2Data = await pass2Response.json();
+        if (pass2Data.success && pass2Data.data) {
+          console.log(`Pass 2 filled ${pass2Data.data.filledCount}/${pass2Data.data.totalCount} eBay fields`);
+
+          await updateDoc(doc(db, 'products', itemId), {
+            ebayItemSpecifics: pass2Data.data.specificsForUI || [],
+            ebayItemSpecificsForSuredone: pass2Data.data.specificsForSuredone || {},
+            pass2Status: 'complete',
+            pass2FilledCount: pass2Data.data.filledCount || 0,
+            pass2TotalCount: pass2Data.data.totalCount || 0
+          });
+
+          // Auto-trigger Pass 3: revise title/description with discovered specs
+          await runPass3(itemId, item, pass2Data.data.specificsForUI || []);
+          return pass2Data.data;
+        }
+      }
+
+      console.error('Pass 2 API error:', pass2Response.status);
+      await updateDoc(doc(db, 'products', itemId), { pass2Status: 'error' });
+      return null;
+    } catch (error) {
+      console.error('Pass 2 error:', error);
+      await updateDoc(doc(db, 'products', itemId), { pass2Status: 'error' });
+      return null;
+    }
+  };
+
+  // =================================================================
+  // PASS 3: Revise title/description using Pass 2 specs
+  // Auto-fires after Pass 2 completes (initial search or category override)
+  // =================================================================
+  const runPass3 = async (itemId, item, specificsForUI) => {
+    try {
+      console.log('=== RUNNING PASS 3 ===');
+      await updateDoc(doc(db, 'products', itemId), { pass3Status: 'revising' });
+
+      // Convert UI specifics array to { ebayName: value } for revise-listing API
+      const filledSpecifics = {};
+      for (const spec of specificsForUI) {
+        if (spec.value && spec.ebayName) {
+          filledSpecifics[spec.ebayName] = spec.value;
+        }
+      }
+
+      console.log(`Pass 3: ${Object.keys(filledSpecifics).length} filled specs for revision`);
+
+      const pass3Response = await fetch('/api/v2/revise-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brand: item.brand,
+          partNumber: item.partNumber,
+          productType: item.productCategory || '',
+          title: item.title || '',
+          description: item.description || '',
+          shortDescription: item.shortDescription || '',
+          filledSpecifics,
+          condition: { descriptionNote: item.conditionNotes || '' }
+        })
+      });
+
+      if (pass3Response.ok) {
+        const pass3Data = await pass3Response.json();
+        if (pass3Data.success && pass3Data.data) {
+          console.log('Pass 3 result:', pass3Data.data.revised ? 'Revised' : 'No changes needed');
+          console.log('Pass 3 changes:', pass3Data.data.changes);
+
+          const updateFields = {
+            pass3Status: 'complete',
+            pass3Changes: pass3Data.data.changes || []
+          };
+
+          if (pass3Data.data.revised) {
+            updateFields.title = pass3Data.data.title;
+            updateFields.description = pass3Data.data.description;
+            updateFields.shortDescription = pass3Data.data.shortDescription;
+            if (pass3Data.data.keywords) {
+              updateFields.metaKeywords = pass3Data.data.keywords;
+            }
+          }
+
+          await updateDoc(doc(db, 'products', itemId), updateFields);
+          return pass3Data.data;
+        }
+      }
+
+      console.error('Pass 3 API error:', pass3Response.status);
+      await updateDoc(doc(db, 'products', itemId), { pass3Status: 'error' });
+      return null;
+    } catch (error) {
+      console.error('Pass 3 error:', error);
+      await updateDoc(doc(db, 'products', itemId), { pass3Status: 'error' });
+      return null;
+    }
   };
 
   const deleteItem = async (itemId) => {
@@ -2257,16 +2346,34 @@ export default function ProListingBuilder() {
                     )}
                     <details className="mt-2">
                       <summary className="text-xs text-blue-600 cursor-pointer hover:underline">Override category manually</summary>
-                      <select 
-                        value={selected.ebayCategoryId || ''} 
-                        onChange={e => {
+                      <select
+                        value={selected.ebayCategoryId || ''}
+                        onChange={async (e) => {
                           const catId = e.target.value;
                           const catName = EBAY_CATEGORY_ID_TO_NAME[catId] || '';
                           updateField(selected.id, 'ebayCategoryId', catId);
                           if (catName) {
                             updateField(selected.id, 'productCategory', catName);
                           }
-                        }} 
+                          // Re-run Pass 2 with new category's eBay aspects
+                          if (catId) {
+                            try {
+                              const aspectsRes = await fetch(`/api/ebay-category-aspects?categoryId=${catId}`);
+                              if (aspectsRes.ok) {
+                                const aspects = await aspectsRes.json();
+                                if (aspects.all?.length > 0) {
+                                  const item = { ...selected, productCategory: catName };
+                                  await runPass2(selected.id, item, aspects);
+                                  await updateDoc(doc(db, 'products', selected.id), {
+                                    categoryOverrideMessage: `Category changed \u2014 item specifics refreshed for ${catName}`
+                                  });
+                                }
+                              }
+                            } catch (err) {
+                              console.error('Category override error:', err);
+                            }
+                          }
+                        }}
                         className="w-full px-3 py-2 border rounded-lg text-xs mt-2"
                       >
                         <option value="">Select eBay category...</option>
@@ -2277,6 +2384,11 @@ export default function ProListingBuilder() {
                         ))}
                       </select>
                     </details>
+                    {selected.categoryOverrideMessage && (
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
+                        {selected.categoryOverrideMessage}
+                      </div>
+                    )}
                   </div>
 
                   {/* eBay Store Categories */}
@@ -2317,6 +2429,40 @@ export default function ProListingBuilder() {
                       <div className="p-4 text-gray-500 text-sm">No specifications found</div>
                     )}
                   </div>
+
+                  {/* Conflict Detection: Pass 1 productType vs Pass 2 "Type" field */}
+                  {selected.ebayItemSpecifics?.length > 0 && selected.productCategory && (() => {
+                    const typeSpec = selected.ebayItemSpecifics.find(s => s.ebayName === 'Type');
+                    if (typeSpec?.value && selected.productCategory) {
+                      const p2Type = typeSpec.value.toLowerCase();
+                      const p1Type = selected.productCategory.toLowerCase();
+                      if (p2Type !== p1Type && !p2Type.includes(p1Type) && !p1Type.includes(p2Type)) {
+                        return (
+                          <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg text-sm text-yellow-800">
+                            <strong>Category mismatch:</strong> AI detected <strong>{selected.productCategory}</strong> but eBay specifics suggest <strong>{typeSpec.value}</strong>. Consider changing the eBay category.
+                          </div>
+                        );
+                      }
+                    }
+                    return null;
+                  })()}
+
+                  {/* Pass 3 Status Indicators */}
+                  {selected.pass3Status === 'revising' && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 animate-pulse">
+                      Pass 3: Revising title and description with discovered specs...
+                    </div>
+                  )}
+                  {selected.pass3Status === 'complete' && selected.pass3Changes?.length > 0 && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                      Pass 3: {selected.pass3Changes.join('; ')}
+                    </div>
+                  )}
+                  {selected.pass3Status === 'error' && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                      Pass 3 revision failed
+                    </div>
+                  )}
 
                   {/* eBay Item Specifics (Pass 2) */}
                   {(selected.ebayItemSpecifics?.length > 0 || selected.pass2Status === 'filling') && (
