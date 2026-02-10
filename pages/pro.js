@@ -1808,7 +1808,7 @@ export default function ProListingBuilder() {
         usertype: product.productType || data._metadata?.productType || '',
         shortDescription: product.shortDescription || '',
         description: product.description || '',
-        specifications: product.specifications || {},
+        specifications: data._resolvedSpecs || product.specifications || {},
         rawSpecifications: product.rawSpecifications || [],
         qualityFlag: product.qualityFlag || 'NEEDS_REVIEW',
         ebayCategoryId: data._metadata?.detectedCategoryId || product.ebayCategoryId || '',
@@ -1847,7 +1847,7 @@ export default function ProListingBuilder() {
               productType: product.productType || data._metadata?.detectedCategory || '',
               title: product.title || `${item.brand} ${item.partNumber}`,
               ebayAspects: data._ebayAspects,
-              pass1Specs: product.specifications || {}
+              pass1Specs: data._resolvedSpecs || product.specifications || {}
             })
           });
 

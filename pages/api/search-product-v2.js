@@ -4,6 +4,7 @@
 // COMPREHENSIVE MAPPINGS for all product types
 
 import Anthropic from '@anthropic-ai/sdk';
+import { resolveSpecsObject } from '../../lib/field-name-resolver.js';
 
 // ============================================================================
 // PRODUCT TYPE TO EBAY CATEGORY MAPPING (COMPREHENSIVE)
@@ -962,8 +963,13 @@ export default async function handler(req, res) {
     
     const product = JSON.parse(jsonMatch[0]);
     const productType = product.productType || '';
-    
+
     console.log('AI Detected Product Type:', productType);
+
+    // Step 1b: Resolve AI spec field names to canonical SureDone field names
+    // e.g., "NominalRatedInputVoltage" → "inputvoltage", "Horsepower" → "horsepower"
+    const resolvedSpecs = resolveSpecsObject(product.specifications || {});
+    console.log('Resolved specs:', Object.keys(resolvedSpecs).length, 'fields');
     
     // Step 2: Map product type to eBay Category
     const ebayMapping = PRODUCT_TYPE_TO_EBAY_CATEGORY[productType] || null;
@@ -1015,6 +1021,7 @@ export default async function handler(req, res) {
         requiredAspects: ebayAspects?.required?.length || 0,
         recommendedAspects: ebayAspects?.recommended?.length || 0
       },
+      _resolvedSpecs: resolvedSpecs,
       _ebayAspects: ebayAspects
     });
     

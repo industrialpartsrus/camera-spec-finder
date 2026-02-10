@@ -13,6 +13,7 @@
 // =============================================================================
 
 import Anthropic from '@anthropic-ai/sdk';
+import { resolveFieldName } from '../../../lib/field-name-resolver.js';
 
 // Fields that are handled separately — skip them in AI filling
 const SKIP_FIELDS = new Set([
@@ -222,15 +223,13 @@ Respond with ONLY valid JSON object (no markdown, no backticks), mapping each eB
         multiValue: aspect.multiValue || false
       });
 
-      // Build SureDone payload using INLINE field names
-      // suredone-create-listing.js Pass 2 logic will correctly add the
-      // "ebayitemspecifics" prefix for non-native fields
+      // Build SureDone payload using resolved field names from consolidation map
+      // resolveFieldName checks: alias → multi-channel short name → ebayitemspecifics prefix
       if (isValid) {
-        if (aspect.suredoneInlineField) {
-          specificsForSuredone[aspect.suredoneInlineField] = value;
-        }
+        const resolvedField = resolveFieldName(ebayName);
+        specificsForSuredone[resolvedField] = value;
         filledCount++;
-        console.log(`  ✓ ${ebayName} → ${aspect.suredoneInlineField} = "${value}"`);
+        console.log(`  ✓ ${ebayName} → ${resolvedField} = "${value}"`);
       }
     }
 

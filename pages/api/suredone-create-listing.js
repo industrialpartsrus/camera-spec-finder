@@ -795,10 +795,35 @@ export default async function handler(req, res) {
 
     // === MAP SPECIFICATIONS TO EBAY INLINE FIELDS ===
     // Using SHORT field names (no prefix) to populate RECOMMENDED section
-    console.log('=== PROCESSING SPECIFICATIONS (SHORT NAMES FOR INLINE FIELDS) ===');
-    console.log('product.specifications:', JSON.stringify(product.specifications, null, 2));
 
     const ebayFieldsSet = new Set(); // Track which eBay fields we've already set
+
+    // === PASS 2: EBAY ITEM SPECIFICS (HIGHEST PRIORITY) ===
+    // These come from auto-fill-ebay-specifics.js with resolved field names
+    // (via resolveFieldName → canonical short names or ebayitemspecifics-prefixed)
+    // User edits from the UI are already merged into this object by pro.js
+    const ebaySpecifics = product.ebayItemSpecificsForSuredone || {};
+    const pass2Count = Object.keys(ebaySpecifics).length;
+
+    if (pass2Count > 0) {
+      console.log(`=== PASS 2 EBAY ITEM SPECIFICS: ${pass2Count} fields ===`);
+      for (const [fieldName, value] of Object.entries(ebaySpecifics)) {
+        if (value && typeof value === 'string' && value.trim()) {
+          formData.append(fieldName, value.trim());
+          ebayFieldsSet.add(fieldName);
+          console.log(`  PASS2: ${fieldName} = ${value}`);
+        }
+      }
+      console.log(`Pass 2 fields applied: ${ebayFieldsSet.size}`);
+    } else {
+      console.log('No Pass 2 eBay item specifics provided');
+    }
+
+    // === SPEC_TO_EBAY_FIELD FALLBACK (LOWEST PRIORITY) ===
+    // Only fills fields that Pass 2 didn't already cover
+    // This is a generic motor-centric mapping — Pass 2 is category-specific and more accurate
+    console.log('=== PROCESSING SPECIFICATIONS (FALLBACK MAPPING) ===');
+    console.log('product.specifications:', JSON.stringify(product.specifications, null, 2));
 
     if (product.specifications && typeof product.specifications === 'object') {
       console.log('Spec count:', Object.keys(product.specifications).length);
