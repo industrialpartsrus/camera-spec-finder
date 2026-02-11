@@ -1500,9 +1500,13 @@ export default function ProListingBuilder() {
       const data = await response.json();
       const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
       const brandMatch = text.match(/BRAND:\s*([^\|]+)/i);
-      const partMatch = text.match(/PART:\s*(.+)/i);
+      const partMatch = text.match(/PART:\s*([^\|]+)/i);
+      const seriesMatch = text.match(/SERIES:\s*([^\|]+)/i);
+      const frnMatch = text.match(/FRN:\s*([^\|]+)/i);
       if (brandMatch && partMatch) {
-        addToQueueWithValues(brandMatch[1].trim(), partMatch[1].trim());
+        const ocrSeries = seriesMatch ? seriesMatch[1].trim() : '';
+        const ocrFrn = frnMatch ? frnMatch[1].trim() : '';
+        addToQueueWithValues(brandMatch[1].trim(), partMatch[1].trim(), ocrSeries, ocrFrn);
       } else {
         alert('Could not extract info. Please enter manually.');
         setBrandName(brandMatch?.[1]?.trim() || '');
@@ -1534,14 +1538,22 @@ export default function ProListingBuilder() {
     return Array.from(keywords).slice(0, 20).join(', ');
   };
 
-  const addToQueueWithValues = async (brand, part) => {
+  const addToQueueWithValues = async (brand, part, ocrSeries = '', ocrFrn = '') => {
     if (!brand.trim() || !part.trim()) return alert('Enter brand and part number');
     try {
+      // If OCR captured series/FRN from the label, seed them into specifications
+      const initialSpecs = {};
+      if (ocrSeries) initialSpecs.series = ocrSeries;
+      if (ocrFrn) {
+        initialSpecs.firmwarerevision = ocrFrn;
+        initialSpecs.fwrevision = ocrFrn;
+        initialSpecs.frn = ocrFrn;
+      }
       const docRef = await addDoc(collection(db, 'products'), {
         brand: brand.trim(), partNumber: part.trim(), model: part.trim(),
         status: 'pending', createdBy: userName || 'Unknown', createdAt: serverTimestamp(),
         title: '', productCategory: '', shortDescription: '', description: '',
-        specifications: {}, rawSpecifications: [],
+        specifications: initialSpecs, rawSpecifications: [],
         condition: '', conditionNotes: '',
         price: '', quantity: '1', shelf: '',
         boxLength: '', boxWidth: '', boxHeight: '', weight: '',
