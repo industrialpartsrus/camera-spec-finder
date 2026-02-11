@@ -860,7 +860,7 @@ FIRST, determine what TYPE of product this is. Choose the MOST SPECIFIC type fro
 
 SECOND, extract EVERY possible technical specification. Here are the key specs to look for by product type:
 
-**BEARINGS (ALL TYPES):** borediameter, outsidediameter, width, material, sealtype, bearingseries, precisionrating, dynamicloadrating, staticloadrating, numberofrows, cagetype, countryoforigin
+**BEARINGS (ALL TYPES):** borediameter, outsidediameter, width, material, sealtype, bearingseries, precisionrating, dynamicloadrating, staticloadrating, numberofrows, cagetype
 **CAM FOLLOWERS:** ALL bearing specs PLUS: studdiameter, studlength, studtype (standard/heavy), rollerdiameter, rollerwidth, rollershape (crowned/cylindrical/flat), facedesign (hex socket/screwdriver slot/no drive), bearingtype (needle/ball), manufacturer
 **NEEDLE BEARINGS:** ALL bearing specs PLUS: rollerdiameter, numberofrollers, cagetype, greasetype
 **PILLOW BLOCKS:** ALL bearing specs PLUS: housingmaterial, housingtype, shaftsize, boltspacing, setscrew
@@ -875,13 +875,20 @@ SECOND, extract EVERY possible technical specification. Here are the key specs t
   - Include coil voltage in the title if found.
   - Flag if coil voltage could not be determined by setting qualityFlag to "COIL_VOLTAGE_UNKNOWN".
 **ALLEN-BRADLEY PRODUCTS:** series, firmwarerevision, platform, catalogprefix
-  - For Allen-Bradley (Rockwell Automation) products, extract these CRITICAL fields:
-  - SERIES: The revision letter, usually the last letter in the catalog number or on the label (e.g., Series A, B, C). Include as "series" in specifications.
-  - FIRMWARE REVISION (FRN/FW): Printed on the label as "FRN 24.011" or "FW 31.012". Critical for PLC processors. Include as "firmwarerevision". If not determinable, set to "Check label".
+  - ALLEN-BRADLEY SERIES vs PLATFORM — IMPORTANT DISTINCTION:
+  - "Series" for Allen-Bradley means a HARDWARE REVISION LETTER (A, B, C, D, etc.) printed on the label. This is NOT the product family.
+  - Example: 1769-L33ER Series B, FRN 24.011. Different series = different capabilities.
+  - Use these field names:
+    * "series" = The revision letter ONLY (e.g., "B", "C", "A") — NOT the platform name
+    * "platform" = The product family (e.g., "CompactLogix", "ControlLogix")
+    * "firmwarerevision" = The FRN/FW number (e.g., "24.011", "31.012")
+  - TITLE FORMAT: "Allen-Bradley 1769-L33ER /B CompactLogix Processor FRN 24.011"
+    The /B notation is standard AB shorthand for Series B. Include right after catalog number.
+  - If series or firmware cannot be determined, set to "See label" to flag the user.
   - PLATFORM NAME from catalog prefix: 1756=ControlLogix, 1769=CompactLogix, 1766=MicroLogix 1400, 1764=MicroLogix 1500, 1762=MicroLogix 1200, 1761=MicroLogix 1000, 1747=SLC 500, 1746=SLC 500 I/O, 1771=PLC-5 I/O, 1785=PLC-5, 2711=PanelView, 2198=Kinetix, 2097=Kinetix (older), 22A/22B/22C/22D=PowerFlex AC Drives, 25A/25B=PowerFlex 520, 20A/20B/20F/20G=PowerFlex 70/700, 100-C=Miniature Contactors, 700-H=Industrial Relays, 193-E=E3 Overload Relays, 1734=POINT I/O, 1794=FLEX I/O, 5069=Compact 5000 I/O
-  - Include the PLATFORM NAME in the title: "Allen-Bradley 1756-PA75 ControlLogix Power Supply" (NOT just "Allen-Bradley 1756-PA75 Power Supply")
-  - Include firmware in title if found: "Allen-Bradley 1756-L72 ControlLogix Processor FRN 24.011"
+  - Always include PLATFORM NAME in title: "Allen-Bradley 1756-PA75 ControlLogix Power Supply"
   - For AB contactors/relays (100-C, 700-H series), try to identify COIL VOLTAGE from catalog number suffix
+  - For OTHER manufacturers (Siemens, Mitsubishi, Omron, etc.): "series" means the product FAMILY name (e.g., "iQ-R", "S7-1200") — no revision letter concept
 
 Be AGGRESSIVE -- use your deep knowledge to include specs that are standard for this exact model even if you have to infer them from the model number/series naming conventions (e.g., McGill CFH series = Heavy Stud, Screwdriver Slot face, CAMROL series, Needle Bearing type).
 
@@ -903,10 +910,11 @@ Return ONLY valid JSON (no markdown, no code blocks):
 
 IMPORTANT RULES:
 1. "productType" MUST be one of the specific types listed above - be as specific as possible
-2. "type" in specifications should match "productType" 
+2. "type" in specifications should match "productType"
 3. Add ALL relevant technical specifications to the specifications object -- the MORE specs the BETTER
 4. Use lowercase keys with no spaces (e.g., "inputvoltage", "outputcurrent", "sensingdistance", "studdiameter")
-5. TITLE RULES:
+5. NEVER auto-fill or guess Country of Origin / Country of Manufacture. Leave these fields EMPTY. The user will select the country manually after inspecting the product label. Do NOT include "countryoforigin", "countryregionofmanufacture", or any field containing "country" in specifications.
+6. TITLE RULES:
    - NEVER include condition words: "New", "Used", "Refurbished", "NOS", "NIB", "Open Box", "For Parts"
    - DO include: brand, model, product type, 1-2 key distinguishing specs
    - Max 80 characters
