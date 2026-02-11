@@ -415,25 +415,45 @@ const STORE_TO_PRODUCT_CATEGORY = {
 
 // Condition options
 const CONDITION_OPTIONS = [
-  { value: 'new_in_box', label: 'New In Box (NIB)' },
-  { value: 'new_open_box', label: 'New - Open Box' },
-  { value: 'new_missing_hardware', label: 'New - Missing Hardware' },
-  { value: 'like_new_excellent', label: 'Excellent - Barely Used' },
-  { value: 'used_very_good', label: 'Used - Very Good' },
-  { value: 'used_good', label: 'Used - Good' },
-  { value: 'used_fair', label: 'Used - Fair' },
-  { value: 'for_parts', label: 'For Parts or Not Working' }
+  { value: 'new', label: 'New' },
+  { value: 'new_surplus', label: 'New Surplus' },
+  { value: 'new_in_box', label: 'New in Box' },
+  { value: 'open_box', label: 'Open Box' },
+  { value: 'refurbished', label: 'Refurbished' },
+  { value: 'manufacturer_refurbished', label: 'Manufacturer Refurbished' },
+  { value: 'used', label: 'Used' },
+  { value: 'for_parts', label: 'For Parts / Not Working' }
 ];
 
 const CONDITION_NOTES = {
-  'new_in_box': 'New item in original manufacturer packaging. Unopened and unused. Includes all original components, manuals, and hardware. We warranty all items for 30 days.',
-  'new_open_box': 'New item, factory seal broken or packaging removed. All original components included. Never used. We warranty all items for 30 days.',
-  'new_missing_hardware': 'New item, may be missing original packaging, manuals, or minor hardware. Fully functional and unused. We warranty all items for 30 days.',
-  'like_new_excellent': 'Previously owned, appears barely used with minimal signs of wear. Tested and fully functional. We warranty all items for 30 days.',
-  'used_very_good': 'Previously used, shows light cosmetic wear from normal use. Tested and fully functional. We warranty all items for 30 days.',
-  'used_good': 'Previously used, shows signs of wear or discoloration due to normal use. Tested and fully functional. We warranty all items for 30 days.',
-  'used_fair': 'Previously used, shows moderate to heavy wear. May have cosmetic damage. Tested and fully functional. We warranty all items for 30 days.',
+  'new': 'Brand new, unused item in original manufacturer packaging. All original components included. We warranty all items for 30 days.',
+  'new_surplus': 'New surplus stock. Unused item, may have older packaging or no original box. Fully functional. We warranty all items for 30 days.',
+  'new_in_box': 'New item in original sealed manufacturer packaging. Unopened and unused. We warranty all items for 30 days.',
+  'open_box': 'New item, packaging has been opened. All original components included. Never installed or used. We warranty all items for 30 days.',
+  'refurbished': 'Professionally refurbished to working condition. Tested and fully functional. May show signs of previous use. We warranty all items for 30 days.',
+  'manufacturer_refurbished': 'Refurbished by the original manufacturer to factory specifications. Tested and fully functional. We warranty all items for 30 days.',
+  'used': 'Previously used item. Tested and fully functional. May show signs of wear from normal use. We warranty all items for 30 days.',
   'for_parts': 'Item sold as-is for parts or repair. Not tested or may not be fully functional. No warranty provided.'
+};
+
+// Coil voltage enforcement — product types that commonly have coil voltages
+const COIL_VOLTAGE_PRODUCT_TYPES = new Set([
+  'Contactor', 'AC Contactor', 'DC Contactor',
+  'Motor Starter', 'Soft Starter', 'DOL Starter', 'Magnetic Starter',
+  'Control Relay', 'Relay', 'Ice Cube Relay', 'Plug-in Relay',
+  'Safety Relay', 'Safety Controller',
+  'Overload Relay',
+  'Solid State Relay', 'SSR',
+  'Time Delay Relay', 'Latching Relay',
+  'Solenoid Valve', 'Pneumatic Valve', 'Air Valve', 'Directional Valve'
+]);
+const COIL_VOLTAGE_KEYWORDS = ['relay', 'contactor', 'starter', 'solenoid'];
+
+const needsCoilVoltage = (productCategory) => {
+  if (!productCategory) return false;
+  if (COIL_VOLTAGE_PRODUCT_TYPES.has(productCategory)) return true;
+  const lower = productCategory.toLowerCase();
+  return COIL_VOLTAGE_KEYWORDS.some(kw => lower.includes(kw));
 };
 
 // Country of Origin options - eBay accepted values
@@ -1402,6 +1422,8 @@ export default function ProListingBuilder() {
   const [isNameSet, setIsNameSet] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState({});
+  const [coilVoltageVerified, setCoilVoltageVerified] = useState({});
   const [showSpecs, setShowSpecs] = useState(true);
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const fileInputRef = useRef(null);
@@ -1504,7 +1526,7 @@ export default function ProListingBuilder() {
         status: 'pending', createdBy: userName || 'Unknown', createdAt: serverTimestamp(),
         title: '', productCategory: '', shortDescription: '', description: '',
         specifications: {}, rawSpecifications: [],
-        condition: 'used_good', conditionNotes: CONDITION_NOTES['used_good'],
+        condition: '', conditionNotes: '',
         price: '', quantity: '1', shelf: '',
         boxLength: '', boxWidth: '', boxHeight: '', weight: '',
         qualityFlag: '', ebayCategoryId: '', ebayStoreCategoryId: '', ebayStoreCategoryId2: '',
@@ -1825,6 +1847,7 @@ export default function ProListingBuilder() {
       }
       
       await updateDoc(doc(db, 'products', itemId), updateData);
+      setSubmitAttempted(prev => ({ ...prev, [itemId]: true }));
 
       // =================================================================
       // PASS 2 + PASS 3: Auto-fill eBay specifics, then revise title/desc
@@ -2008,7 +2031,14 @@ export default function ProListingBuilder() {
   const sendToSureDone = async (itemId) => {
     const item = queue.find(q => q.id === itemId);
     if (!item) return alert('Item not found');
+    setSubmitAttempted(prev => ({ ...prev, [itemId]: true }));
     if (!item.title || !item.price) return alert('Please fill in Title and Price');
+    if (!item.condition) return alert('Please select a Condition');
+    if (!item.shelf) return alert('Please enter a Shelf Location');
+    if (needsCoilVoltage(item.productCategory)) {
+      if (!item.specifications?.coilvoltage) return alert('Coil voltage is required for ' + item.productCategory + '. Please check the product nameplate.');
+      if (!item.coilVoltageVerified && !coilVoltageVerified[itemId]) return alert('Please verify the coil voltage by checking the confirmation checkbox.');
+    }
 
     setIsSending(true);
     try {
@@ -2027,7 +2057,7 @@ export default function ProListingBuilder() {
           brand: item.brand,
           mpn: item.partNumber,
           model: item.model || item.partNumber,
-          condition: conditionOption?.label || 'Used - Good',
+          condition: conditionOption?.label || 'Used',
           usertype: item.usertype || item.productCategory || '',
           ...(item.boxLength && { boxlength: item.boxLength }),
           ...(item.boxWidth && { boxwidth: item.boxWidth }),
@@ -2068,7 +2098,7 @@ export default function ProListingBuilder() {
           model: item.model || item.partNumber,
           productCategory: item.productCategory || '',
           usertype: item.usertype || item.productCategory || '',
-          condition: conditionOption?.label || 'Used - Good',
+          condition: conditionOption?.label || 'Used',
           conditionNotes: item.conditionNotes || '',
           specifications: item.specifications || {},
           rawSpecifications: item.rawSpecifications || [],
@@ -2464,6 +2494,38 @@ export default function ProListingBuilder() {
                     </div>
                   )}
 
+                  {/* Coil Voltage Enforcement — for relays, contactors, starters, solenoid valves */}
+                  {needsCoilVoltage(selected.productCategory) && (
+                    <div className="p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+                      <p className="font-bold text-yellow-800 text-sm">
+                        ⚡ COIL VOLTAGE REQUIRED — This product type commonly has a coil voltage. Please verify and enter the coil voltage. Check the product label/nameplate and add a photo showing the coil voltage.
+                      </p>
+                      <div className="mt-3 flex items-center gap-4">
+                        <label className="text-sm font-bold text-yellow-900 whitespace-nowrap">Coil Voltage:</label>
+                        <input type="text" placeholder="e.g. 24V DC, 120V AC, 240V AC"
+                          value={selected.specifications?.coilvoltage || ''}
+                          onChange={e => updateSpecification(selected.id, 'coilvoltage', e.target.value)}
+                          className="flex-1 px-3 py-2 border-2 border-yellow-400 rounded-lg bg-white font-semibold text-lg"
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 mt-3 cursor-pointer">
+                        <input type="checkbox"
+                          checked={selected.coilVoltageVerified || coilVoltageVerified[selected.id] || false}
+                          onChange={e => { const checked = e.target.checked; setCoilVoltageVerified(prev => ({ ...prev, [selected.id]: checked })); updateField(selected.id, 'coilVoltageVerified', checked); }}
+                          className="w-5 h-5 accent-yellow-600"
+                        />
+                        <span className="text-sm font-semibold text-yellow-900">I have verified the coil voltage from the product nameplate/label</span>
+                      </label>
+                      {submitAttempted[selected.id] && !selected.specifications?.coilvoltage && (
+                        <div className="mt-3 p-3 bg-red-100 border border-red-400 rounded-lg">
+                          <p className="text-sm font-bold text-red-800">
+                            🚫 Coil voltage is required for {selected.productCategory}. This is the #1 reason for returns. Please check the product nameplate and enter the coil voltage before submitting.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* eBay Item Specifics (Pass 2) */}
                   {(selected.ebayItemSpecifics?.length > 0 || selected.pass2Status === 'filling') && (
                     <div className="border rounded-lg overflow-hidden">
@@ -2676,11 +2738,17 @@ export default function ProListingBuilder() {
 
                   {/* Condition */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Condition</label>
-                    <select value={selected.condition || 'used_good'} onChange={e => updateCondition(selected.id, e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+                    <label className="block text-sm font-semibold mb-2">Condition <span className="text-red-500">*</span></label>
+                    <select value={selected.condition || ''} onChange={e => updateCondition(selected.id, e.target.value)} className={`w-full px-3 py-2 border rounded-lg ${!selected.condition && submitAttempted[selected.id] ? 'border-red-500 bg-red-50' : ''}`}>
+                      <option value="" disabled>-- Select Condition --</option>
                       {CONDITION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
-                    <p className="text-xs text-gray-600 mt-2 p-2 bg-gray-50 rounded">{selected.conditionNotes}</p>
+                    {!selected.condition && submitAttempted[selected.id] && (
+                      <p className="text-xs text-red-600 mt-1 font-medium">Condition is required before submitting</p>
+                    )}
+                    {selected.conditionNotes && (
+                      <p className="text-xs text-gray-600 mt-2 p-2 bg-gray-50 rounded">{selected.conditionNotes}</p>
+                    )}
                   </div>
 
                   {/* Country of Origin - Autocomplete */}
@@ -2734,17 +2802,25 @@ export default function ProListingBuilder() {
                       <input type="text" placeholder="0.00" value={selected.price || ''} onChange={e => updateField(selected.id, 'price', e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold mb-2">Shelf Location</label>
-                      <input type="text" placeholder="A1" value={selected.shelf || ''} onChange={e => updateField(selected.id, 'shelf', e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                      <label className="block text-sm font-semibold mb-2">Shelf Location <span className="text-red-500">*</span></label>
+                      <input type="text" placeholder="A1" value={selected.shelf || ''} onChange={e => { let val = e.target.value; if (val.length > 0) val = val.charAt(0).toUpperCase() + val.slice(1); updateField(selected.id, 'shelf', val); }} className={`w-full px-3 py-2 border rounded-lg ${!selected.shelf && submitAttempted[selected.id] ? 'border-red-500 bg-red-50' : ''}`} />
+                      {!selected.shelf && submitAttempted[selected.id] && (
+                        <p className="text-xs text-red-600 mt-1 font-medium">Shelf location is required before submitting</p>
+                      )}
                     </div>
                   </div>
 
                   {/* Send Button */}
-                  <button onClick={() => sendToSureDone(selected.id)} disabled={isSending || !selected.title || !selected.price}
-                    className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    {isSending ? <><Loader className="w-5 h-5 animate-spin" /> Sending...</> : 
-                      selected.isEditingExisting ? '📝 Update in SureDone' : '🚀 Send to SureDone'}
-                  </button>
+                  {(() => {
+                    const coilBlocking = needsCoilVoltage(selected.productCategory) && (!selected.specifications?.coilvoltage || !(selected.coilVoltageVerified || coilVoltageVerified[selected.id]));
+                    return (
+                      <button onClick={() => sendToSureDone(selected.id)} disabled={isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking}
+                        className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        {isSending ? <><Loader className="w-5 h-5 animate-spin" /> Sending...</> :
+                          selected.isEditingExisting ? '📝 Update in SureDone' : '🚀 Send to SureDone'}
+                      </button>
+                    );
+                  })()}
                 </div>
               )}
 

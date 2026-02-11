@@ -862,6 +862,10 @@ SECOND, extract EVERY possible technical specification. Here are the key specs t
 **PLCs:** inputpoints, outputpoints, communicationstandard, powersupply, memorysize
 **SENSORS:** sensingrange, operatingdistance, sensortype, outputtype, voltage, connectiontype
 **PNEUMATIC:** borediameter, strokelength, maxpsi, portsize, cylindertype
+**RELAYS/CONTACTORS/STARTERS/SOLENOIDS:** coilvoltage, contactrating, poles, auxiliarycontacts, coilpower, operatingvoltage, mountingtype
+  - For relays, contactors, motor starters, solenoid valves, and similar products: ALWAYS try to identify the coil voltage from the part number or product data. Common coil voltages are: 24V DC, 24V AC, 48V DC, 110V AC, 120V AC, 208V AC, 220V AC, 240V AC, 277V AC, 380V AC, 480V AC, 600V AC.
+  - Include coil voltage in the title if found.
+  - Flag if coil voltage could not be determined by setting qualityFlag to "COIL_VOLTAGE_UNKNOWN".
 
 Be AGGRESSIVE -- use your deep knowledge to include specs that are standard for this exact model even if you have to infer them from the model number/series naming conventions (e.g., McGill CFH series = Heavy Stud, Screwdriver Slot face, CAMROL series, Needle Bearing type).
 
@@ -950,14 +954,25 @@ export default async function handler(req, res) {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
+      // =====================================================================
+      // ⚠️  CRITICAL: DO NOT REMOVE WEB SEARCH
+      // Web search is essential for identifying obscure industrial parts.
+      // Removing it caused a major regression on 2/9/2026 when switching
+      // from v1 to v2. The AI cannot accurately identify niche products
+      // (filters, hydraulic components, specialty sensors) without web access.
+      // See docs/SYSTEM_SPEC.md for details.
+      // =====================================================================
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }]
     });
 
     // Extract the JSON from AI response
-    // When AI uses web_search, the response has multiple content blocks:
-    //   [text, tool_use, tool_result, text, tool_use, tool_result, ..., text]
-    // The JSON answer is in the LAST text block, not the first.
+    // =====================================================================
+    // ⚠️  CRITICAL: MUST USE LAST TEXT BLOCK
+    // When web search is enabled, the response contains multiple content
+    // blocks (search queries, results, reasoning). The final JSON answer
+    // is ALWAYS in the LAST text block. Do not use .join() or first block.
+    // =====================================================================
     let text = '';
     if (response.content && Array.isArray(response.content)) {
       const textBlocks = response.content.filter(b => b.type === 'text' && b.text);

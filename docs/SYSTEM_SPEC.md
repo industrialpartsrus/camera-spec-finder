@@ -117,6 +117,13 @@ The primary research endpoint. Single AI call with web search, then maps results
 }
 ```
 
+## Critical Configuration — DO NOT CHANGE
+- search-product-v2.js MUST have web search enabled:
+  `tools: [{ type: 'web_search_20250305', name: 'web_search' }]`
+- Response parsing MUST use the LAST text block pattern (not join, not first)
+- Removing web search causes AI to fail on obscure industrial parts
+- This was a confirmed regression on 2/9/2026 — do not repeat it
+
 #### `/api/search-product` (912 lines) — Legacy v1
 
 Original research endpoint. Still exists but no longer called by /pro (was switched to v2).
