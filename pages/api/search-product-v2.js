@@ -863,7 +863,8 @@ SECOND, extract EVERY possible technical specification. Here are the key specs t
 **SENSORS:** sensingrange, operatingdistance, sensortype, outputtype, voltage, connectiontype
 **PNEUMATIC:** borediameter, strokelength, maxpsi, portsize, cylindertype
 **RELAYS/CONTACTORS/STARTERS/SOLENOIDS:** coilvoltage, contactrating, poles, auxiliarycontacts, coilpower, operatingvoltage, mountingtype
-  - For relays, contactors, motor starters, solenoid valves, and similar products: ALWAYS try to identify the coil voltage from the part number or product data. Common coil voltages are: 24V DC, 24V AC, 48V DC, 110V AC, 120V AC, 208V AC, 220V AC, 240V AC, 277V AC, 380V AC, 480V AC, 600V AC.
+  - For relays, contactors, motor starters, solenoid valves, and similar products: ALWAYS try to identify the coil voltage from the part number or product data.
+  - When identifying coil voltage, normalize to standard values: 12VDC, 24VDC, 48VDC, 12VAC, 24VAC, 48VAC, 110VAC, 120VAC, 208VAC, 220VAC, 230VAC, 240VAC, 277VAC, 380VAC, 400VAC, 480VAC, 600VAC. For ranges like 110/120V, use 120VAC. For 220/240V, use 240VAC. For 460/480V, use 480VAC. For 575/600V, use 600VAC.
   - Include coil voltage in the title if found.
   - Flag if coil voltage could not be determined by setting qualityFlag to "COIL_VOLTAGE_UNKNOWN".
 

@@ -7,6 +7,7 @@ import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Uplo
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import InventoryCheckAlert from '../components/InventoryCheckAlert';
+import { normalizeCoilVoltage, STANDARD_COIL_VOLTAGES } from '../lib/coil-voltage-normalizer';
 
 // Product category options - will be built from EBAY_CATEGORY_ID_TO_NAME
 let CATEGORY_OPTIONS = [];
@@ -2500,13 +2501,42 @@ export default function ProListingBuilder() {
                       <p className="font-bold text-yellow-800 text-sm">
                         ⚡ COIL VOLTAGE REQUIRED — This product type commonly has a coil voltage. Please verify and enter the coil voltage. Check the product label/nameplate and add a photo showing the coil voltage.
                       </p>
-                      <div className="mt-3 flex items-center gap-4">
-                        <label className="text-sm font-bold text-yellow-900 whitespace-nowrap">Coil Voltage:</label>
-                        <input type="text" placeholder="e.g. 24V DC, 120V AC, 240V AC"
+                      {/* Raw input — what's on the nameplate */}
+                      <div className="mt-3">
+                        <label className="text-sm font-bold text-yellow-900">Coil Voltage (as shown on nameplate):</label>
+                        <input type="text" placeholder="e.g. 24V DC, 110/120VAC, DC48V"
+                          value={selected.coilVoltageRaw || ''}
+                          onChange={e => {
+                            const raw = e.target.value;
+                            updateField(selected.id, 'coilVoltageRaw', raw);
+                            const result = normalizeCoilVoltage(raw);
+                            if (result.confidence === 'high') {
+                              updateSpecification(selected.id, 'coilvoltage', result.standardized);
+                            }
+                          }}
+                          className="w-full mt-1 px-3 py-2 border-2 border-yellow-400 rounded-lg bg-white font-semibold text-lg"
+                        />
+                        {selected.coilVoltageRaw && (() => {
+                          const result = normalizeCoilVoltage(selected.coilVoltageRaw);
+                          if (result.confidence === 'high' && result.standardized !== 'Other') {
+                            return <p className="text-sm text-green-700 mt-1 font-medium">Standardized as: {result.standardized}</p>;
+                          } else if (result.standardized === 'Other') {
+                            return <p className="text-sm text-orange-600 mt-1 font-medium">Could not auto-detect — please select from dropdown</p>;
+                          }
+                          return null;
+                        })()}
+                      </div>
+                      {/* Standard value dropdown */}
+                      <div className="mt-2">
+                        <label className="text-sm font-bold text-yellow-900">Standard Value (used in listing):</label>
+                        <select
                           value={selected.specifications?.coilvoltage || ''}
                           onChange={e => updateSpecification(selected.id, 'coilvoltage', e.target.value)}
-                          className="flex-1 px-3 py-2 border-2 border-yellow-400 rounded-lg bg-white font-semibold text-lg"
-                        />
+                          className="w-full mt-1 px-3 py-2 border-2 border-yellow-400 rounded-lg bg-white font-semibold"
+                        >
+                          <option value="">-- Select Standard Value --</option>
+                          {STANDARD_COIL_VOLTAGES.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
                       </div>
                       <label className="flex items-center gap-2 mt-3 cursor-pointer">
                         <input type="checkbox"
@@ -2519,7 +2549,7 @@ export default function ProListingBuilder() {
                       {submitAttempted[selected.id] && !selected.specifications?.coilvoltage && (
                         <div className="mt-3 p-3 bg-red-100 border border-red-400 rounded-lg">
                           <p className="text-sm font-bold text-red-800">
-                            🚫 Coil voltage is required for {selected.productCategory}. This is the #1 reason for returns. Please check the product nameplate and enter the coil voltage before submitting.
+                            Coil voltage is required for {selected.productCategory}. This is the #1 reason for returns. Please check the product nameplate and enter the coil voltage before submitting.
                           </p>
                         </div>
                       )}
