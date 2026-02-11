@@ -21,7 +21,7 @@ export default async function handler(req, res) {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageData }},
-            { type: 'text', text: 'Look at this nameplate and extract: 1) Brand name, 2) Part or model number. Return as: BRAND: [name] | PART: [number]' }
+            { type: 'text', text: 'Look at this nameplate/product label and extract:\n1) Brand name\n2) Part or model number (the catalog number or MPN)\n\nBRAND RULES:\n- If you see "AB" alone (without additional letters), the brand is "Allen-Bradley" — NOT "ABB"\n- If you see "A-B" or "A.B.", the brand is "Allen-Bradley"\n- If you see "Allen-Bradley" or "Allen Bradley", use "Allen-Bradley" (with hyphen)\n- If you see "Rockwell" or "Rockwell Automation", the brand is "Allen-Bradley"\n- "ABB" is a DIFFERENT company — only use ABB if you clearly see the full "ABB" name/logo\n\nReturn as: BRAND: [name] | PART: [number]' }
           ]
         }]
       })

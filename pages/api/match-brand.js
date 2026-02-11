@@ -4,6 +4,8 @@ import brands from '../../data/bigcommerce_brands.json';
 // Common brand synonyms/aliases → canonical brand key in bigcommerce_brands.json
 const BRAND_ALIASES = {
   'a-b': 'allen bradley',
+  'a.b.': 'allen bradley',
+  'a/b': 'allen bradley',
   'ab': 'allen bradley',
   'allen-bradley': 'allen bradley',
   'rockwell': 'allen bradley',

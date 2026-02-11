@@ -457,6 +457,20 @@ const needsCoilVoltage = (productCategory) => {
   return COIL_VOLTAGE_KEYWORDS.some(kw => lower.includes(kw));
 };
 
+// Emitter/Receiver set detection for photoelectric sensors, light curtains, etc.
+const EMITTER_RECEIVER_PRODUCT_TYPES = new Set([
+  'Photoelectric Sensor', 'Through Beam Sensor',
+  'Fiber Optic Sensor', 'Light Curtain', 'Safety Light Curtain',
+  'Area Scanner', 'Safety Scanner'
+]);
+const EMITTER_RECEIVER_KEYWORDS = ['emitter', 'receiver', 'through-beam', 'through beam', 'light curtain', 'beam'];
+const needsEmitterReceiverCheck = (productCategory) => {
+  if (!productCategory) return false;
+  if (EMITTER_RECEIVER_PRODUCT_TYPES.has(productCategory)) return true;
+  const lower = productCategory.toLowerCase();
+  return EMITTER_RECEIVER_KEYWORDS.some(kw => lower.includes(kw));
+};
+
 // Country of Origin options - eBay accepted values
 // Sorted with most common industrial equipment manufacturing countries first
 const COUNTRIES = [
@@ -1425,6 +1439,7 @@ export default function ProListingBuilder() {
   const [isSending, setIsSending] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState({});
   const [coilVoltageVerified, setCoilVoltageVerified] = useState({});
+  const [emitterReceiverStatus, setEmitterReceiverStatus] = useState({});
   const [showSpecs, setShowSpecs] = useState(true);
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const fileInputRef = useRef(null);
@@ -1881,6 +1896,38 @@ export default function ProListingBuilder() {
     catch (error) { console.error('Error updating field:', error); }
   };
 
+  // Auto-modify title and description when emitter/receiver status changes
+  const applyEmitterReceiverToListing = async (itemId, status, item) => {
+    let title = item.title || '';
+    let description = item.description || '';
+
+    // Strip any previous ER suffixes/banners so they don't stack
+    title = title
+      .replace(/\s*-\s*EMITTER ONLY$/i, '')
+      .replace(/\s*-\s*RECEIVER ONLY$/i, '')
+      .replace(/\s*-\s*Complete Emitter\/Receiver Set$/i, '');
+    description = description
+      .replace(/<p[^>]*style="[^"]*background[^"]*"[^>]*>.*?(EMITTER ONLY|RECEIVER ONLY|COMPLETE SET).*?<\/p>/gi, '');
+
+    if (status === 'emitter') {
+      title = (title + ' - EMITTER ONLY').substring(0, 80);
+      const warning = '<p style="background:#fff3cd;padding:10px;border:1px solid #ffc107;font-weight:bold;margin-bottom:15px;">This listing is for the EMITTER ONLY. The receiver is NOT included.</p>';
+      description = warning + description;
+    } else if (status === 'receiver') {
+      title = (title + ' - RECEIVER ONLY').substring(0, 80);
+      const warning = '<p style="background:#fff3cd;padding:10px;border:1px solid #ffc107;font-weight:bold;margin-bottom:15px;">This listing is for the RECEIVER ONLY. The emitter is NOT included.</p>';
+      description = warning + description;
+    } else if (status === 'set') {
+      title = (title + ' - Complete Emitter/Receiver Set').substring(0, 80);
+      const notice = '<p style="background:#d4edda;padding:10px;border:1px solid #28a745;font-weight:bold;margin-bottom:15px;">This listing includes the COMPLETE SET with both emitter and receiver units.</p>';
+      description = notice + description;
+    }
+    // 'na' = no changes, just stripped previous modifications
+
+    try { await updateDoc(doc(db, 'products', itemId), { title, description }); }
+    catch (error) { console.error('Error applying ER status to listing:', error); }
+  };
+
   const updateSpecification = async (itemId, specKey, value) => {
     const item = queue.find(q => q.id === itemId);
     if (!item) return;
@@ -2039,6 +2086,9 @@ export default function ProListingBuilder() {
     if (needsCoilVoltage(item.productCategory)) {
       if (!item.specifications?.coilvoltage) return alert('Coil voltage is required for ' + item.productCategory + '. Please check the product nameplate.');
       if (!item.coilVoltageVerified && !coilVoltageVerified[itemId]) return alert('Please verify the coil voltage by checking the confirmation checkbox.');
+    }
+    if (needsEmitterReceiverCheck(item.productCategory)) {
+      if (!item.emitterReceiverStatus && !emitterReceiverStatus[itemId]) return alert('Please select the emitter/receiver status for this product.');
     }
 
     setIsSending(true);
@@ -2556,6 +2606,78 @@ export default function ProListingBuilder() {
                     </div>
                   )}
 
+                  {/* Emitter/Receiver Set Detection — for photoelectric sensors, light curtains, through-beam sensors */}
+                  {needsEmitterReceiverCheck(selected.productCategory) && (
+                    <div className="p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+                      <p className="font-bold text-yellow-800 text-sm">
+                        EMITTER/RECEIVER DETECTION — This product type often comes as a paired set (emitter + receiver). Please select:
+                      </p>
+                      <div className="mt-3 space-y-2">
+                        {[
+                          { value: 'set', label: 'Complete Set (Emitter + Receiver together)' },
+                          { value: 'emitter', label: 'Emitter Only' },
+                          { value: 'receiver', label: 'Receiver Only' },
+                          { value: 'na', label: 'Not Applicable (single unit sensor)' }
+                        ].map(opt => (
+                          <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name={`er-${selected.id}`}
+                              value={opt.value}
+                              checked={(selected.emitterReceiverStatus || emitterReceiverStatus[selected.id]) === opt.value}
+                              onChange={() => {
+                                setEmitterReceiverStatus(prev => ({ ...prev, [selected.id]: opt.value }));
+                                updateField(selected.id, 'emitterReceiverStatus', opt.value);
+                                applyEmitterReceiverToListing(selected.id, opt.value, selected);
+                              }}
+                              className="w-4 h-4 accent-yellow-600"
+                            />
+                            <span className="text-sm font-medium text-yellow-900">{opt.label}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                      {/* If Complete Set — show both part number fields */}
+                      {(selected.emitterReceiverStatus || emitterReceiverStatus[selected.id]) === 'set' && (
+                        <div className="mt-3 space-y-2">
+                          <div>
+                            <label className="text-sm font-bold text-yellow-900">Emitter Part Number:</label>
+                            <input type="text"
+                              value={selected.emitterPartNumber || ''}
+                              onChange={e => {
+                                const val = e.target.value;
+                                updateField(selected.id, 'emitterPartNumber', val);
+                                const recvPN = selected.receiverPartNumber || '';
+                                if (val && recvPN) updateField(selected.id, 'partNumber', val + ' / ' + recvPN);
+                              }}
+                              className="w-full mt-1 px-3 py-2 border-2 border-yellow-400 rounded-lg bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-bold text-yellow-900">Receiver Part Number:</label>
+                            <input type="text"
+                              value={selected.receiverPartNumber || ''}
+                              onChange={e => {
+                                const val = e.target.value;
+                                updateField(selected.id, 'receiverPartNumber', val);
+                                const emitPN = selected.emitterPartNumber || '';
+                                if (emitPN && val) updateField(selected.id, 'partNumber', emitPN + ' / ' + val);
+                              }}
+                              className="w-full mt-1 px-3 py-2 border-2 border-yellow-400 rounded-lg bg-white"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Validation: must select an option before submit */}
+                      {submitAttempted[selected.id] && !(selected.emitterReceiverStatus || emitterReceiverStatus[selected.id]) && (
+                        <div className="mt-3 p-3 bg-red-100 border border-red-400 rounded-lg">
+                          <p className="text-sm font-bold text-red-800">
+                            Please select whether this is a complete set, emitter only, receiver only, or not applicable.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* eBay Item Specifics (Pass 2) */}
                   {(selected.ebayItemSpecifics?.length > 0 || selected.pass2Status === 'filling') && (
                     <div className="border rounded-lg overflow-hidden">
@@ -2843,8 +2965,9 @@ export default function ProListingBuilder() {
                   {/* Send Button */}
                   {(() => {
                     const coilBlocking = needsCoilVoltage(selected.productCategory) && (!selected.specifications?.coilvoltage || !(selected.coilVoltageVerified || coilVoltageVerified[selected.id]));
+                    const erBlocking = needsEmitterReceiverCheck(selected.productCategory) && !(selected.emitterReceiverStatus || emitterReceiverStatus[selected.id]);
                     return (
-                      <button onClick={() => sendToSureDone(selected.id)} disabled={isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking}
+                      <button onClick={() => sendToSureDone(selected.id)} disabled={isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking || erBlocking}
                         className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                         {isSending ? <><Loader className="w-5 h-5 animate-spin" /> Sending...</> :
                           selected.isEditingExisting ? '📝 Update in SureDone' : '🚀 Send to SureDone'}

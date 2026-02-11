@@ -822,6 +822,13 @@ CRITICAL: You MUST find specifications for the EXACT model number "${partNumber}
 - If you cannot find the exact specs for "${partNumber}", return what you CAN confirm and set "qualityFlag" to "NEEDS ATTENTION".
 - The model/MPN in your response MUST be "${partNumber}" -- not a similar part number.
 
+BRAND RULES:
+- "AB" alone means Allen-Bradley (Rockwell Automation), NOT ABB
+- Allen-Bradley products often display just "AB" on the label
+- ABB is a completely different company (formerly ASEA Brown Boveri) — only use "ABB" if the full "ABB" name or logo is clearly present
+- Normalize "Allen Bradley", "AllenBradley", "A-B", "A.B." → "Allen-Bradley"
+- If brand is "Rockwell" or "Rockwell Automation", use "Allen-Bradley" as the brand name
+
 FIRST, determine what TYPE of product this is. Choose the MOST SPECIFIC type from this list:
 
 **MOTORS:** Servo Motor, AC Servo Motor, DC Servo Motor, Stepper Motor, Electric Motor, AC Motor, DC Motor, Gearmotor, Induction Motor
@@ -867,6 +874,14 @@ SECOND, extract EVERY possible technical specification. Here are the key specs t
   - When identifying coil voltage, normalize to standard values: 12VDC, 24VDC, 48VDC, 12VAC, 24VAC, 48VAC, 110VAC, 120VAC, 208VAC, 220VAC, 230VAC, 240VAC, 277VAC, 380VAC, 400VAC, 480VAC, 600VAC. For ranges like 110/120V, use 120VAC. For 220/240V, use 240VAC. For 460/480V, use 480VAC. For 575/600V, use 600VAC.
   - Include coil voltage in the title if found.
   - Flag if coil voltage could not be determined by setting qualityFlag to "COIL_VOLTAGE_UNKNOWN".
+**ALLEN-BRADLEY PRODUCTS:** series, firmwarerevision, platform, catalogprefix
+  - For Allen-Bradley (Rockwell Automation) products, extract these CRITICAL fields:
+  - SERIES: The revision letter, usually the last letter in the catalog number or on the label (e.g., Series A, B, C). Include as "series" in specifications.
+  - FIRMWARE REVISION (FRN/FW): Printed on the label as "FRN 24.011" or "FW 31.012". Critical for PLC processors. Include as "firmwarerevision". If not determinable, set to "Check label".
+  - PLATFORM NAME from catalog prefix: 1756=ControlLogix, 1769=CompactLogix, 1766=MicroLogix 1400, 1764=MicroLogix 1500, 1762=MicroLogix 1200, 1761=MicroLogix 1000, 1747=SLC 500, 1746=SLC 500 I/O, 1771=PLC-5 I/O, 1785=PLC-5, 2711=PanelView, 2198=Kinetix, 2097=Kinetix (older), 22A/22B/22C/22D=PowerFlex AC Drives, 25A/25B=PowerFlex 520, 20A/20B/20F/20G=PowerFlex 70/700, 100-C=Miniature Contactors, 700-H=Industrial Relays, 193-E=E3 Overload Relays, 1734=POINT I/O, 1794=FLEX I/O, 5069=Compact 5000 I/O
+  - Include the PLATFORM NAME in the title: "Allen-Bradley 1756-PA75 ControlLogix Power Supply" (NOT just "Allen-Bradley 1756-PA75 Power Supply")
+  - Include firmware in title if found: "Allen-Bradley 1756-L72 ControlLogix Processor FRN 24.011"
+  - For AB contactors/relays (100-C, 700-H series), try to identify COIL VOLTAGE from catalog number suffix
 
 Be AGGRESSIVE -- use your deep knowledge to include specs that are standard for this exact model even if you have to infer them from the model number/series naming conventions (e.g., McGill CFH series = Heavy Stud, Screwdriver Slot face, CAMROL series, Needle Bearing type).
 
