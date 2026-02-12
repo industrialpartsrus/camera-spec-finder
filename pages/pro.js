@@ -8,6 +8,27 @@ import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import InventoryCheckAlert from '../components/InventoryCheckAlert';
 import { normalizeCoilVoltage, STANDARD_COIL_VOLTAGES } from '../lib/coil-voltage-normalizer';
+import dynamic from 'next/dynamic';
+const ReactQuill = dynamic(() => import('react-quill'), {
+  ssr: false,
+  loading: () => <div className="h-64 border rounded-lg flex items-center justify-center text-gray-400">Loading editor...</div>
+});
+
+const QUILL_MODULES = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strikethrough'],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    [{ 'align': [] }],
+    ['link'],
+    ['clean']
+  ]
+};
+
+const QUILL_FORMATS = [
+  'header', 'bold', 'italic', 'underline', 'strikethrough',
+  'list', 'align', 'link'
+];
 
 // Product category options - will be built from EBAY_CATEGORY_ID_TO_NAME
 let CATEGORY_OPTIONS = [];
@@ -1440,6 +1461,7 @@ export default function ProListingBuilder() {
   const [submitAttempted, setSubmitAttempted] = useState({});
   const [coilVoltageVerified, setCoilVoltageVerified] = useState({});
   const [emitterReceiverStatus, setEmitterReceiverStatus] = useState({});
+  const [descriptionViewMode, setDescriptionViewMode] = useState({});
   const [showSpecs, setShowSpecs] = useState(true);
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const fileInputRef = useRef(null);
@@ -2884,13 +2906,41 @@ export default function ProListingBuilder() {
 
                   {/* Description */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Description</label>
-                    <textarea value={selected.description || ''} onChange={e => updateField(selected.id, 'description', e.target.value)} className="w-full px-3 py-2 border rounded-lg h-40 font-mono text-sm" />
-                    {selected.description?.includes('<') && (
-                      <div className="mt-2 p-3 bg-gray-50 border rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 mb-2">Preview:</p>
-                        <div className="text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: selected.description }} />
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold">Description</label>
+                      <div className="flex border rounded-lg overflow-hidden text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setDescriptionViewMode(prev => ({ ...prev, [selected.id]: 'visual' }))}
+                          className={`px-3 py-1 ${(descriptionViewMode[selected.id] || 'visual') === 'visual' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        >
+                          Visual
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDescriptionViewMode(prev => ({ ...prev, [selected.id]: 'html' }))}
+                          className={`px-3 py-1 ${descriptionViewMode[selected.id] === 'html' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        >
+                          HTML Source
+                        </button>
                       </div>
+                    </div>
+                    {(descriptionViewMode[selected.id] || 'visual') === 'visual' ? (
+                      <ReactQuill
+                        theme="snow"
+                        value={selected.description || ''}
+                        onChange={(content) => updateField(selected.id, 'description', content)}
+                        modules={QUILL_MODULES}
+                        formats={QUILL_FORMATS}
+                        style={{ minHeight: '300px' }}
+                      />
+                    ) : (
+                      <textarea
+                        value={selected.description || ''}
+                        onChange={e => updateField(selected.id, 'description', e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
+                        style={{ minHeight: '300px' }}
+                      />
                     )}
                   </div>
 
