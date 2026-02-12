@@ -1521,18 +1521,20 @@ export default function ProListingBuilder() {
       });
       const data = await response.json();
       const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
-      const brandMatch = text.match(/BRAND:\s*([^\|]+)/i);
-      const partMatch = text.match(/PART:\s*([^\|]+)/i);
-      const seriesMatch = text.match(/SERIES:\s*([^\|]+)/i);
-      const frnMatch = text.match(/FRN:\s*([^\|]+)/i);
-      if (brandMatch && partMatch) {
+      const brandMatch = text.match(/BRAND:\s*([^\|\n\r]+)/i);
+      const partMatch = text.match(/PART:\s*([^\|\n\r]+)/i);
+      const seriesMatch = text.match(/SERIES:\s*([^\|\n\r]+)/i);
+      const frnMatch = text.match(/FRN:\s*([^\|\n\r]+)/i);
+      const extractedBrand = brandMatch?.[1]?.trim() || '';
+      const extractedPart = partMatch?.[1]?.trim() || '';
+      if (extractedBrand && extractedPart && extractedPart.length <= 60) {
         const ocrSeries = seriesMatch ? seriesMatch[1].trim() : '';
         const ocrFrn = frnMatch ? frnMatch[1].trim() : '';
-        addToQueueWithValues(brandMatch[1].trim(), partMatch[1].trim(), ocrSeries, ocrFrn);
+        addToQueueWithValues(extractedBrand, extractedPart, ocrSeries, ocrFrn);
       } else {
-        alert('Could not extract info. Please enter manually.');
-        setBrandName(brandMatch?.[1]?.trim() || '');
-        setPartNumber(partMatch?.[1]?.trim() || '');
+        alert('Could not extract brand and part number from scan. Please enter manually.');
+        setBrandName(extractedBrand.length <= 60 ? extractedBrand : '');
+        setPartNumber(extractedPart.length <= 60 ? extractedPart : '');
       }
     } catch (error) {
       console.error('Image error:', error);

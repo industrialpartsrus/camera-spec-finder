@@ -907,6 +907,13 @@ SECOND, extract EVERY possible technical specification. Here are the key specs t
 
 Be AGGRESSIVE -- use your deep knowledge to include specs that are standard for this exact model even if you have to infer them from the model number/series naming conventions (e.g., McGill CFH series = Heavy Stud, Screwdriver Slot face, CAMROL series, Needle Bearing type).
 
+SPEC EXCLUSION RULES:
+For small automation components (PLCs, sensors, communication modules, I/O modules, controllers, relays, contactors, drives, power supplies, HMIs, and similar controls), EXCLUDE these irrelevant specifications:
+- operatinghumidity, storagetemperature, operatingaltitude, shockresistance, vibrationresistance
+- emptyweight (reserve for motors over 50 lbs, machinery, large equipment only)
+- attachmentmodel (reserve for machinery tool attachments ONLY — NEVER use as a duplicate of mpn/model)
+These specs ARE relevant for: electric motors, pumps, compressors, CNC machines, injection molding, forklifts, conveyors, and other large industrial machinery.
+
 Return ONLY valid JSON (no markdown, no code blocks):
 {
   "productType": "The specific product type from the list above",
