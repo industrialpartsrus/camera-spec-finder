@@ -5,6 +5,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Check, X, LogOut, RefreshCw, Package, AlertCircle, ArrowLeft } from 'lucide-react';
 import { verifyUser, getActiveUsers } from '../lib/auth';
+import { storage, db } from '../firebase';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { collection, doc, updateDoc, Timestamp, addDoc } from 'firebase/firestore';
 
 const CONDITION_OPTIONS = [
   { value: 'New', label: 'New', color: 'bg-green-100 border-green-500 text-green-900' },
@@ -335,75 +338,101 @@ export default function PhotoStation() {
     setScreen('uploading');
 
     try {
-      // Prepare photos array for upload
+      const uploadedPhotos = [];
       const photosToUpload = [];
 
+      // Collect photos to upload
       if (capturedPhotos.left) {
-        photosToUpload.push({
-          view: 'left',
-          data: capturedPhotos.left.dataUrl
-        });
+        photosToUpload.push({ view: 'left', dataUrl: capturedPhotos.left.dataUrl });
       }
       if (capturedPhotos.right) {
-        photosToUpload.push({
-          view: 'right',
-          data: capturedPhotos.right.dataUrl
-        });
+        photosToUpload.push({ view: 'right', dataUrl: capturedPhotos.right.dataUrl });
       }
       if (capturedPhotos.center) {
-        photosToUpload.push({
-          view: 'center',
-          data: capturedPhotos.center.dataUrl
-        });
+        photosToUpload.push({ view: 'center', dataUrl: capturedPhotos.center.dataUrl });
       }
       if (capturedPhotos.nameplate) {
-        photosToUpload.push({
-          view: 'nameplate',
-          data: capturedPhotos.nameplate.dataUrl
-        });
+        photosToUpload.push({ view: 'nameplate', dataUrl: capturedPhotos.nameplate.dataUrl });
+      }
+      capturedPhotos.extra.forEach((photo, index) => {
+        photosToUpload.push({ view: `extra_${index + 1}`, dataUrl: photo.dataUrl });
+      });
+
+      setUploadProgress(10);
+
+      // Upload each photo directly to Firebase Storage (client-side)
+      for (let i = 0; i < photosToUpload.length; i++) {
+        const { view, dataUrl } = photosToUpload[i];
+
+        try {
+          // Create storage reference: /photos/{sku}/{view}.jpg
+          const storageRef = ref(storage, `photos/${selectedItem.sku}/${view}.jpg`);
+
+          // Upload using data_url format (handles "data:image/jpeg;base64,..." prefix)
+          await uploadString(storageRef, dataUrl, 'data_url', {
+            contentType: 'image/jpeg',
+            customMetadata: {
+              sku: selectedItem.sku,
+              view: view,
+              uploadedBy: currentUser.username,
+              uploadedAt: new Date().toISOString()
+            }
+          });
+
+          // Get download URL
+          const downloadURL = await getDownloadURL(storageRef);
+
+          uploadedPhotos.push({
+            view: view,
+            url: downloadURL
+          });
+
+          // Update progress
+          setUploadProgress(10 + ((i + 1) / photosToUpload.length) * 70);
+        } catch (uploadError) {
+          console.error(`Failed to upload ${view}:`, uploadError);
+          throw new Error(`Failed to upload ${view}: ${uploadError.message}`);
+        }
       }
 
-      // Add extra photos
-      capturedPhotos.extra.forEach((photo, index) => {
-        photosToUpload.push({
-          view: `extra_${index + 1}`,
-          data: photo.dataUrl
-        });
+      setUploadProgress(85);
+
+      // Update Firestore product document
+      const productRef = doc(db, 'products', selectedItem.id);
+      await updateDoc(productRef, {
+        photos: uploadedPhotos.map(p => p.url),
+        photoCount: uploadedPhotos.length,
+        photoViews: uploadedPhotos.map(p => p.view),
+        photographedBy: currentUser.username,
+        photographedAt: Timestamp.now(),
+        status: 'photos_complete'
       });
 
-      // Simulate progress (actual upload happens at once)
-      setUploadProgress(20);
-
-      const response = await fetch('/api/photos/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Log to activity_log collection (optional)
+      try {
+        await addDoc(collection(db, 'activity_log'), {
+          action: 'photos_uploaded',
           sku: selectedItem.sku,
           productId: selectedItem.id,
-          photos: photosToUpload,
-          photographedBy: currentUser.username,
-          removeBgFlags: removeBgFlags
-        })
-      });
-
-      setUploadProgress(80);
-
-      const data = await response.json();
+          photoCount: uploadedPhotos.length,
+          photoViews: uploadedPhotos.map(p => p.view),
+          user: currentUser.username,
+          timestamp: Timestamp.now()
+        });
+      } catch (logError) {
+        // Activity log is optional - don't fail if it doesn't exist
+        console.warn('Activity log failed:', logError.message);
+      }
 
       setUploadProgress(100);
 
-      if (data.success) {
-        setSuccessMessage(`✅ Photos uploaded for ${selectedItem.sku}\n📍 Return item to shelf: ${selectedItem.shelf}`);
-        setScreen('complete');
+      setSuccessMessage(`✅ Photos uploaded for ${selectedItem.sku}\n📍 Return item to shelf: ${selectedItem.shelf}`);
+      setScreen('complete');
 
-        // Auto-return to queue after 3 seconds
-        setTimeout(() => {
-          handleReturnToQueue();
-        }, 3000);
-      } else {
-        alert('Upload failed: ' + (data.error || 'Unknown error'));
-        setScreen('review');
-      }
+      // Auto-return to queue after 3 seconds
+      setTimeout(() => {
+        handleReturnToQueue();
+      }, 3000);
     } catch (error) {
       console.error('Upload error:', error);
       alert('Upload failed: ' + error.message);
