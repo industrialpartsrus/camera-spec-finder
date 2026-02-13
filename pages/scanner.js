@@ -212,20 +212,7 @@ export default function WarehouseScanner() {
 
       const lookupData = await lookupRes.json();
 
-      console.log('=== SCANNER RECEIVED LOOKUP DATA ===');
-      console.log('Response status:', lookupRes.status);
-      console.log('Found:', lookupData.found);
-      console.log('Total matches:', lookupData.totalMatches);
-      console.log('Firebase matches:', lookupData.firebaseMatches?.length || 0);
-      console.log('SureDone matches:', lookupData.suredoneMatches?.length || 0);
-      console.log('Full response:', JSON.stringify(lookupData, null, 2));
-
       const allMatches = [...(lookupData.firebaseMatches || []), ...(lookupData.suredoneMatches || [])];
-
-      console.log('Combined allMatches array length:', allMatches.length);
-      if (allMatches.length > 0) {
-        console.log('First match:', JSON.stringify(allMatches[0], null, 2));
-      }
 
       // Check for duplicates
       const dupRes = await fetch('/api/scanner/check-duplicate', {
@@ -238,9 +225,6 @@ export default function WarehouseScanner() {
 
       setMatches(allMatches);
       setDuplicateWarning(dupData.isDuplicate ? dupData : null);
-
-      console.log('SET MATCHES STATE:', allMatches.length, 'items');
-      console.log('SCREEN DECISION: allMatches.length =', allMatches.length, '→', allMatches.length === 0 ? 'CREATE NEW' : 'SHOW RESULTS');
 
       if (allMatches.length === 0) {
         // No matches — go straight to new item

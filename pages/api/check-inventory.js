@@ -41,8 +41,6 @@ export default async function handler(req, res) {
 
     const formattedMatches = inStockMatches.map(item => formatProductMatch(item));
 
-    console.log(`Search for "${searchBrand} ${searchPartNumber}": ${allResults.length} raw, ${verifiedMatches.length} verified, ${inStockMatches.length} in stock`);
-
     return res.status(200).json({
       found: formattedMatches.length > 0,
       matches: formattedMatches,
@@ -115,7 +113,6 @@ function isActualMatch(item, searchBrand, searchPartNumber) {
     if (!brandMatches) return false;
   }
 
-  console.log(`Accepted: "${item.title}"`);
   return true;
 }
 
@@ -159,69 +156,54 @@ async function searchSureDoneComprehensive(brand, partNumber) {
   const allProducts = new Map();
 
   // Strategy 1: Exact MPN (NO brand in query)
-  console.log('Strategy 1: Exact MPN...');
   let products = await searchSureDone(`mpn:=${partNumber}`);
   if (products.length > 0) {
     products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`✓ Found ${products.length} via exact MPN`);
     return applyBrandVerification(Array.from(allProducts.values()), brand);
   }
 
   // Strategy 2: MPN contains (NO brand in query)
-  console.log('Strategy 2: MPN contains...');
   products = await searchSureDone(`mpn:${partNumber}`);
   if (products.length > 0) {
     products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`✓ Found ${products.length} via MPN contains`);
     return applyBrandVerification(Array.from(allProducts.values()), brand);
   }
 
   // Strategy 3: Exact model (NO brand in query)
-  console.log('Strategy 3: Exact model...');
   products = await searchSureDone(`model:=${partNumber}`);
   if (products.length > 0) {
     products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`✓ Found ${products.length} via exact model`);
     return applyBrandVerification(Array.from(allProducts.values()), brand);
   }
 
   // Strategy 4: Model contains (NO brand in query)
-  console.log('Strategy 4: Model contains...');
   products = await searchSureDone(`model:${partNumber}`);
   if (products.length > 0) {
     products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`✓ Found ${products.length} via model contains`);
     return applyBrandVerification(Array.from(allProducts.values()), brand);
   }
 
   // Strategy 5: Exact partnumber (NO brand in query)
-  console.log('Strategy 5: Exact partnumber...');
   products = await searchSureDone(`partnumber:=${partNumber}`);
   if (products.length > 0) {
     products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`✓ Found ${products.length} via exact partnumber`);
     return applyBrandVerification(Array.from(allProducts.values()), brand);
   }
 
   // Strategy 6: Title contains (NO brand in query)
-  console.log('Strategy 6: Title contains...');
   products = await searchSureDone(`title:${partNumber}`);
   if (products.length > 0) {
     products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`✓ Found ${products.length} via title contains`);
     return applyBrandVerification(Array.from(allProducts.values()), brand);
   }
 
   // Strategy 7: Keyword search all fields (NO brand in query)
-  console.log('Strategy 7: Keyword search...');
   products = await searchSureDone(partNumber);
   if (products.length > 0) {
     products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`✓ Found ${products.length} via keyword search`);
     return applyBrandVerification(Array.from(allProducts.values()), brand);
   }
 
-  console.log('No results found');
   return [];
 }
 
@@ -258,9 +240,7 @@ async function searchSureDone(searchQuery) {
   // Use the correct Search API endpoint
   // The query goes in the URL path, not as a query parameter
   const url = `https://api.suredone.com/v1/search/items/${encodeURIComponent(searchQuery)}`;
-  
-  console.log(`SureDone API: ${url}`);
-  
+
   const response = await fetch(url, {
     method: 'GET',
     headers: {
@@ -277,7 +257,7 @@ async function searchSureDone(searchQuery) {
 
   const data = await response.json();
   const products = [];
-  
+
   // SureDone returns products as numbered keys
   for (const key in data) {
     if (!isNaN(key) && data[key] && typeof data[key] === 'object') {
@@ -285,13 +265,6 @@ async function searchSureDone(searchQuery) {
     }
   }
 
-  // Log total count if available
-  if (data.all) {
-    console.log(`Search found ${products.length} products (${data.all} total in DB)`);
-  } else {
-    console.log(`Search found ${products.length} products`);
-  }
-  
   return products;
 }
 

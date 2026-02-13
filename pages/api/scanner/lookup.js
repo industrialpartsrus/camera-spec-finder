@@ -28,12 +28,6 @@ export default async function handler(req, res) {
   const searchPartNumber = partNumber.trim();
   const searchBrand = brand ? brand.trim() : '';
 
-  console.log('=== SCANNER LOOKUP START ===');
-  console.log('Original brand:', brand);
-  console.log('Original partNumber:', partNumber);
-  console.log('Search brand:', searchBrand);
-  console.log('Search partNumber:', searchPartNumber);
-
   try {
     // Search both sources in parallel
     const [firebaseResults, suredoneResults] = await Promise.all([
@@ -43,8 +37,6 @@ export default async function handler(req, res) {
 
     const allMatches = [...firebaseResults, ...suredoneResults];
 
-    console.log(`Lookup for "${searchBrand} ${searchPartNumber}": ${firebaseResults.length} Firebase, ${suredoneResults.length} SureDone`);
-
     const response = {
       found: allMatches.length > 0,
       firebaseMatches: firebaseResults,
@@ -52,15 +44,6 @@ export default async function handler(req, res) {
       totalMatches: allMatches.length,
       searchedFor: { brand: brand || '(any)', partNumber }
     };
-
-    console.log('=== LOOKUP API RESPONSE ===');
-    console.log('Total matches:', response.totalMatches);
-    console.log('Firebase matches:', response.firebaseMatches.length);
-    console.log('SureDone matches:', response.suredoneMatches.length);
-    if (response.suredoneMatches.length > 0) {
-      console.log('First SureDone match fields:', Object.keys(response.suredoneMatches[0]));
-      console.log('First SureDone match:', JSON.stringify(response.suredoneMatches[0], null, 2));
-    }
 
     return res.status(200).json(response);
   } catch (error) {
@@ -165,69 +148,54 @@ async function searchSureDone(brand, partNumber) {
     const allProducts = new Map();
 
     // Strategy 1: Exact MPN (NO brand in query)
-    console.log('Strategy 1: Exact MPN...');
     let products = await querySureDone(`mpn:=${partNumber}`, SUREDONE_USER, SUREDONE_TOKEN);
     if (products.length > 0) {
       products.forEach(p => allProducts.set(p.sku || p.guid, p));
-      console.log(`✓ Found ${products.length} via exact MPN`);
       return applyBrandVerification(Array.from(allProducts.values()), brand, partNumber);
     }
 
     // Strategy 2: MPN contains (NO brand in query)
-    console.log('Strategy 2: MPN contains...');
     products = await querySureDone(`mpn:${partNumber}`, SUREDONE_USER, SUREDONE_TOKEN);
     if (products.length > 0) {
       products.forEach(p => allProducts.set(p.sku || p.guid, p));
-      console.log(`✓ Found ${products.length} via MPN contains`);
       return applyBrandVerification(Array.from(allProducts.values()), brand, partNumber);
     }
 
     // Strategy 3: Exact model (NO brand in query)
-    console.log('Strategy 3: Exact model...');
     products = await querySureDone(`model:=${partNumber}`, SUREDONE_USER, SUREDONE_TOKEN);
     if (products.length > 0) {
       products.forEach(p => allProducts.set(p.sku || p.guid, p));
-      console.log(`✓ Found ${products.length} via exact model`);
       return applyBrandVerification(Array.from(allProducts.values()), brand, partNumber);
     }
 
     // Strategy 4: Model contains (NO brand in query)
-    console.log('Strategy 4: Model contains...');
     products = await querySureDone(`model:${partNumber}`, SUREDONE_USER, SUREDONE_TOKEN);
     if (products.length > 0) {
       products.forEach(p => allProducts.set(p.sku || p.guid, p));
-      console.log(`✓ Found ${products.length} via model contains`);
       return applyBrandVerification(Array.from(allProducts.values()), brand, partNumber);
     }
 
     // Strategy 5: Exact partnumber (NO brand in query)
-    console.log('Strategy 5: Exact partnumber...');
     products = await querySureDone(`partnumber:=${partNumber}`, SUREDONE_USER, SUREDONE_TOKEN);
     if (products.length > 0) {
       products.forEach(p => allProducts.set(p.sku || p.guid, p));
-      console.log(`✓ Found ${products.length} via exact partnumber`);
       return applyBrandVerification(Array.from(allProducts.values()), brand, partNumber);
     }
 
     // Strategy 6: Title contains (NO brand in query)
-    console.log('Strategy 6: Title contains...');
     products = await querySureDone(`title:${partNumber}`, SUREDONE_USER, SUREDONE_TOKEN);
     if (products.length > 0) {
       products.forEach(p => allProducts.set(p.sku || p.guid, p));
-      console.log(`✓ Found ${products.length} via title contains`);
       return applyBrandVerification(Array.from(allProducts.values()), brand, partNumber);
     }
 
     // Strategy 7: Keyword search all fields (NO brand in query)
-    console.log('Strategy 7: Keyword search...');
     products = await querySureDone(partNumber, SUREDONE_USER, SUREDONE_TOKEN);
     if (products.length > 0) {
       products.forEach(p => allProducts.set(p.sku || p.guid, p));
-      console.log(`✓ Found ${products.length} via keyword search`);
       return applyBrandVerification(Array.from(allProducts.values()), brand, partNumber);
     }
 
-    console.log('No results found');
     return [];
   } catch (error) {
     console.error('SureDone search error:', error);

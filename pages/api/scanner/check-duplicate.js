@@ -29,15 +29,32 @@ export default async function handler(req, res) {
     const scanLogRef = collection(db, 'scan_log');
 
     // Query for scans of this part number within last 8 hours
+    // NOTE: This compound query requires a Firestore index on (partNumber_upper, timestamp)
     const q = query(
       scanLogRef,
       where('partNumber_upper', '==', searchPartNumber),
       where('timestamp', '>=', timestampEightHoursAgo),
       orderBy('timestamp', 'desc'),
-      limit(5) // Get up to 5 most recent scans
+      limit(5)
     );
 
-    const snapshot = await getDocs(q);
+    let snapshot;
+    try {
+      snapshot = await getDocs(q);
+    } catch (queryError) {
+      // Handle missing index or empty collection gracefully
+      if (queryError.code === 'failed-precondition' ||
+          queryError.code === 'not-found' ||
+          queryError.message?.includes('index')) {
+        console.warn('Duplicate check query failed (likely missing index or empty collection):', queryError.message);
+        return res.status(200).json({
+          isDuplicate: false,
+          recentScans: [],
+          note: 'Duplicate check unavailable (Firestore index required)'
+        });
+      }
+      throw queryError; // Re-throw other errors
+    }
 
     if (snapshot.empty) {
       return res.status(200).json({
