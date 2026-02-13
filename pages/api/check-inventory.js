@@ -120,75 +120,127 @@ function isActualMatch(item, searchBrand, searchPartNumber) {
 }
 
 /**
- * Comprehensive search using the correct SureDone Search API
- * Endpoint: GET https://api.suredone.com/v1/search/items/{query}
+ * Normalize brand for soft matching
+ */
+function normalizeBrand(brand) {
+  if (!brand) return '';
+  return brand.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Verify brand match with soft matching
+ */
+function verifyBrand(searchBrand, itemBrand) {
+  if (!searchBrand || searchBrand.trim() === '') {
+    return { matches: true, mismatch: null };
+  }
+
+  const normalizedSearch = normalizeBrand(searchBrand);
+  const normalizedItem = normalizeBrand(itemBrand);
+
+  if (normalizedSearch === normalizedItem) {
+    return { matches: true, mismatch: null };
+  }
+
+  if (normalizedItem.includes(normalizedSearch) || normalizedSearch.includes(normalizedItem)) {
+    return { matches: true, mismatch: null };
+  }
+
+  return {
+    matches: false,
+    mismatch: `Brand mismatch: searched for '${searchBrand}' but item is '${itemBrand}'`
+  };
+}
+
+/**
+ * Comprehensive search - NO brand in queries, brand verification happens after
  */
 async function searchSureDoneComprehensive(brand, partNumber) {
   const allProducts = new Map();
-  
-  // Strategy 1: Exact match on MPN (lowercase field name, := for exact)
-  console.log('Strategy 1: Exact MPN match...');
+
+  // Strategy 1: Exact MPN (NO brand in query)
+  console.log('Strategy 1: Exact MPN...');
   let products = await searchSureDone(`mpn:=${partNumber}`);
-  products.forEach(p => allProducts.set(p.sku || p.guid, p));
-  console.log(`After exact MPN: ${allProducts.size} products`);
-  
-  // Strategy 2: Contains match on MPN
-  if (allProducts.size === 0) {
-    console.log('Strategy 2: MPN contains...');
-    products = await searchSureDone(`mpn:${partNumber}`);
+  if (products.length > 0) {
     products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`After MPN contains: ${allProducts.size} products`);
-  }
-  
-  // Strategy 3: Exact match on model
-  if (allProducts.size === 0) {
-    console.log('Strategy 3: Exact model match...');
-    products = await searchSureDone(`model:=${partNumber}`);
-    products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`After exact model: ${allProducts.size} products`);
-  }
-  
-  // Strategy 4: Contains match on model
-  if (allProducts.size === 0) {
-    console.log('Strategy 4: Model contains...');
-    products = await searchSureDone(`model:${partNumber}`);
-    products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`After model contains: ${allProducts.size} products`);
-  }
-  
-  // Strategy 5: Exact match on partnumber field
-  if (allProducts.size === 0) {
-    console.log('Strategy 5: Exact partnumber match...');
-    products = await searchSureDone(`partnumber:=${partNumber}`);
-    products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`After exact partnumber: ${allProducts.size} products`);
-  }
-  
-  // Strategy 6: Title contains
-  if (allProducts.size === 0) {
-    console.log('Strategy 6: Title contains...');
-    products = await searchSureDone(`title:${partNumber}`);
-    products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`After title contains: ${allProducts.size} products`);
-  }
-  
-  // Strategy 7: Plain keyword search (searches all fields)
-  if (allProducts.size === 0) {
-    console.log('Strategy 7: Keyword search...');
-    products = await searchSureDone(partNumber);
-    products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`After keyword search: ${allProducts.size} products`);
-  }
-  
-  // Strategy 8: Brand + part number combined
-  if (allProducts.size === 0 && brand) {
-    console.log(`Strategy 8: Brand + part number: ${brand} ${partNumber}`);
-    products = await searchSureDone(`brand:=${brand} mpn:${partNumber}`);
-    products.forEach(p => allProducts.set(p.sku || p.guid, p));
-    console.log(`After brand+mpn: ${allProducts.size} products`);
+    console.log(`✓ Found ${products.length} via exact MPN`);
+    return applyBrandVerification(Array.from(allProducts.values()), brand);
   }
 
-  return Array.from(allProducts.values());
+  // Strategy 2: MPN contains (NO brand in query)
+  console.log('Strategy 2: MPN contains...');
+  products = await searchSureDone(`mpn:${partNumber}`);
+  if (products.length > 0) {
+    products.forEach(p => allProducts.set(p.sku || p.guid, p));
+    console.log(`✓ Found ${products.length} via MPN contains`);
+    return applyBrandVerification(Array.from(allProducts.values()), brand);
+  }
+
+  // Strategy 3: Exact model (NO brand in query)
+  console.log('Strategy 3: Exact model...');
+  products = await searchSureDone(`model:=${partNumber}`);
+  if (products.length > 0) {
+    products.forEach(p => allProducts.set(p.sku || p.guid, p));
+    console.log(`✓ Found ${products.length} via exact model`);
+    return applyBrandVerification(Array.from(allProducts.values()), brand);
+  }
+
+  // Strategy 4: Model contains (NO brand in query)
+  console.log('Strategy 4: Model contains...');
+  products = await searchSureDone(`model:${partNumber}`);
+  if (products.length > 0) {
+    products.forEach(p => allProducts.set(p.sku || p.guid, p));
+    console.log(`✓ Found ${products.length} via model contains`);
+    return applyBrandVerification(Array.from(allProducts.values()), brand);
+  }
+
+  // Strategy 5: Exact partnumber (NO brand in query)
+  console.log('Strategy 5: Exact partnumber...');
+  products = await searchSureDone(`partnumber:=${partNumber}`);
+  if (products.length > 0) {
+    products.forEach(p => allProducts.set(p.sku || p.guid, p));
+    console.log(`✓ Found ${products.length} via exact partnumber`);
+    return applyBrandVerification(Array.from(allProducts.values()), brand);
+  }
+
+  // Strategy 6: Title contains (NO brand in query)
+  console.log('Strategy 6: Title contains...');
+  products = await searchSureDone(`title:${partNumber}`);
+  if (products.length > 0) {
+    products.forEach(p => allProducts.set(p.sku || p.guid, p));
+    console.log(`✓ Found ${products.length} via title contains`);
+    return applyBrandVerification(Array.from(allProducts.values()), brand);
+  }
+
+  // Strategy 7: Keyword search all fields (NO brand in query)
+  console.log('Strategy 7: Keyword search...');
+  products = await searchSureDone(partNumber);
+  if (products.length > 0) {
+    products.forEach(p => allProducts.set(p.sku || p.guid, p));
+    console.log(`✓ Found ${products.length} via keyword search`);
+    return applyBrandVerification(Array.from(allProducts.values()), brand);
+  }
+
+  console.log('No results found');
+  return [];
+}
+
+/**
+ * Apply brand verification after search
+ */
+function applyBrandVerification(results, searchBrand) {
+  return results.map(item => {
+    const brandCheck = verifyBrand(searchBrand, item.brand);
+    return {
+      ...item,
+      brandMatches: brandCheck.matches,
+      brandMismatch: brandCheck.mismatch
+    };
+  }).sort((a, b) => {
+    if (a.brandMatches && !b.brandMatches) return -1;
+    if (!a.brandMatches && b.brandMatches) return 1;
+    return 0;
+  });
 }
 
 /**
