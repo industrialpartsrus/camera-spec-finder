@@ -23,8 +23,16 @@ export default async function handler(req, res) {
     });
   }
 
-  const searchPartNumber = partNumber.trim().toUpperCase();
-  const searchBrand = brand ? brand.trim().toUpperCase() : '';
+  // IMPORTANT: Don't uppercase for SureDone search - it's case-sensitive!
+  // Keep original case for better matching
+  const searchPartNumber = partNumber.trim();
+  const searchBrand = brand ? brand.trim() : '';
+
+  console.log('=== SCANNER LOOKUP START ===');
+  console.log('Original brand:', brand);
+  console.log('Original partNumber:', partNumber);
+  console.log('Search brand:', searchBrand);
+  console.log('Search partNumber:', searchPartNumber);
 
   try {
     // Search both sources in parallel
@@ -37,13 +45,24 @@ export default async function handler(req, res) {
 
     console.log(`Lookup for "${searchBrand} ${searchPartNumber}": ${firebaseResults.length} Firebase, ${suredoneResults.length} SureDone`);
 
-    return res.status(200).json({
+    const response = {
       found: allMatches.length > 0,
       firebaseMatches: firebaseResults,
       suredoneMatches: suredoneResults,
       totalMatches: allMatches.length,
       searchedFor: { brand: brand || '(any)', partNumber }
-    });
+    };
+
+    console.log('=== LOOKUP API RESPONSE ===');
+    console.log('Total matches:', response.totalMatches);
+    console.log('Firebase matches:', response.firebaseMatches.length);
+    console.log('SureDone matches:', response.suredoneMatches.length);
+    if (response.suredoneMatches.length > 0) {
+      console.log('First SureDone match fields:', Object.keys(response.suredoneMatches[0]));
+      console.log('First SureDone match:', JSON.stringify(response.suredoneMatches[0], null, 2));
+    }
+
+    return res.status(200).json(response);
   } catch (error) {
     console.error('Lookup error:', error);
     return res.status(500).json({
