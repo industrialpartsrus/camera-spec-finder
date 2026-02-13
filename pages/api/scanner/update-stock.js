@@ -56,21 +56,56 @@ export default async function handler(req, res) {
       updates.shelf = shelf;
     }
 
-    // Update Firebase if firebaseId provided
-    if (firebaseId) {
-      const productRef = doc(db, 'products', firebaseId);
-      await updateDoc(productRef, updates);
-      console.log(`Updated Firebase product ${firebaseId} with stock ${newStock}`);
+    // Create or update Firebase
+    let createdFirebaseId = null;
+    try {
+      if (action === 'create_new' && !firebaseId) {
+        // CREATE new Firebase document
+        const newProduct = {
+          sku: sku,
+          partNumber: partNumber || '',
+          brand: brand || '',
+          stock: newStock,
+          shelf: shelf || 'Not Assigned',
+          condition: 'Unknown', // Scanner doesn't capture condition yet
+          scannedBy: scannedBy,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          lastScannedBy: scannedBy,
+          lastScannedAt: serverTimestamp(),
+          photoCount: 0,
+          status: 'needs_photos'
+        };
+        const docRef = await addDoc(collection(db, 'products'), newProduct);
+        createdFirebaseId = docRef.id;
+        console.log(`Created Firebase product ${createdFirebaseId} for SKU ${sku}`);
+      } else if (firebaseId) {
+        // UPDATE existing Firebase document
+        const productRef = doc(db, 'products', firebaseId);
+        await updateDoc(productRef, updates);
+        console.log(`Updated Firebase product ${firebaseId} with stock ${newStock}`);
+      }
+    } catch (fbError) {
+      console.error('Firebase operation failed:', fbError);
+      return res.status(500).json({
+        error: 'Failed to save to Firebase',
+        details: fbError.message,
+        stack: fbError.stack?.split('\n').slice(0, 3).join('\n'),
+        step: 'firebase_save',
+        success: false
+      });
     }
 
     // Update SureDone (always done to keep inventory in sync)
-    const suredoneSuccess = await updateSureDoneStock(sku, newStock, shelf);
+    const suredoneResult = await updateSureDoneStock(sku, newStock, shelf, action === 'create_new');
 
-    if (!suredoneSuccess) {
+    if (!suredoneResult.success) {
       return res.status(500).json({
         error: 'Failed to update SureDone stock',
+        details: suredoneResult.error || 'Unknown error',
+        step: 'suredone_update',
         success: false,
-        firebaseUpdated: !!firebaseId,
+        firebaseUpdated: !!(firebaseId || createdFirebaseId),
         suredoneUpdated: false
       });
     }
@@ -104,21 +139,24 @@ export default async function handler(req, res) {
       timestamp: Timestamp.now()
     });
 
-    console.log(`Stock updated successfully: ${sku} → ${newStock} (Firebase: ${!!firebaseId}, SureDone: true)`);
+    console.log(`Stock updated successfully: ${sku} → ${newStock} (Firebase: ${!!(firebaseId || createdFirebaseId)}, SureDone: true)`);
 
     return res.status(200).json({
       success: true,
       sku: sku,
       newStock: newStock,
-      firebaseUpdated: !!firebaseId,
+      firebaseId: createdFirebaseId || firebaseId,
+      firebaseUpdated: !!(firebaseId || createdFirebaseId),
       suredoneUpdated: true,
-      message: `Stock updated to ${newStock}`
+      message: action === 'create_new' ? `New item ${sku} created` : `Stock updated to ${newStock}`
     });
   } catch (error) {
     console.error('Stock update error:', error);
     return res.status(500).json({
       error: 'Failed to update stock',
       details: error.message,
+      stack: error.stack?.split('\n').slice(0, 3).join('\n'),
+      step: 'unknown',
       success: false
     });
   }
@@ -127,15 +165,28 @@ export default async function handler(req, res) {
 /**
  * Update stock in SureDone using the PUT /editor/items API
  * SureDone automatically syncs to eBay and BigCommerce
+ *
+ * @param {string} sku - SKU to update
+ * @param {number} stock - New stock quantity
+ * @param {string} shelf - Shelf location
+ * @param {boolean} isCreate - If true, SKU may not exist in SureDone yet (skip update)
+ * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function updateSureDoneStock(sku, stock, shelf) {
+async function updateSureDoneStock(sku, stock, shelf, isCreate = false) {
   try {
     const SUREDONE_USER = process.env.SUREDONE_USER;
     const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
 
     if (!SUREDONE_USER || !SUREDONE_TOKEN) {
       console.error('SureDone credentials not configured');
-      return false;
+      return { success: false, error: 'SureDone credentials not configured' };
+    }
+
+    // For new items, the SKU won't exist in SureDone yet
+    // The full listing will be created later via Pro Listing Builder
+    if (isCreate) {
+      console.log(`Skipping SureDone update for new item ${sku} - will be created via Pro Builder`);
+      return { success: true }; // Not an error - expected for new items
     }
 
     // Build update payload
@@ -163,10 +214,16 @@ async function updateSureDoneStock(sku, stock, shelf) {
     });
 
     if (!response.ok) {
-      console.error(`SureDone update failed: ${response.status} ${response.statusText}`);
       const errorText = await response.text();
-      console.error('SureDone error response:', errorText);
-      return false;
+      console.error(`SureDone update failed: ${response.status} ${response.statusText}`, errorText);
+
+      // If item doesn't exist (404), that's expected for scanner-created items
+      if (response.status === 404) {
+        console.log(`SKU ${sku} not found in SureDone - will be created later via Pro Builder`);
+        return { success: true }; // Not an error
+      }
+
+      return { success: false, error: `SureDone API error: ${response.status} ${errorText}` };
     }
 
     const data = await response.json();
@@ -174,13 +231,13 @@ async function updateSureDoneStock(sku, stock, shelf) {
 
     // Check for success in response
     if (data.result === 'success' || data[sku]?.result === 'success') {
-      return true;
+      return { success: true };
     }
 
     console.error('SureDone update did not return success:', data);
-    return false;
+    return { success: false, error: 'SureDone did not return success' };
   } catch (error) {
     console.error('Error updating SureDone stock:', error);
-    return false;
+    return { success: false, error: error.message };
   }
 }
