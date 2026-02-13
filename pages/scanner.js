@@ -5,7 +5,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Edit3, LogOut, Plus, Minus, Check, X, AlertTriangle, Package, RefreshCw } from 'lucide-react';
 import { verifyUser, getActiveUsers } from '../lib/auth';
-import { generateNextSku } from '../lib/sku-generator';
 
 const CONDITION_OPTIONS = [
   { value: 'New', label: 'New', color: 'bg-green-100 border-green-500 text-green-900' },
@@ -312,8 +311,15 @@ export default function WarehouseScanner() {
   const handleCreateNewItem = async () => {
     setIsProcessing(true);
     try {
-      const sku = await generateNextSku();
-      setNewSku(sku);
+      // Call server-side API to generate SKU
+      const response = await fetch('/api/generate-sku');
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate SKU');
+      }
+
+      setNewSku(data.sku);
       setNewCondition('');
       setNewQuantity(1);
       setNewItemShelf('');
