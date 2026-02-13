@@ -98,11 +98,28 @@ export default function PhotoStation() {
   // Load users on mount
   useEffect(() => {
     loadUsers();
+    checkStoredLogin();
   }, []);
 
   const loadUsers = async () => {
     const activeUsers = await getActiveUsers();
     setUsers(activeUsers);
+  };
+
+  const checkStoredLogin = async () => {
+    const storedUsername = localStorage.getItem('photos_user');
+    if (storedUsername) {
+      const activeUsers = await getActiveUsers();
+      const user = activeUsers.find(u => u.username === storedUsername);
+      if (user) {
+        setCurrentUser(user);
+        loadQueue();
+        setScreen('queue');
+      } else {
+        // User no longer active, clear storage
+        localStorage.removeItem('photos_user');
+      }
+    }
   };
 
   // ============================================
@@ -140,6 +157,8 @@ export default function PhotoStation() {
       setSelectedUserId(null);
       loadQueue();
       setScreen('queue');
+      // Save to localStorage for persistent login
+      localStorage.setItem('photos_user', result.user.username);
     } else {
       alert(result.error || 'Incorrect PIN');
       setPinInput('');
@@ -150,6 +169,8 @@ export default function PhotoStation() {
     setCurrentUser(null);
     setScreen('login');
     resetAllState();
+    // Clear stored login
+    localStorage.removeItem('photos_user');
   };
 
   // ============================================
@@ -426,13 +447,8 @@ export default function PhotoStation() {
 
       setUploadProgress(100);
 
-      setSuccessMessage(`✅ Photos uploaded for ${selectedItem.sku}\n📍 Return item to shelf: ${selectedItem.shelf}`);
+      setSuccessMessage(`✅ Photos uploaded for ${selectedItem.sku}`);
       setScreen('complete');
-
-      // Auto-return to queue after 3 seconds
-      setTimeout(() => {
-        handleReturnToQueue();
-      }, 3000);
     } catch (error) {
       console.error('Upload error:', error);
       alert('Upload failed: ' + error.message);
@@ -977,14 +993,19 @@ export default function PhotoStation() {
             </div>
             <pre className="text-2xl font-bold text-gray-900 whitespace-pre-wrap mb-8">{successMessage}</pre>
 
+            {/* Prominent Shelf Location Warning */}
+            <div className="bg-yellow-100 border-4 border-yellow-500 rounded-xl p-8 mb-8">
+              <p className="text-sm font-semibold text-yellow-900 mb-3">RETURN ITEM TO SHELF:</p>
+              <p className="text-5xl font-black text-yellow-900">{selectedItem.shelf}</p>
+            </div>
+
             <button
               onClick={handleConfirmReturn}
-              className="w-full py-6 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-xl text-2xl font-bold transition mb-4"
+              className="w-full py-6 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-xl text-2xl font-bold transition flex items-center justify-center gap-3"
             >
-              ✅ Confirm Item Returned to Shelf
+              <Check size={28} />
+              ✅ Item Returned to Shelf
             </button>
-
-            <p className="text-gray-600">Returning to queue...</p>
           </div>
         </div>
       )}

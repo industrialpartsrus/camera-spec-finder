@@ -70,6 +70,8 @@ async function getHighestSureDoneSku() {
 
     const url = `https://api.suredone.com/v1/search/items/${encodeURIComponent('sku:AI*')}`;
 
+    console.log(`[SKU Generator] Querying SureDone: ${url}`);
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -86,18 +88,27 @@ async function getHighestSureDoneSku() {
 
     const data = await response.json();
     let maxNum = 0;
+    let itemCount = 0;
 
     for (const key in data) {
       if (!isNaN(key) && data[key] && typeof data[key] === 'object') {
-        const sku = data[key].sku;
+        itemCount++;
+        // Check both 'sku' and 'guid' fields for AI#### pattern
+        const sku = data[key].sku || data[key].guid;
         const num = extractSkuNumber(sku);
         if (num !== null && num > maxNum) {
           maxNum = num;
+          console.log(`[SKU Generator] Found SureDone SKU: ${sku} (${num})`);
         }
       }
     }
 
-    console.log(`SureDone highest SKU: AI${String(maxNum).padStart(4, '0')}`);
+    console.log(`[SKU Generator] SureDone returned ${itemCount} items, highest SKU: AI${String(maxNum).padStart(4, '0')}`);
+
+    if (itemCount >= 100) {
+      console.warn(`[SKU Generator] WARNING: SureDone search may be limited to 100 items. Highest found: AI${String(maxNum).padStart(4, '0')}. Consider using Firebase as primary source.`);
+    }
+
     return maxNum;
   } catch (error) {
     console.error('Error querying SureDone SKUs:', error);

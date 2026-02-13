@@ -51,11 +51,27 @@ export default function WarehouseScanner() {
   // Load users on mount
   useEffect(() => {
     loadUsers();
+    checkStoredLogin();
   }, []);
 
   const loadUsers = async () => {
     const activeUsers = await getActiveUsers();
     setUsers(activeUsers);
+  };
+
+  const checkStoredLogin = async () => {
+    const storedUsername = localStorage.getItem('scanner_user');
+    if (storedUsername) {
+      const activeUsers = await getActiveUsers();
+      const user = activeUsers.find(u => u.username === storedUsername);
+      if (user) {
+        setCurrentUser(user);
+        setScreen('scan');
+      } else {
+        // User no longer active, clear storage
+        localStorage.removeItem('scanner_user');
+      }
+    }
   };
 
   // ============================================
@@ -93,6 +109,8 @@ export default function WarehouseScanner() {
       setScreen('scan');
       setPinInput('');
       setSelectedUserId(null);
+      // Save to localStorage for persistent login
+      localStorage.setItem('scanner_user', result.user.username);
     } else {
       alert(result.error || 'Incorrect PIN');
       setPinInput('');
@@ -107,6 +125,8 @@ export default function WarehouseScanner() {
     setMatches([]);
     setDuplicateWarning(null);
     setSelectedMatch(null);
+    // Clear stored login
+    localStorage.removeItem('scanner_user');
   };
 
   // ============================================
@@ -713,7 +733,7 @@ export default function WarehouseScanner() {
                     type="number"
                     value={quantityToAdd}
                     onChange={(e) => setQuantityToAdd(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="flex-1 text-center text-3xl font-bold border-2 border-gray-300 rounded-lg py-3 focus:border-blue-500 focus:outline-none"
+                    className="w-24 text-center text-3xl font-bold border-2 border-gray-300 rounded-lg py-3 focus:border-blue-500 focus:outline-none"
                     min="1"
                   />
                   <button
