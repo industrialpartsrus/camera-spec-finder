@@ -3,7 +3,7 @@
 // Guided workflow: Queue → Capture → Review → Upload → Complete
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Check, X, LogOut, RefreshCw, Package, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Camera, Check, X, LogOut, RefreshCw, Package, AlertCircle, ArrowLeft, Loader } from 'lucide-react';
 import { verifyUser, getActiveUsers } from '../lib/auth';
 import { storage, db } from '../firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
@@ -89,6 +89,8 @@ export default function PhotoStation() {
     center: false,
     nameplate: false
   });
+  const [processingBg, setProcessingBg] = useState({});
+  const [processedPhotos, setProcessedPhotos] = useState({});
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -353,6 +355,92 @@ export default function PhotoStation() {
     }));
   };
 
+  const handleRemoveBg = async (view, shouldRemove) => {
+    // Don't allow background removal for nameplate
+    if (view === 'nameplate') {
+      return;
+    }
+
+    // Toggle flag
+    setRemoveBgFlags(prev => ({
+      ...prev,
+      [view]: shouldRemove
+    }));
+
+    if (!shouldRemove) {
+      // User unchecked - remove processed version
+      setProcessedPhotos(prev => {
+        const updated = { ...prev };
+        delete updated[view];
+        return updated;
+      });
+      return;
+    }
+
+    // Process background removal
+    setProcessingBg(prev => ({ ...prev, [view]: true }));
+
+    try {
+      const photo = capturedPhotos[view];
+      if (!photo || !photo.dataUrl) {
+        throw new Error('Photo not found');
+      }
+
+      // Extract base64 from data URL (remove "data:image/jpeg;base64," prefix)
+      const base64 = photo.dataUrl.split(',')[1];
+
+      const response = await fetch('/api/photos/remove-bg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: base64,
+          view: view
+        })
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Background removal failed');
+      }
+
+      // Store processed photo
+      setProcessedPhotos(prev => ({
+        ...prev,
+        [view]: data.dataUrl
+      }));
+
+      console.log(`Background removed for ${view}`);
+    } catch (error) {
+      console.error(`Background removal failed for ${view}:`, error);
+      alert(`Failed to remove background for ${view}: ${error.message}`);
+
+      // Uncheck on failure
+      setRemoveBgFlags(prev => ({
+        ...prev,
+        [view]: false
+      }));
+    } finally {
+      setProcessingBg(prev => ({ ...prev, [view]: false }));
+    }
+  };
+
+  const handleRemoveAllBackgrounds = async () => {
+    const viewsToProcess = ['left', 'right', 'center'].filter(view =>
+      capturedPhotos[view] && !removeBgFlags[view]
+    );
+
+    if (viewsToProcess.length === 0) {
+      alert('All backgrounds already removed!');
+      return;
+    }
+
+    // Process sequentially to avoid rate limiting
+    for (const view of viewsToProcess) {
+      await handleRemoveBg(view, true);
+    }
+  };
+
   const handleUploadPhotos = async () => {
     setIsUploading(true);
     setUploadProgress(0);
@@ -382,14 +470,16 @@ export default function PhotoStation() {
       setUploadProgress(10);
 
       // Upload each photo directly to Firebase Storage (client-side)
+      let uploadCount = 0;
+      const totalUploads = photosToUpload.length + Object.keys(processedPhotos).length;
+
       for (let i = 0; i < photosToUpload.length; i++) {
         const { view, dataUrl } = photosToUpload[i];
 
         try {
-          // Create storage reference: /photos/{sku}/{view}.jpg
+          // Upload original: /photos/{sku}/{view}.jpg
           const storageRef = ref(storage, `photos/${selectedItem.sku}/${view}.jpg`);
 
-          // Upload using data_url format (handles "data:image/jpeg;base64,..." prefix)
           await uploadString(storageRef, dataUrl, 'data_url', {
             contentType: 'image/jpeg',
             customMetadata: {
@@ -400,7 +490,6 @@ export default function PhotoStation() {
             }
           });
 
-          // Get download URL
           const downloadURL = await getDownloadURL(storageRef);
 
           uploadedPhotos.push({
@@ -408,8 +497,29 @@ export default function PhotoStation() {
             url: downloadURL
           });
 
-          // Update progress
-          setUploadProgress(10 + ((i + 1) / photosToUpload.length) * 70);
+          uploadCount++;
+          setUploadProgress(10 + (uploadCount / totalUploads) * 70);
+
+          // Upload processed version if exists: /photos/{sku}/{view}_nobg.png
+          if (processedPhotos[view]) {
+            const nobgRef = ref(storage, `photos/${selectedItem.sku}/${view}_nobg.png`);
+
+            await uploadString(nobgRef, processedPhotos[view], 'data_url', {
+              contentType: 'image/png',
+              customMetadata: {
+                sku: selectedItem.sku,
+                view: view,
+                type: 'background_removed',
+                uploadedBy: currentUser.username,
+                uploadedAt: new Date().toISOString()
+              }
+            });
+
+            console.log(`Uploaded ${view}_nobg.png`);
+
+            uploadCount++;
+            setUploadProgress(10 + (uploadCount / totalUploads) * 70);
+          }
         } catch (uploadError) {
           console.error(`Failed to upload ${view}:`, uploadError);
           throw new Error(`Failed to upload ${view}: ${uploadError.message}`);
@@ -424,6 +534,7 @@ export default function PhotoStation() {
         photos: uploadedPhotos.map(p => p.url),
         photoCount: uploadedPhotos.length,
         photoViews: uploadedPhotos.map(p => p.view),
+        removeBgFlags: removeBgFlags,
         photographedBy: currentUser.username,
         photographedAt: Timestamp.now(),
         status: 'photos_complete'
@@ -494,6 +605,8 @@ export default function PhotoStation() {
       center: false,
       nameplate: false
     });
+    setProcessingBg({});
+    setProcessedPhotos({});
     setUploadProgress(0);
     setSuccessMessage('');
   };
@@ -881,6 +994,24 @@ export default function PhotoStation() {
 
           <h1 className="text-3xl font-bold text-gray-900 mb-6">Review Photos</h1>
 
+          {/* Remove All Backgrounds Button */}
+          <button
+            onClick={handleRemoveAllBackgrounds}
+            disabled={Object.values(processingBg).some(v => v)}
+            className="w-full py-4 bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white rounded-xl text-xl font-bold transition disabled:opacity-50 mb-6 flex items-center justify-center gap-3"
+          >
+            {Object.values(processingBg).some(v => v) ? (
+              <>
+                <Loader size={24} className="animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                ✨ Remove All Backgrounds
+              </>
+            )}
+          </button>
+
           <div className="space-y-4 mb-6">
             {/* Required photos */}
             {['left', 'right', 'center', 'nameplate'].map((view) => (
@@ -896,22 +1027,39 @@ export default function PhotoStation() {
                     </button>
                   </div>
                   <img
-                    src={capturedPhotos[view].dataUrl}
+                    src={processedPhotos[view] || capturedPhotos[view].dataUrl}
                     alt={view}
                     className="w-full rounded-lg mb-3"
                   />
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={removeBgFlags[view] || false}
-                      onChange={(e) => setRemoveBgFlags(prev => ({
-                        ...prev,
-                        [view]: e.target.checked
-                      }))}
-                      className="w-5 h-5"
-                    />
-                    <span className="text-sm text-gray-700">Remove background (not yet functional)</span>
-                  </label>
+                  {view === 'nameplate' ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-500 italic">
+                      <input
+                        type="checkbox"
+                        disabled
+                        className="w-5 h-5 opacity-50"
+                      />
+                      <span>Not available for nameplate photos</span>
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={removeBgFlags[view] || false}
+                        onChange={(e) => handleRemoveBg(view, e.target.checked)}
+                        disabled={processingBg[view]}
+                        className="w-5 h-5"
+                      />
+                      <span className="text-sm text-gray-700 font-semibold">
+                        Remove background
+                        {processingBg[view] && (
+                          <Loader size={14} className="inline-block ml-2 animate-spin" />
+                        )}
+                        {removeBgFlags[view] && !processingBg[view] && (
+                          <span className="ml-2 text-green-600">✓</span>
+                        )}
+                      </span>
+                    </label>
+                  )}
                 </div>
               )
             ))}

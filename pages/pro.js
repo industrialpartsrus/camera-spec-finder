@@ -3063,6 +3063,49 @@ export default function ProListingBuilder() {
                     )}
                   </div>
 
+                  {/* Product Photos */}
+                  {selected.photoViews && selected.photoViews.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">
+                        📷 Product Photos ({selected.photoViews.length})
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {selected.photoViews.map((view, idx) => {
+                          // Construct Firebase Storage URL
+                          const baseUrl = `https://firebasestorage.googleapis.com/v0/b/camera-spec-finder.appspot.com/o/photos%2F${encodeURIComponent(selected.sku)}%2F`;
+                          const hasBgRemoved = selected.removeBgFlags && selected.removeBgFlags[view];
+
+                          // Prefer _nobg version if it exists
+                          const imageUrl = hasBgRemoved
+                            ? `${baseUrl}${encodeURIComponent(view)}_nobg.png?alt=media`
+                            : `${baseUrl}${encodeURIComponent(view)}.jpg?alt=media`;
+
+                          return (
+                            <div key={idx} className="relative border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                              <div className="aspect-square relative">
+                                <img
+                                  src={imageUrl}
+                                  alt={view}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    // Fallback to original if _nobg fails
+                                    if (hasBgRemoved) {
+                                      e.target.src = `${baseUrl}${encodeURIComponent(view)}.jpg?alt=media`;
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs px-2 py-1 text-center capitalize">
+                                {view.replace('_', ' ')}
+                                {hasBgRemoved && <span className="ml-1">✨</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Short Description */}
                   <div>
                     <label className="block text-sm font-semibold mb-2">Meta Description ({selected.shortDescription?.length || 0}/160)</label>

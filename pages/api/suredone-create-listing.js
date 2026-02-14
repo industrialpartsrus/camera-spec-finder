@@ -999,6 +999,26 @@ export default async function handler(req, res) {
       formData.append('bigcommercebinpickingnumber', product.shelfLocation);
     }
 
+    // === PRODUCT PHOTOS (media1-media12) ===
+    if (product.photoViews && product.photoViews.length > 0) {
+      const baseUrl = `https://firebasestorage.googleapis.com/v0/b/camera-spec-finder.appspot.com/o/photos%2F${encodeURIComponent(sku)}%2F`;
+
+      product.photoViews.forEach((view, index) => {
+        // Prefer _nobg version if background was removed for this view
+        const hasBgRemoved = product.removeBgFlags && product.removeBgFlags[view];
+        const photoUrl = hasBgRemoved
+          ? `${baseUrl}${encodeURIComponent(view)}_nobg.png?alt=media`
+          : `${baseUrl}${encodeURIComponent(view)}.jpg?alt=media`;
+
+        // SureDone supports media1 through media12
+        const mediaField = `media${index + 1}`;
+        if (index < 12) {
+          formData.append(mediaField, photoUrl);
+          console.log(`Added ${mediaField}: ${view}${hasBgRemoved ? ' (nobg)' : ''}`);
+        }
+      });
+    }
+
     // === BIGCOMMERCE FIELDS ===
     formData.append('bigcommerceisconditionshown', 'on');
     formData.append('bigcommerceavailabilitydescription', 'In Stock');
