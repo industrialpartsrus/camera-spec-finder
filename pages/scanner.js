@@ -722,7 +722,7 @@ export default function WarehouseScanner() {
 
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">How many adding?</label>
-                <div className="flex items-center gap-4">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', maxWidth: '250px', margin: '0 auto' }}>
                   <button
                     onClick={() => setQuantityToAdd(Math.max(1, quantityToAdd - 1))}
                     className="w-16 h-16 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg flex items-center justify-center transition"
@@ -733,7 +733,8 @@ export default function WarehouseScanner() {
                     type="number"
                     value={quantityToAdd}
                     onChange={(e) => setQuantityToAdd(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-24 text-center text-3xl font-bold border-2 border-gray-300 rounded-lg py-3 focus:border-blue-500 focus:outline-none"
+                    style={{ width: '80px', textAlign: 'center' }}
+                    className="text-3xl font-bold border-2 border-gray-300 rounded-lg py-3 focus:border-blue-500 focus:outline-none"
                     min="1"
                   />
                   <button
@@ -829,7 +830,7 @@ export default function WarehouseScanner() {
 
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Quantity *</label>
-              <div className="flex items-center gap-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', maxWidth: '250px', margin: '0 auto' }}>
                 <button
                   onClick={() => setNewQuantity(Math.max(1, newQuantity - 1))}
                   className="w-16 h-16 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg flex items-center justify-center transition"
@@ -840,7 +841,8 @@ export default function WarehouseScanner() {
                   type="number"
                   value={newQuantity}
                   onChange={(e) => setNewQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="flex-1 text-center text-3xl font-bold border-2 border-gray-300 rounded-lg py-3 focus:border-blue-500 focus:outline-none"
+                  style={{ width: '80px', textAlign: 'center' }}
+                  className="text-3xl font-bold border-2 border-gray-300 rounded-lg py-3 focus:border-blue-500 focus:outline-none"
                   min="1"
                 />
                 <button
