@@ -859,32 +859,9 @@ export default async function handler(req, res) {
 
   try {
     // === GENERATE SKU ===
-    let aiNumber = 1;
-    try {
-      const searchResponse = await fetch(`${SUREDONE_URL}/editor/items?search=sku:AI`, {
-        method: 'GET',
-        headers: { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN }
-      });
-
-      if (searchResponse.ok) {
-        const searchData = await searchResponse.json();
-        const skus = [];
-        for (const key in searchData) {
-          if (key !== 'result' && key !== 'message' && key !== 'type' && key !== 'time') {
-            const item = searchData[key];
-            if (item?.sku?.startsWith('AI')) {
-              const match = item.sku.match(/^AI(\d+)/);
-              if (match) skus.push(parseInt(match[1], 10));
-            }
-          }
-        }
-        if (skus.length > 0) aiNumber = Math.max(...skus) + 1;
-      }
-    } catch (e) {
-      console.log('SKU search error:', e.message);
-    }
-
-    const sku = `AI${String(aiNumber).padStart(4, '0')}`;
+    // Use atomic Firestore counter (simple, fast, reliable)
+    const { generateNextSku } = await import('../../lib/sku-generator');
+    const sku = await generateNextSku();
 
     // === GET UPC ===
     let upc = null;
