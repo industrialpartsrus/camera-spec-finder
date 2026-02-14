@@ -1049,10 +1049,58 @@ function toUpperCase(str) {
   return str.toUpperCase();
 }
 
+// Brand display names with correct capitalization for brands that need special handling
+const BRAND_DISPLAY_NAMES = {
+  'automationdirect': 'AutomationDirect',
+  'automation direct': 'AutomationDirect',
+  'allen-bradley': 'Allen-Bradley',
+  'allen bradley': 'Allen-Bradley',
+  'sew-eurodrive': 'SEW-Eurodrive',
+  'sew eurodrive': 'SEW-Eurodrive',
+  'pepperl+fuchs': 'Pepperl+Fuchs',
+  'pepperl fuchs': 'Pepperl+Fuchs',
+  'b&r': 'B&R',
+  'b&r automation': 'B&R Automation',
+  'br automation': 'B&R Automation',
+  'ge-fanuc': 'GE-Fanuc',
+  'ge fanuc': 'GE Fanuc',
+  'leroy-somer': 'Leroy-Somer',
+  'leroy somer': 'Leroy-Somer',
+  'sprecher+schuh': 'Sprecher+Schuh',
+  'sprecher schuh': 'Sprecher+Schuh',
+  'tdk-lambda': 'TDK-Lambda',
+  'tdk lambda': 'TDK-Lambda',
+  'power-one': 'Power-One',
+  'power one': 'Power-One',
+  'pro-face': 'Pro-face',
+  'proface': 'Pro-face',
+  'oriental motor': 'Oriental Motor',
+  'banner engineering': 'Banner Engineering',
+  'schneider electric': 'Schneider Electric',
+  'rockwell automation': 'Rockwell Automation',
+  'phoenix contact': 'Phoenix Contact',
+  'red lion': 'Red Lion',
+  'red lion controls': 'Red Lion Controls',
+  'sick': 'SICK',
+  'ifm': 'IFM',
+  'ifm efector': 'IFM',
+  'ifm electronic': 'IFM',
+  'baumer electric': 'Baumer Electric',
+  'boston gear': 'Boston Gear',
+  'cooper bussmann': 'Cooper Bussmann',
+  'carlo gavazzi': 'Carlo Gavazzi',
+  'cutler-hammer': 'Cutler-Hammer',
+  'cutler hammer': 'Cutler-Hammer',
+};
+
 function capitalizeBrand(brandName) {
   if (!brandName) return brandName;
 
-  // Look up canonical capitalization from bigcommerce_brands.json first
+  // Check display names map first for brands with specific capitalization
+  const displayName = BRAND_DISPLAY_NAMES[brandName.toLowerCase().trim()];
+  if (displayName) return displayName;
+
+  // Look up canonical capitalization from bigcommerce_brands.json
   const brandLower = brandName.toLowerCase().trim();
   if (brandsDb[brandLower]?.name) return brandsDb[brandLower].name;
 

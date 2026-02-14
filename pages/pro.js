@@ -508,7 +508,7 @@ const CONDITION_NOTES = {
 
 // Map Scanner/legacy condition values to Pro Builder values
 const CONDITION_NORMALIZER = {
-  // Pro Builder native values (pass through)
+  // ===== Pro Builder native values (compound) =====
   'new_in_box': 'new_in_box',
   'new_open_box': 'new_open_box',
   'new_missing_hardware': 'new_missing_hardware',
@@ -517,18 +517,31 @@ const CONDITION_NORMALIZER = {
   'used_good': 'used_good',
   'used_fair': 'used_fair',
   'for_parts': 'for_parts',
-  // Scanner/legacy simple values (normalize UP)
+
+  // ===== Scanner simple values (lowercase) =====
   'new': 'new_in_box',
   'like_new': 'like_new_excellent',
   'good': 'used_good',
   'fair': 'used_fair',
   'poor': 'used_fair',
   'parts': 'for_parts',
-  // SureDone display values (from loadExistingListing)
+
+  // ===== Scanner simple values (capitalized) =====
   'New': 'new_in_box',
+  'Good': 'used_good',
+  'Fair': 'used_fair',
+  'Parts': 'for_parts',
+
+  // ===== SureDone display values (what comes back from the API) =====
+  'New In Box': 'new_in_box',
   'New Other': 'new_open_box',
-  'Used': 'used_good',
+  'Used - Good': 'used_good',
+  'Used - Fair': 'used_fair',
   'For Parts or Not Working': 'for_parts',
+
+  // ===== Legacy/fallback values =====
+  'Used': 'used_good',
+  'used': 'used_good',
 };
 
 function normalizeCondition(condition) {
