@@ -509,35 +509,31 @@ const CONDITION_NOTES = {
 // Map Scanner/legacy condition values to Pro Builder values
 const CONDITION_NORMALIZER = {
   // Pro Builder native values (pass through)
-  'new': 'new',
-  'new_surplus': 'new_surplus',
   'new_in_box': 'new_in_box',
-  'open_box': 'open_box',
-  'refurbished': 'refurbished',
-  'manufacturer_refurbished': 'manufacturer_refurbished',
-  'used': 'used',
+  'new_open_box': 'new_open_box',
+  'new_missing_hardware': 'new_missing_hardware',
+  'like_new_excellent': 'like_new_excellent',
+  'used_very_good': 'used_very_good',
+  'used_good': 'used_good',
+  'used_fair': 'used_fair',
   'for_parts': 'for_parts',
-  // Scanner values (from CONDITION_OPTIONS in scanner.js)
-  'New': 'new',
-  'New Other (see details)': 'new_in_box',
-  'New (Other)': 'new_surplus',
-  'Open Box (Never Used)': 'open_box',
-  'Used': 'used',
-  'For parts or not working': 'for_parts',
+  // Scanner/legacy simple values (normalize UP)
+  'new': 'new_in_box',
+  'like_new': 'like_new_excellent',
+  'good': 'used_good',
+  'fair': 'used_fair',
+  'poor': 'used_fair',
+  'parts': 'for_parts',
   // SureDone display values (from loadExistingListing)
-  'New Other': 'new_in_box',
+  'New': 'new_in_box',
+  'New Other': 'new_open_box',
+  'Used': 'used_good',
   'For Parts or Not Working': 'for_parts',
-  // Legacy/System Architecture values (if they exist)
-  'like_new': 'new_in_box',
-  'good': 'used',
-  'fair': 'used',
-  'poor': 'used',
-  'parts': 'for_parts'
 };
 
 function normalizeCondition(condition) {
-  if (!condition) return 'used';
-  return CONDITION_NORMALIZER[condition] || 'used';
+  if (!condition) return 'used_good';
+  return CONDITION_NORMALIZER[condition] || 'used_good';
 }
 
 // Coil voltage enforcement — product types that commonly have coil voltages
