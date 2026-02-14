@@ -3064,21 +3064,21 @@ export default function ProListingBuilder() {
                   </div>
 
                   {/* Product Photos */}
-                  {selected.photoViews && selected.photoViews.length > 0 && (
+                  {selected.photos && selected.photos.length > 0 && (
                     <div>
                       <label className="block text-sm font-semibold mb-2">
-                        📷 Product Photos ({selected.photoViews.length})
+                        📷 Product Photos ({selected.photos.length})
                       </label>
                       <div className="grid grid-cols-3 gap-3">
                         {selected.photoViews.map((view, idx) => {
-                          // Construct Firebase Storage URL
-                          const baseUrl = `https://firebasestorage.googleapis.com/v0/b/camera-spec-finder.appspot.com/o/photos%2F${encodeURIComponent(selected.sku)}%2F`;
+                          // Use the download URLs saved in Firestore (includes access tokens)
+                          const originalUrl = selected.photos[idx];
                           const hasBgRemoved = selected.removeBgFlags && selected.removeBgFlags[view];
 
-                          // Prefer _nobg version if it exists
-                          const imageUrl = hasBgRemoved
-                            ? `${baseUrl}${encodeURIComponent(view)}_nobg.png?alt=media`
-                            : `${baseUrl}${encodeURIComponent(view)}.jpg?alt=media`;
+                          // Use saved _nobg URL if available, otherwise use original
+                          const imageUrl = (hasBgRemoved && selected.photosNobg && selected.photosNobg[view])
+                            ? selected.photosNobg[view]
+                            : originalUrl;
 
                           return (
                             <div key={idx} className="relative border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
@@ -3088,9 +3088,9 @@ export default function ProListingBuilder() {
                                   alt={view}
                                   className="w-full h-full object-contain"
                                   onError={(e) => {
-                                    // Fallback to original if _nobg fails
-                                    if (hasBgRemoved) {
-                                      e.target.src = `${baseUrl}${encodeURIComponent(view)}.jpg?alt=media`;
+                                    // Fallback to original if _nobg fails to load
+                                    if (hasBgRemoved && originalUrl) {
+                                      e.target.src = originalUrl;
                                     }
                                   }}
                                 />

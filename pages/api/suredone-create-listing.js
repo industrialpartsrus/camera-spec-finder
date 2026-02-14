@@ -977,19 +977,20 @@ export default async function handler(req, res) {
     }
 
     // === PRODUCT PHOTOS (media1-media12) ===
-    if (product.photoViews && product.photoViews.length > 0) {
-      const baseUrl = `https://firebasestorage.googleapis.com/v0/b/camera-spec-finder.appspot.com/o/photos%2F${encodeURIComponent(sku)}%2F`;
-
+    if (product.photos && product.photos.length > 0) {
       product.photoViews.forEach((view, index) => {
-        // Prefer _nobg version if background was removed for this view
+        // Use the download URLs saved in Firestore (includes access tokens)
+        const originalUrl = product.photos[index];
         const hasBgRemoved = product.removeBgFlags && product.removeBgFlags[view];
-        const photoUrl = hasBgRemoved
-          ? `${baseUrl}${encodeURIComponent(view)}_nobg.png?alt=media`
-          : `${baseUrl}${encodeURIComponent(view)}.jpg?alt=media`;
+
+        // Prefer _nobg version if available, otherwise use original
+        const photoUrl = (hasBgRemoved && product.photosNobg && product.photosNobg[view])
+          ? product.photosNobg[view]
+          : originalUrl;
 
         // SureDone supports media1 through media12
         const mediaField = `media${index + 1}`;
-        if (index < 12) {
+        if (index < 12 && photoUrl) {
           formData.append(mediaField, photoUrl);
           console.log(`Added ${mediaField}: ${view}${hasBgRemoved ? ' (nobg)' : ''}`);
         }

@@ -472,6 +472,7 @@ export default function PhotoStation() {
       // Upload each photo directly to Firebase Storage (client-side)
       let uploadCount = 0;
       const totalUploads = photosToUpload.length + Object.keys(processedPhotos).length;
+      const photosNobg = {}; // Store _nobg download URLs
 
       for (let i = 0; i < photosToUpload.length; i++) {
         const { view, dataUrl } = photosToUpload[i];
@@ -515,7 +516,11 @@ export default function PhotoStation() {
               }
             });
 
-            console.log(`Uploaded ${view}_nobg.png`);
+            // Get download URL for _nobg version
+            const nobgDownloadURL = await getDownloadURL(nobgRef);
+            photosNobg[view] = nobgDownloadURL;
+
+            console.log(`Uploaded ${view}_nobg.png: ${nobgDownloadURL}`);
 
             uploadCount++;
             setUploadProgress(10 + (uploadCount / totalUploads) * 70);
@@ -532,6 +537,7 @@ export default function PhotoStation() {
       const productRef = doc(db, 'products', selectedItem.id);
       await updateDoc(productRef, {
         photos: uploadedPhotos.map(p => p.url),
+        photosNobg: photosNobg, // Object mapping view names to _nobg URLs
         photoCount: uploadedPhotos.length,
         photoViews: uploadedPhotos.map(p => p.view),
         removeBgFlags: removeBgFlags,
