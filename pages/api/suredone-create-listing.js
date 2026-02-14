@@ -20,7 +20,14 @@ const BRAND_IDS = {
   'oriental motor': '104', 'vickers': '137', 'eaton': '72', 'cutler hammer': '72',
   'cutler-hammer': '72', 'phoenix contact': '50', 'wago': '50', 'pilz': '155',
   'bihl+wiedemann': '97', 'bihl wiedemann': '97', 'b&r': '97', 'b&r automation': '97',
-  'weg': '95', 'marathon': '93', 'leeson': '91', 'teco': '96', 'reliance': '92'
+  'weg': '95', 'marathon': '93', 'leeson': '91', 'teco': '96', 'reliance': '92',
+  'automationdirect': '286', 'automation direct': '286',
+  'automation direct stride': '695',
+  'honeywell': '153', 'ifm': '152', 'ifm electronic': '152',
+  'balluff': '77', 'pepperl fuchs': '78', 'pepperl+fuchs': '78',
+  'lenze': '100', 'sew eurodrive': '102', 'sew-eurodrive': '102',
+  'nord': '103', 'bonfiglioli': '105',
+  'watlow': '154', 'red lion': '156'
 };
 
 // BigCommerce multi-category mappings: Shop All + Parent + Leaf
@@ -977,24 +984,14 @@ export default async function handler(req, res) {
     }
 
     // === PRODUCT PHOTOS (media1-media12) ===
-    if (product.photos && product.photos.length > 0) {
-      product.photoViews.forEach((view, index) => {
-        // Use the download URLs saved in Firestore (includes access tokens)
-        const originalUrl = product.photos[index];
-        const hasBgRemoved = product.removeBgFlags && product.removeBgFlags[view];
-
-        // Prefer _nobg version if available, otherwise use original
-        const photoUrl = (hasBgRemoved && product.photosNobg && product.photosNobg[view])
-          ? product.photosNobg[view]
-          : originalUrl;
-
-        // SureDone supports media1 through media12
-        const mediaField = `media${index + 1}`;
-        if (index < 12 && photoUrl) {
-          formData.append(mediaField, photoUrl);
-          console.log(`Added ${mediaField}: ${view}${hasBgRemoved ? ' (nobg)' : ''}`);
+    if (product.photos && Array.isArray(product.photos)) {
+      product.photos.forEach((url, index) => {
+        if (url && index < 12) {
+          formData.append(`media${index + 1}`, url);
+          console.log(`  media${index + 1} = ${url.substring(0, 80)}...`);
         }
       });
+      console.log(`Total media fields set: ${product.photos.length}`);
     }
 
     // === BIGCOMMERCE FIELDS ===

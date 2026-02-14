@@ -506,6 +506,40 @@ const CONDITION_NOTES = {
   'for_parts': 'Item sold as-is for parts or repair. Not tested or may not be fully functional. No warranty provided.'
 };
 
+// Map Scanner/legacy condition values to Pro Builder values
+const CONDITION_NORMALIZER = {
+  // Pro Builder native values (pass through)
+  'new': 'new',
+  'new_surplus': 'new_surplus',
+  'new_in_box': 'new_in_box',
+  'open_box': 'open_box',
+  'refurbished': 'refurbished',
+  'manufacturer_refurbished': 'manufacturer_refurbished',
+  'used': 'used',
+  'for_parts': 'for_parts',
+  // Scanner values (from CONDITION_OPTIONS in scanner.js)
+  'New': 'new',
+  'New Other (see details)': 'new_in_box',
+  'New (Other)': 'new_surplus',
+  'Open Box (Never Used)': 'open_box',
+  'Used': 'used',
+  'For parts or not working': 'for_parts',
+  // SureDone display values (from loadExistingListing)
+  'New Other': 'new_in_box',
+  'For Parts or Not Working': 'for_parts',
+  // Legacy/System Architecture values (if they exist)
+  'like_new': 'new_in_box',
+  'good': 'used',
+  'fair': 'used',
+  'poor': 'used',
+  'parts': 'for_parts'
+};
+
+function normalizeCondition(condition) {
+  if (!condition) return 'used';
+  return CONDITION_NORMALIZER[condition] || 'used';
+}
+
 // Coil voltage enforcement — product types that commonly have coil voltages
 const COIL_VOLTAGE_PRODUCT_TYPES = new Set([
   'Contactor', 'AC Contactor', 'DC Contactor',
@@ -1524,7 +1558,14 @@ export default function ProListingBuilder() {
     const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items = [];
-      snapshot.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        items.push({
+          id: doc.id,
+          ...data,
+          condition: normalizeCondition(data.condition)
+        });
+      });
       setQueue(items);
     });
     return () => unsubscribe();
@@ -2214,7 +2255,11 @@ export default function ProListingBuilder() {
           ebaycatid: item.ebayCategoryId || '',
           ebaystoreid: item.ebayStoreCategoryId || '',
           ebaystoreid2: item.ebayStoreCategoryId2 || '',
-          ebayshippingprofileid: item.ebayShippingProfileId || '69077991015'
+          ebayshippingprofileid: item.ebayShippingProfileId || '69077991015',
+          photos: item.photos || [],
+          photosNobg: item.photosNobg || {},
+          photoViews: item.photoViews || [],
+          removeBgFlags: item.removeBgFlags || {}
         };
         
         console.log('Updating existing listing:', updateData);
@@ -2261,7 +2306,11 @@ export default function ProListingBuilder() {
           bigcommerceCategoryId: item.bigcommerceCategoryId || '',
           ebayShippingProfileId: item.ebayShippingProfileId || '69077991015',
           // Pass 2: eBay item specifics (pre-filled by AI)
-          ebayItemSpecificsForSuredone: item.ebayItemSpecificsForSuredone || {}
+          ebayItemSpecificsForSuredone: item.ebayItemSpecificsForSuredone || {},
+          photos: item.photos || [],
+          photosNobg: item.photosNobg || {},
+          photoViews: item.photoViews || [],
+          removeBgFlags: item.removeBgFlags || {}
         };
         
         console.log('Creating new listing:', productData);
@@ -3115,7 +3164,7 @@ export default function ProListingBuilder() {
                   {/* Condition */}
                   <div>
                     <label className="block text-sm font-semibold mb-2">Condition <span className="text-red-500">*</span></label>
-                    <select value={selected.condition || ''} onChange={e => updateCondition(selected.id, e.target.value)} className={`w-full px-3 py-2 border rounded-lg ${!selected.condition && submitAttempted[selected.id] ? 'border-red-500 bg-red-50' : ''}`}>
+                    <select value={normalizeCondition(selected.condition)} onChange={e => updateCondition(selected.id, e.target.value)} className={`w-full px-3 py-2 border rounded-lg ${!selected.condition && submitAttempted[selected.id] ? 'border-red-500 bg-red-50' : ''}`}>
                       <option value="" disabled>-- Select Condition --</option>
                       {CONDITION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
