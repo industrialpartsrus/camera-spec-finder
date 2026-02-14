@@ -950,8 +950,9 @@ export default async function handler(req, res) {
     formData.append('ebayskip', '1');
     formData.append('bigcommerceskip', '1');
     console.log('Channels skipped: eBay and BigCommerce (draft mode)');
-    
-    formData.append('longdescription', product.description || '');
+
+    // Use rawDescription (with preserved table HTML) if available, fallback to description
+    formData.append('longdescription', product.rawDescription || product.description || '');
     formData.append('price', product.price || '0.00');
     formData.append('stock', product.stock || '1');
     formData.append('brand', brandFormatted);

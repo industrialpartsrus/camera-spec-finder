@@ -30,6 +30,54 @@ const QUILL_FORMATS = [
   'list', 'align', 'link'
 ];
 
+// ============================================================================
+// TABLE PRESERVATION SYSTEM
+// ReactQuill doesn't support <table> tags, so we split them out for editing
+// ============================================================================
+
+/**
+ * Split HTML description by table tags
+ * @param {string} html - Full HTML description with potential table
+ * @returns {object} - { beforeTable, table, afterTable, hasTable }
+ */
+function splitDescriptionByTable(html) {
+  if (!html) return { beforeTable: '', table: '', afterTable: '', hasTable: false };
+
+  // Match the entire table including opening and closing tags
+  const tableRegex = /<table[^>]*>[\s\S]*?<\/table>/i;
+  const match = html.match(tableRegex);
+
+  if (!match) {
+    return { beforeTable: html, table: '', afterTable: '', hasTable: false };
+  }
+
+  const tableHtml = match[0];
+  const tableStart = match.index;
+  const tableEnd = tableStart + tableHtml.length;
+
+  return {
+    beforeTable: html.substring(0, tableStart).trim(),
+    table: tableHtml,
+    afterTable: html.substring(tableEnd).trim(),
+    hasTable: true
+  };
+}
+
+/**
+ * Merge description parts back into single HTML
+ * @param {string} beforeTable - Content before table (from ReactQuill)
+ * @param {string} table - Table HTML (preserved as-is)
+ * @param {string} afterTable - Content after table (editable or from original)
+ * @returns {string} - Complete HTML description
+ */
+function mergeDescriptionParts(beforeTable, table, afterTable) {
+  const parts = [];
+  if (beforeTable && beforeTable.trim()) parts.push(beforeTable.trim());
+  if (table && table.trim()) parts.push(table.trim());
+  if (afterTable && afterTable.trim()) parts.push(afterTable.trim());
+  return parts.join('\n\n');
+}
+
 // Product category options - will be built from EBAY_CATEGORY_ID_TO_NAME
 let CATEGORY_OPTIONS = [];
 // CATEGORY_DROPDOWN_OPTIONS will be built after EBAY_CATEGORY_ID_TO_NAME is defined
@@ -1576,7 +1624,7 @@ export default function ProListingBuilder() {
       const docRef = await addDoc(collection(db, 'products'), {
         brand: brand.trim(), partNumber: part.trim(), model: part.trim(),
         status: 'pending', createdBy: userName || 'Unknown', createdAt: serverTimestamp(),
-        title: '', productCategory: '', shortDescription: '', description: '',
+        title: '', productCategory: '', shortDescription: '', description: '', rawDescription: '',
         specifications: initialSpecs, rawSpecifications: [],
         condition: '', conditionNotes: '',
         price: '', quantity: '1', shelf: '',
@@ -1741,6 +1789,7 @@ export default function ProListingBuilder() {
       console.log('Final productCategory:', productCategory);
       console.log('Final detectedEbayCatId:', detectedEbayCatId);
 
+      const loadedDesc = existingData.longdescription || '';
       const docRef = await addDoc(collection(db, 'products'), {
         brand: existingData.brand || existingData.manufacturer || '',
         partNumber: existingData.mpn || existingData.partnumber || existingData.model || '',
@@ -1751,7 +1800,8 @@ export default function ProListingBuilder() {
         title: existingData.title || '',
         productCategory: productCategory,
         shortDescription: existingData.shortdescription || '',
-        description: existingData.longdescription || '',
+        description: loadedDesc,
+        rawDescription: loadedDesc, // Store original HTML from SureDone
         specifications: specs,
         rawSpecifications: [],
         condition: mappedCondition,
@@ -1875,13 +1925,15 @@ export default function ProListingBuilder() {
       }
       
       // Build update object, filtering out any undefined values
+      const rawDesc = product.description || '';
       const updateData = {
         status: 'complete',
         title: product.title || `${item.brand} ${item.partNumber}`,
         productCategory: product.productType || data._metadata?.detectedCategory || '',
         usertype: product.productType || data._metadata?.productType || '',
         shortDescription: product.shortDescription || '',
-        description: product.description || '',
+        description: rawDesc,
+        rawDescription: rawDesc, // Store original AI-generated HTML (source of truth for SureDone)
         specifications: data._resolvedSpecs || product.specifications || {},
         rawSpecifications: product.rawSpecifications || [],
         qualityFlag: product.qualityFlag || 'NEEDS_REVIEW',
@@ -1960,7 +2012,13 @@ export default function ProListingBuilder() {
     }
     // 'na' = no changes, just stripped previous modifications
 
-    try { await updateDoc(doc(db, 'products', itemId), { title, description }); }
+    try {
+      await updateDoc(doc(db, 'products', itemId), {
+        title,
+        description,
+        rawDescription: description // Keep rawDescription in sync when modifying for emitter/receiver
+      });
+    }
     catch (error) { console.error('Error applying ER status to listing:', error); }
   };
 
@@ -2080,6 +2138,7 @@ export default function ProListingBuilder() {
           if (pass3Data.data.revised) {
             updateFields.title = pass3Data.data.title;
             updateFields.description = pass3Data.data.description;
+            updateFields.rawDescription = pass3Data.data.description; // Keep rawDescription in sync
             updateFields.shortDescription = pass3Data.data.shortDescription;
             if (pass3Data.data.keywords) {
               updateFields.metaKeywords = pass3Data.data.keywords;
@@ -2928,18 +2987,76 @@ export default function ProListingBuilder() {
                       </div>
                     </div>
                     {(descriptionViewMode[selected.id] || 'visual') === 'visual' ? (
-                      <ReactQuill
-                        theme="snow"
-                        value={selected.description || ''}
-                        onChange={(content) => updateField(selected.id, 'description', content)}
-                        modules={QUILL_MODULES}
-                        formats={QUILL_FORMATS}
-                        style={{ minHeight: '300px' }}
-                      />
+                      (() => {
+                        // Split description by table for editing
+                        const rawDesc = selected.rawDescription || selected.description || '';
+                        const { beforeTable, table, afterTable, hasTable } = splitDescriptionByTable(rawDesc);
+
+                        return hasTable ? (
+                          <div className="space-y-4">
+                            {/* Editable prose before table */}
+                            <ReactQuill
+                              theme="snow"
+                              value={beforeTable}
+                              onChange={(content) => {
+                                const merged = mergeDescriptionParts(content, table, afterTable);
+                                updateField(selected.id, 'description', merged);
+                                updateField(selected.id, 'rawDescription', merged);
+                              }}
+                              modules={QUILL_MODULES}
+                              formats={QUILL_FORMATS}
+                              style={{ minHeight: '150px' }}
+                            />
+
+                            {/* Read-only table preview */}
+                            <div className="border-2 border-blue-200 bg-blue-50 rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-sm font-semibold text-blue-900">
+                                  📊 Technical Specifications Table (Read-Only)
+                                </p>
+                                <p className="text-xs text-blue-700">
+                                  Use "HTML Source" to edit table
+                                </p>
+                              </div>
+                              <div
+                                className="bg-white rounded p-3 overflow-x-auto"
+                                dangerouslySetInnerHTML={{ __html: table }}
+                              />
+                            </div>
+
+                            {/* Remaining content after table */}
+                            {afterTable && afterTable.trim() && (
+                              <div className="border-l-4 border-gray-300 pl-4">
+                                <p className="text-xs text-gray-500 mb-2">Content after table:</p>
+                                <div
+                                  className="prose prose-sm max-w-none"
+                                  dangerouslySetInnerHTML={{ __html: afterTable }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          // No table - use regular ReactQuill
+                          <ReactQuill
+                            theme="snow"
+                            value={selected.description || ''}
+                            onChange={(content) => {
+                              updateField(selected.id, 'description', content);
+                              updateField(selected.id, 'rawDescription', content);
+                            }}
+                            modules={QUILL_MODULES}
+                            formats={QUILL_FORMATS}
+                            style={{ minHeight: '300px' }}
+                          />
+                        );
+                      })()
                     ) : (
                       <textarea
-                        value={selected.description || ''}
-                        onChange={e => updateField(selected.id, 'description', e.target.value)}
+                        value={selected.rawDescription || selected.description || ''}
+                        onChange={e => {
+                          updateField(selected.id, 'description', e.target.value);
+                          updateField(selected.id, 'rawDescription', e.target.value);
+                        }}
                         className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
                         style={{ minHeight: '300px' }}
                       />
