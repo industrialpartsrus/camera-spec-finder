@@ -6,14 +6,58 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Edit3, LogOut, Plus, Minus, Check, X, AlertTriangle, Package, RefreshCw } from 'lucide-react';
 import { verifyUser, getActiveUsers } from '../lib/auth';
 
-const CONDITION_OPTIONS = [
-  { value: 'New', label: 'New', color: 'bg-green-100 border-green-500 text-green-900' },
-  { value: 'New Other (see details)', label: 'New in Box', color: 'bg-green-100 border-green-500 text-green-900' },
-  { value: 'New (Other)', label: 'New Surplus', color: 'bg-blue-100 border-blue-500 text-blue-900' },
-  { value: 'Open Box (Never Used)', label: 'Open Box', color: 'bg-blue-100 border-blue-500 text-blue-900' },
-  { value: 'Used', label: 'Used', color: 'bg-yellow-100 border-yellow-500 text-yellow-900' },
-  { value: 'For parts or not working', label: 'For Parts', color: 'bg-red-100 border-red-500 text-red-900' }
-];
+// Condition configuration - matches Pro Builder CONDITION_OPTIONS exactly
+const CONDITIONS = {
+  'new_in_box': {
+    label: 'New In Box',
+    shortLabel: 'NIB',
+    bgClass: 'bg-green-600'
+  },
+  'new_open_box': {
+    label: 'New - Open Box',
+    shortLabel: 'Open Box',
+    bgClass: 'bg-green-500'
+  },
+  'new_missing_hardware': {
+    label: 'New - No Pkg',
+    shortLabel: 'No Pkg',
+    bgClass: 'bg-green-400'
+  },
+  'like_new_excellent': {
+    label: 'Used - Excellent',
+    shortLabel: 'Excellent',
+    bgClass: 'bg-blue-500'
+  },
+  'used_good': {
+    label: 'Used - Good',
+    shortLabel: 'Good',
+    bgClass: 'bg-blue-400'
+  },
+  'used_fair': {
+    label: 'Used - Fair',
+    shortLabel: 'Fair',
+    bgClass: 'bg-yellow-500'
+  },
+  'for_parts': {
+    label: 'For Parts',
+    shortLabel: 'Parts',
+    bgClass: 'bg-red-500'
+  },
+  'refurbished': {
+    label: 'Refurbished',
+    shortLabel: 'Refurb',
+    bgClass: 'bg-purple-500'
+  },
+};
+
+function getConditionOptions() {
+  return Object.entries(CONDITIONS).map(([id, config]) => ({
+    id,
+    label: config.label,
+    shortLabel: config.shortLabel,
+    bgClass: config.bgClass,
+  }));
+}
 
 export default function WarehouseScanner() {
   // Auth state
@@ -41,7 +85,7 @@ export default function WarehouseScanner() {
 
   // New item state
   const [newSku, setNewSku] = useState('');
-  const [newCondition, setNewCondition] = useState('');
+  const [newCondition, setNewCondition] = useState('used_good'); // Default to 'used_good'
   const [newQuantity, setNewQuantity] = useState(1);
   const [newItemShelf, setNewItemShelf] = useState('');
 
@@ -420,8 +464,15 @@ export default function WarehouseScanner() {
   };
 
   const getConditionColor = (condition) => {
-    const opt = CONDITION_OPTIONS.find(o => o.value === condition || o.label === condition);
-    return opt ? opt.color : 'bg-gray-100 border-gray-500 text-gray-900';
+    // First try direct lookup by condition ID (e.g., 'used_good')
+    if (CONDITIONS[condition]) {
+      return CONDITIONS[condition].bgClass + ' border-current text-white';
+    }
+    // Fallback: search by label for legacy conditions
+    const entry = Object.entries(CONDITIONS).find(([id, config]) =>
+      config.label === condition || config.shortLabel === condition
+    );
+    return entry ? entry[1].bgClass + ' border-current text-white' : 'bg-gray-100 border-gray-500 text-gray-900';
   };
 
   // ============================================
@@ -812,13 +863,13 @@ export default function WarehouseScanner() {
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">Condition *</label>
               <div className="grid grid-cols-2 gap-3">
-                {CONDITION_OPTIONS.map(opt => (
+                {getConditionOptions().map(opt => (
                   <button
-                    key={opt.value}
-                    onClick={() => setNewCondition(opt.value)}
+                    key={opt.id}
+                    onClick={() => setNewCondition(opt.id)}
                     className={`p-4 border-2 rounded-lg font-bold text-center transition ${
-                      newCondition === opt.value
-                        ? opt.color + ' border-current'
+                      newCondition === opt.id
+                        ? opt.bgClass + ' text-white border-current'
                         : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
                   >

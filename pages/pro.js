@@ -3260,6 +3260,35 @@ export default function ProListingBuilder() {
                     </div>
                   </div>
 
+                  {/* Condition Verification Banner */}
+                  {selected.condition && (
+                    <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-4 mb-4">
+                      <div className="flex items-start gap-3">
+                        <div className="text-amber-600 mt-0.5">⚠️</div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-amber-900 mb-1">
+                            Condition: {(() => {
+                              const opt = CONDITION_OPTIONS.find(o => o.value === selected.condition);
+                              return opt ? opt.label : selected.condition.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                            })()}
+                          </div>
+                          <div className="text-sm text-amber-800 mb-1">
+                            {selected.lifecycle?.scannedBy ? (
+                              <>Set by: <span className="font-medium">{selected.lifecycle.scannedBy}</span> during scanning</>
+                            ) : selected.createdBy ? (
+                              <>Set by: <span className="font-medium">{selected.createdBy}</span></>
+                            ) : (
+                              <>Set during item creation</>
+                            )}
+                          </div>
+                          <div className="text-xs text-amber-700 italic">
+                            Verify this condition matches the item photos
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Send Button */}
                   {(() => {
                     const coilBlocking = needsCoilVoltage(selected.productCategory) && (!selected.specifications?.coilvoltage || !(selected.coilVoltageVerified || coilVoltageVerified[selected.id]));
