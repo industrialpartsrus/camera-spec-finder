@@ -485,14 +485,15 @@ const STORE_TO_PRODUCT_CATEGORY = {
 
 // Condition options
 const CONDITION_OPTIONS = [
-  { value: 'new', label: 'New' },
-  { value: 'new_surplus', label: 'New Surplus' },
-  { value: 'new_in_box', label: 'New in Box' },
-  { value: 'open_box', label: 'Open Box' },
+  { value: 'new_in_box', label: 'New In Box' },
+  { value: 'new_open_box', label: 'New - Open Box' },
+  { value: 'new_missing_hardware', label: 'New - No Packaging' },
+  { value: 'like_new_excellent', label: 'Used - Excellent' },
+  { value: 'used_very_good', label: 'Used - Very Good' },
+  { value: 'used_good', label: 'Used - Good' },
+  { value: 'used_fair', label: 'Used - Fair' },
   { value: 'refurbished', label: 'Refurbished' },
-  { value: 'manufacturer_refurbished', label: 'Manufacturer Refurbished' },
-  { value: 'used', label: 'Used' },
-  { value: 'for_parts', label: 'For Parts / Not Working' }
+  { value: 'for_parts', label: 'For Parts or Not Working' }
 ];
 
 const CONDITION_NOTES = {
@@ -508,7 +509,7 @@ const CONDITION_NOTES = {
   'like_new_excellent': 'Excellent condition, appears unused or very lightly used. Tested and fully functional. All components included. We warranty all items for 30 days.',
 
   // Refurbished conditions
-  'refurbished': 'Professionally refurbished to working condition. Tested and fully functional. May show signs of previous use. We warranty all items for 30 days.',
+  'refurbished': 'Professionally refurbished to working condition. Tested and verified functional. May show cosmetic wear. We warranty all items for 30 days.',
   'manufacturer_refurbished': 'Refurbished by the original manufacturer to factory specifications. Tested and fully functional. We warranty all items for 30 days.',
 
   // Used conditions
@@ -3189,6 +3190,37 @@ export default function ProListingBuilder() {
 
                   {/* Condition */}
                   <div>
+                    {/* Condition Verification Banner */}
+                    {selected.condition && (
+                      <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-4 mb-4">
+                        <div className="flex items-start gap-3">
+                          <div className="text-amber-600 mt-0.5 text-xl">⚠️</div>
+                          <div className="flex-1">
+                            <div className="font-bold text-amber-900 text-lg mb-2 uppercase">
+                              {(() => {
+                                const opt = CONDITION_OPTIONS.find(o => o.value === selected.condition);
+                                return opt ? opt.label : selected.condition.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                              })()}
+                            </div>
+                            <div className="text-sm text-amber-800 mb-3 leading-relaxed">
+                              {CONDITION_NOTES[selected.condition] || 'No description available'}
+                            </div>
+                            <div className="text-xs text-amber-700 border-t border-amber-300 pt-2">
+                              {selected.lifecycle?.scannedBy ? (
+                                <>Set by: <span className="font-medium">{selected.lifecycle.scannedBy}</span> during scanning</>
+                              ) : selected.createdBy ? (
+                                <>Set by: <span className="font-medium">{selected.createdBy}</span></>
+                              ) : (
+                                <>Set during item creation</>
+                              )}
+                              <br />
+                              <span className="italic">Verify this condition matches the item photos</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <label className="block text-sm font-semibold mb-2">Condition <span className="text-red-500">*</span></label>
                     <select value={normalizeCondition(selected.condition)} onChange={e => updateCondition(selected.id, e.target.value)} className={`w-full px-3 py-2 border rounded-lg ${!selected.condition && submitAttempted[selected.id] ? 'border-red-500 bg-red-50' : ''}`}>
                       <option value="" disabled>-- Select Condition --</option>
@@ -3196,9 +3228,6 @@ export default function ProListingBuilder() {
                     </select>
                     {!selected.condition && submitAttempted[selected.id] && (
                       <p className="text-xs text-red-600 mt-1 font-medium">Condition is required before submitting</p>
-                    )}
-                    {selected.conditionNotes && (
-                      <p className="text-xs text-gray-600 mt-2 p-2 bg-gray-50 rounded">{selected.conditionNotes}</p>
                     )}
                   </div>
 
@@ -3260,35 +3289,6 @@ export default function ProListingBuilder() {
                       )}
                     </div>
                   </div>
-
-                  {/* Condition Verification Banner */}
-                  {selected.condition && (
-                    <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-4 mb-4">
-                      <div className="flex items-start gap-3">
-                        <div className="text-amber-600 mt-0.5">⚠️</div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-amber-900 mb-1">
-                            Condition: {(() => {
-                              const opt = CONDITION_OPTIONS.find(o => o.value === selected.condition);
-                              return opt ? opt.label : selected.condition.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                            })()}
-                          </div>
-                          <div className="text-sm text-amber-800 mb-1">
-                            {selected.lifecycle?.scannedBy ? (
-                              <>Set by: <span className="font-medium">{selected.lifecycle.scannedBy}</span> during scanning</>
-                            ) : selected.createdBy ? (
-                              <>Set by: <span className="font-medium">{selected.createdBy}</span></>
-                            ) : (
-                              <>Set during item creation</>
-                            )}
-                          </div>
-                          <div className="text-xs text-amber-700 italic">
-                            Verify this condition matches the item photos
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Send Button */}
                   {(() => {

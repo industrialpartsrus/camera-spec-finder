@@ -19,7 +19,7 @@ const CONDITIONS = {
     bgClass: 'bg-green-500'
   },
   'new_missing_hardware': {
-    label: 'New - No Pkg',
+    label: 'New - No Packaging',
     shortLabel: 'No Pkg',
     bgClass: 'bg-green-400'
   },
