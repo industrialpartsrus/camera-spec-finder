@@ -496,13 +496,28 @@ const CONDITION_OPTIONS = [
 ];
 
 const CONDITION_NOTES = {
+  // New conditions
   'new': 'Brand new, unused item in original manufacturer packaging. All original components included. We warranty all items for 30 days.',
-  'new_surplus': 'New surplus stock. Unused item, may have older packaging or no original box. Fully functional. We warranty all items for 30 days.',
   'new_in_box': 'New item in original sealed manufacturer packaging. Unopened and unused. We warranty all items for 30 days.',
+  'new_open_box': 'New item, packaging has been opened. All original components included. Never installed or used. We warranty all items for 30 days.',
+  'new_missing_hardware': 'New item, some hardware or accessories may be missing. Otherwise unused and fully functional. We warranty all items for 30 days.',
+  'new_surplus': 'New surplus stock. Unused item, may have older packaging or no original box. Fully functional. We warranty all items for 30 days.',
   'open_box': 'New item, packaging has been opened. All original components included. Never installed or used. We warranty all items for 30 days.',
+
+  // Like New / Excellent conditions
+  'like_new_excellent': 'Excellent condition, appears unused or very lightly used. Tested and fully functional. All components included. We warranty all items for 30 days.',
+
+  // Refurbished conditions
   'refurbished': 'Professionally refurbished to working condition. Tested and fully functional. May show signs of previous use. We warranty all items for 30 days.',
   'manufacturer_refurbished': 'Refurbished by the original manufacturer to factory specifications. Tested and fully functional. We warranty all items for 30 days.',
+
+  // Used conditions
   'used': 'Previously used item. Tested and fully functional. May show signs of wear from normal use. We warranty all items for 30 days.',
+  'used_very_good': 'Previously used item in very good condition. Minimal signs of wear. Tested and fully functional. We warranty all items for 30 days.',
+  'used_good': 'Previously used item in good condition. Tested and fully functional. May show normal signs of wear from use. We warranty all items for 30 days.',
+  'used_fair': 'Previously used item in fair condition. Tested and fully functional. May show noticeable wear or cosmetic damage. We warranty all items for 30 days.',
+
+  // For Parts
   'for_parts': 'Item sold as-is for parts or repair. Not tested or may not be fully functional. No warranty provided.'
 };
 
@@ -1572,7 +1587,8 @@ export default function ProListingBuilder() {
         items.push({
           id: doc.id,
           ...data,
-          condition: normalizeCondition(data.condition)
+          condition: normalizeCondition(data.condition),
+          conditionNotes: data.conditionNotes || CONDITION_NOTES[normalizeCondition(data.condition)] || '',
         });
       });
       setQueue(items);
