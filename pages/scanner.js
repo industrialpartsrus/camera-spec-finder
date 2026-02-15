@@ -418,6 +418,7 @@ export default function WarehouseScanner() {
           oldStock: 0,
           partNumber: partNumber,
           brand: brand,
+          condition: newCondition, // Send condition from Scanner
           shelf: newItemShelf.toUpperCase(),
           scannedBy: currentUser.username,
           action: 'create_new',

@@ -2304,6 +2304,7 @@ export default function ProListingBuilder() {
       } else {
         // CREATE new listing
         const productData = {
+          sku: item.sku || item.id || '', // Pass Scanner's SKU to prevent double generation
           title: item.title,
           description: item.description || '',
           shortDescription: item.shortDescription || '',

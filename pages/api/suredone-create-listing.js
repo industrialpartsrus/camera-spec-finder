@@ -1179,10 +1179,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    // === GENERATE SKU ===
-    // Use atomic Firestore counter (simple, fast, reliable)
-    const { generateNextSku } = await import('../../lib/sku-generator');
-    const sku = await generateNextSku();
+    // === GENERATE OR USE PROVIDED SKU ===
+    let sku;
+    // Use provided SKU if available (from Scanner)
+    if (product.sku && product.sku.startsWith('AI')) {
+      sku = product.sku;
+      console.log(`📋 Using provided SKU from Scanner: ${sku}`);
+    } else {
+      // Generate new SKU using atomic Firestore counter (simple, fast, reliable)
+      const { generateNextSku } = await import('../../lib/sku-generator');
+      sku = await generateNextSku();
+      console.log(`🆕 Generated new SKU: ${sku}`);
+    }
 
     // === GET UPC ===
     let upc = null;

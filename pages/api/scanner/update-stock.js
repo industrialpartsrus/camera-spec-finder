@@ -16,6 +16,7 @@ export default async function handler(req, res) {
     oldStock,
     partNumber,
     brand,
+    condition, // Condition from Scanner (e.g., 'used_good', 'new_in_box')
     shelf,
     scannedBy,
     action, // 'add_stock', 'create_new', 'update_existing'
@@ -67,14 +68,18 @@ export default async function handler(req, res) {
           brand: brand || '',
           stock: newStock,
           shelf: shelf || 'Not Assigned',
-          condition: 'Unknown', // Scanner doesn't capture condition yet
+          condition: condition || 'used_good', // Use Scanner's condition, default to 'used_good'
           scannedBy: scannedBy,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           lastScannedBy: scannedBy,
           lastScannedAt: serverTimestamp(),
           photoCount: 0,
-          status: 'needs_photos'
+          status: 'needs_photos',
+          lifecycle: {
+            scannedBy: scannedBy,
+            scannedAt: serverTimestamp()
+          }
         };
         const docRef = await addDoc(collection(db, 'products'), newProduct);
         createdFirebaseId = docRef.id;
