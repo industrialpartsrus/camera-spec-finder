@@ -641,18 +641,7 @@ export default function PhotoStation() {
   // ============================================
 
   const handleConfirmReturn = async () => {
-    // Trigger auto-research in background (fire-and-forget)
-    fetch('/api/auto-research', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        itemId: selectedItem.id,
-        brand: selectedItem.brand || selectedItem.brandName || '',
-        partNumber: selectedItem.partNumber || ''
-      })
-    }).catch(err => console.error('Auto-research trigger failed:', err));
-
-    // Return to queue
+    // Return to queue (research already triggered at scan time)
     handleReturnToQueue();
   };
 

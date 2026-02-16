@@ -429,7 +429,20 @@ export default function WarehouseScanner() {
       const data = await response.json();
 
       if (data.success) {
-        setSuccessMessage(`✅ ${newSku} created!\nCondition: ${newCondition}\nStock: ${newQuantity}\nShelf: ${newItemShelf.toUpperCase()}\n\nQueued for photos & listing`);
+        // Trigger AI research immediately (fire-and-forget)
+        if (data.firebaseId) {
+          fetch('/api/auto-research', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              itemId: data.firebaseId,
+              brand: brand,
+              partNumber: partNumber
+            })
+          }).catch(err => console.error('Auto-research trigger failed:', err));
+        }
+
+        setSuccessMessage(`✅ ${newSku} created!\nCondition: ${CONDITIONS[newCondition]?.label || newCondition}\nStock: ${newQuantity}\nShelf: ${newItemShelf.toUpperCase()}\n\nAI research started!\nQueued for photos`);
         setScreen('success');
         // Auto-return to scan after 3 seconds
         setTimeout(() => {

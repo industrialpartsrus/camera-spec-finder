@@ -3241,6 +3241,42 @@ export default function ProListingBuilder() {
                     <textarea value={getFieldValue(selected, 'shortDescription')} onChange={e => setFieldValue(selected.id, 'shortDescription', e.target.value.slice(0, 160))} className="w-full px-3 py-2 border rounded-lg h-20 text-sm" maxLength={160} />
                   </div>
 
+                  {/* Photos Section */}
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2">
+                      Product Photos {selected.photos?.length > 0 && (
+                        <span className="text-gray-500 font-normal">({selected.photos.length} photo{selected.photos.length !== 1 ? 's' : ''})</span>
+                      )}
+                    </h3>
+                    {selected.photos && selected.photos.length > 0 ? (
+                      <div className="grid grid-cols-4 gap-2">
+                        {selected.photos.map((url, idx) => (
+                          <div key={idx} className="relative group">
+                            <img
+                              src={url}
+                              alt={`Photo ${idx + 1}`}
+                              className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition cursor-pointer"
+                              onClick={() => window.open(url, '_blank')}
+                            />
+                            <span className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs font-bold px-2 py-0.5 rounded">
+                              {idx + 1}
+                            </span>
+                            {idx === 0 && (
+                              <span className="absolute top-1 right-1 bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                                ★ MAIN
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4 text-center">
+                        <p className="text-orange-700 font-semibold">📷 No photos yet</p>
+                        <p className="text-orange-600 text-sm mt-1">Item is in the photo queue — photos will appear here automatically</p>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Condition */}
                   <div>
                     {/* Condition Verification Banner */}
@@ -3345,14 +3381,64 @@ export default function ProListingBuilder() {
 
                   {/* Send Button */}
                   {(() => {
+                    // Existing validation
                     const coilBlocking = needsCoilVoltage(selected.productCategory) && (!selected.specifications?.coilvoltage || !(selected.coilVoltageVerified || coilVoltageVerified[selected.id]));
                     const erBlocking = needsEmitterReceiverCheck(selected.productCategory) && !(selected.emitterReceiverStatus || emitterReceiverStatus[selected.id]);
+
+                    // NEW: Photo requirement
+                    const hasPhotos = selected.photos && selected.photos.length > 0;
+                    const hasTitle = selected.title && selected.title.length > 5;
+                    const hasCategory = selected.ebayCategoryId;
+                    const photoBlocking = !hasPhotos;
+
+                    const isBlocked = isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking || erBlocking || photoBlocking;
+
                     return (
-                      <button onClick={() => sendToSureDone(selected.id)} disabled={isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking || erBlocking}
-                        className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                        {isSending ? <><Loader className="w-5 h-5 animate-spin" /> Sending...</> :
-                          selected.isEditingExisting ? '📝 Update in SureDone' : '🚀 Send to SureDone'}
-                      </button>
+                      <>
+                        <button
+                          onClick={() => sendToSureDone(selected.id)}
+                          disabled={isBlocked}
+                          className={`w-full px-6 py-4 rounded-lg font-semibold text-lg disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                            isBlocked
+                              ? 'bg-gray-300 text-gray-500'
+                              : 'bg-green-600 text-white hover:bg-green-700'
+                          }`}
+                        >
+                          {isSending ? <><Loader className="w-5 h-5 animate-spin" /> Sending...</> :
+                            isBlocked ? '🔒 Send to SureDone' :
+                            selected.isEditingExisting ? '📝 Update in SureDone' : '🚀 Send to SureDone'}
+                        </button>
+
+                        {/* Show what's blocking */}
+                        {isBlocked && !isSending && (
+                          <div className="mt-3 text-sm space-y-1">
+                            {photoBlocking && (
+                              <p className="text-orange-600 font-semibold">📷 Waiting for photos</p>
+                            )}
+                            {!hasTitle && (
+                              <p className="text-red-600 font-semibold">❌ Title required</p>
+                            )}
+                            {!hasCategory && (
+                              <p className="text-red-600 font-semibold">❌ eBay category required</p>
+                            )}
+                            {!selected.price && (
+                              <p className="text-red-600 font-semibold">❌ Price required</p>
+                            )}
+                            {!selected.condition && (
+                              <p className="text-red-600 font-semibold">❌ Condition required</p>
+                            )}
+                            {!selected.shelf && (
+                              <p className="text-red-600 font-semibold">❌ Shelf location required</p>
+                            )}
+                            {coilBlocking && (
+                              <p className="text-red-600 font-semibold">⚠️ Coil voltage verification required</p>
+                            )}
+                            {erBlocking && (
+                              <p className="text-red-600 font-semibold">⚠️ Emitter/Receiver check required</p>
+                            )}
+                          </div>
+                        )}
+                      </>
                     );
                   })()}
                 </div>

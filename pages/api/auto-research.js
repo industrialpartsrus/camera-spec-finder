@@ -62,8 +62,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Only proceed if photos_complete, pending, or error
-    if (!['photos_complete', 'pending', 'error'].includes(product.status)) {
+    // Allow research for new scans, pending items, needs_photos, or errors
+    if (!['needs_photos', 'scanned', 'pending', 'photos_complete', 'error'].includes(product.status)) {
       return res.status(400).json({
         success: false,
         error: `Invalid status for auto-research: ${product.status}`
@@ -75,19 +75,27 @@ export default async function handler(req, res) {
     console.log(`Auto-research started: ${itemId} (${brand} ${partNumber})`);
 
     // ===== PASS 1: PRODUCT RESEARCH =====
-    // Determine base URL for internal API call
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    // Build internal API URL using the same host/protocol as this request
+    // This ensures we call the same deployment (production/preview/localhost)
+    const protocol = process.env.VERCEL_URL ? 'https' : (req.headers.host?.includes('localhost') ? 'http' : 'https');
+    const host = req.headers.host || process.env.VERCEL_URL || 'localhost:3000';
+    const searchUrl = `${protocol}://${host}/api/search-product-v2`;
 
-    const searchResponse = await fetch(`${baseUrl}/api/search-product-v2`, {
+    console.log(`[Auto-research ${itemId}] Calling search API: ${searchUrl}`);
+
+    const searchResponse = await fetch(searchUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ brand, partNumber })
     });
 
     if (!searchResponse.ok) {
-      throw new Error(`Search API failed: ${searchResponse.status}`);
+      const errorText = await searchResponse.text();
+      console.error(`[Auto-research ${itemId}] Search API failed: ${searchResponse.status}`, errorText);
+      throw new Error(`Search API failed: ${searchResponse.status} - ${errorText.substring(0, 200)}`);
     }
+
+    console.log(`[Auto-research ${itemId}] Search API success, parsing response...`);
 
     const data = await searchResponse.json();
 
@@ -157,9 +165,10 @@ export default async function handler(req, res) {
     // ===== PASS 2: EBAY ITEM SPECIFICS =====
     if (data._ebayAspects && data._ebayAspects.all?.length > 0) {
       await updateDoc(productRef, { pass2Status: 'filling' });
-      console.log(`Auto-research Pass 2 starting: ${itemId} (${data._ebayAspects.all.length} aspects)`);
+      console.log(`[Auto-research ${itemId}] Pass 2 starting (${data._ebayAspects.all.length} aspects)`);
 
-      const pass2Response = await fetch(`${baseUrl}/api/v2/auto-fill-ebay-specifics`, {
+      const pass2Url = `${protocol}://${host}/api/v2/auto-fill-ebay-specifics`;
+      const pass2Response = await fetch(pass2Url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
