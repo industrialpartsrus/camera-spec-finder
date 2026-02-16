@@ -1577,6 +1577,9 @@ export default function ProListingBuilder() {
   const [showComparePanel, setShowComparePanel] = useState(false);
   const [existingListingData, setExistingListingData] = useState(null);
 
+  // Debounced local state for text inputs (prevents cursor jumping from Firestore writes)
+  const [localFields, setLocalFields] = useState({});
+
   // Real-time Firebase sync
   useEffect(() => {
     if (!isNameSet) return;
@@ -1596,6 +1599,42 @@ export default function ProListingBuilder() {
     });
     return () => unsubscribe();
   }, [isNameSet]);
+
+  // Debounced Firestore updates for text inputs (prevents cursor jumping)
+  useEffect(() => {
+    const timeouts = {};
+
+    Object.entries(localFields).forEach(([key, fieldsForItem]) => {
+      const [itemId, ...rest] = key.split('::');
+      if (!itemId) return;
+
+      Object.entries(fieldsForItem).forEach(([fieldName, value]) => {
+        const timeoutKey = `${itemId}::${fieldName}`;
+        timeouts[timeoutKey] = setTimeout(() => {
+          updateField(itemId, fieldName, value);
+        }, 500); // 500ms debounce
+      });
+    });
+
+    return () => Object.values(timeouts).forEach(clearTimeout);
+  }, [localFields]);
+
+  // Helper: Get field value (local state if exists, otherwise from item)
+  const getFieldValue = (item, fieldName) => {
+    const localValue = localFields[item.id]?.[fieldName];
+    return localValue !== undefined ? localValue : (item[fieldName] || '');
+  };
+
+  // Helper: Set local field value (triggers debounced Firestore update)
+  const setFieldValue = (itemId, fieldName, value) => {
+    setLocalFields(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [fieldName]: value
+      }
+    }));
+  };
 
   const compressImage = (file, maxWidth = 1200, quality = 0.8) => {
     return new Promise((resolve, reject) => {
@@ -2554,19 +2593,19 @@ export default function ProListingBuilder() {
                 <div className="space-y-6">
                   {/* Title */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Title ({selected.title?.length || 0}/80)</label>
-                    <input type="text" value={selected.title || ''} onChange={e => updateField(selected.id, 'title', e.target.value.slice(0, 80))} className="w-full px-3 py-2 border rounded-lg" maxLength={80} />
+                    <label className="block text-sm font-semibold mb-2">Title ({getFieldValue(selected, 'title').length}/80)</label>
+                    <input type="text" value={getFieldValue(selected, 'title')} onChange={e => setFieldValue(selected.id, 'title', e.target.value.slice(0, 80))} className="w-full px-3 py-2 border rounded-lg" maxLength={80} />
                   </div>
 
                   {/* MPN and Model */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold mb-2">MPN (Full Part Number)</label>
-                      <input type="text" value={selected.partNumber || ''} onChange={e => updateField(selected.id, 'partNumber', e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                      <input type="text" value={getFieldValue(selected, 'partNumber')} onChange={e => setFieldValue(selected.id, 'partNumber', e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold mb-2">Model (Base/Series)</label>
-                      <input type="text" value={selected.model || ''} onChange={e => updateField(selected.id, 'model', e.target.value)} className="w-full px-3 py-2 border rounded-lg" placeholder="Same as MPN if identical" />
+                      <input type="text" value={getFieldValue(selected, 'model')} onChange={e => setFieldValue(selected.id, 'model', e.target.value)} className="w-full px-3 py-2 border rounded-lg" placeholder="Same as MPN if identical" />
                     </div>
                   </div>
 
@@ -2669,12 +2708,14 @@ export default function ProListingBuilder() {
                     </button>
                     {showSpecs && selected.specifications && Object.keys(selected.specifications).length > 0 && (
                       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {Object.entries(selected.specifications).map(([key, value]) => (
-                          <div key={key} className="flex flex-col">
-                            <label className="text-xs font-medium text-gray-600 mb-1">{SPEC_LABELS[key] || SPEC_LABELS[key.toLowerCase()] || SPEC_LABELS[key.replace(/([A-Z])/g, '_$1').toLowerCase()] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</label>
-                            <input type="text" value={value || ''} onChange={e => updateSpecification(selected.id, key, e.target.value)} className="px-3 py-2 border rounded-lg text-sm" />
-                          </div>
-                        ))}
+                        {Object.entries(selected.specifications)
+                          .sort(([a], [b]) => a.localeCompare(b))
+                          .map(([key, value]) => (
+                            <div key={key} className="flex flex-col">
+                              <label className="text-xs font-medium text-gray-600 mb-1">{SPEC_LABELS[key] || SPEC_LABELS[key.toLowerCase()] || SPEC_LABELS[key.replace(/([A-Z])/g, '_$1').toLowerCase()] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</label>
+                              <input type="text" value={value || ''} onChange={e => updateSpecification(selected.id, key, e.target.value)} className="px-3 py-2 border rounded-lg text-sm" />
+                            </div>
+                          ))}
                       </div>
                     )}
                     {showSpecs && (!selected.specifications || Object.keys(selected.specifications).length === 0) && (
@@ -2882,8 +2923,8 @@ export default function ProListingBuilder() {
                             <div className="mb-4">
                               <p className="text-xs font-bold text-red-600 mb-2 uppercase">Required</p>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {selected.ebayItemSpecifics.filter(s => s.required).map((spec, idx) => (
-                                  <div key={`req-${idx}`} className="flex flex-col">
+                                {selected.ebayItemSpecifics.filter(s => s.required).map((spec) => (
+                                  <div key={spec.ebayName || spec.name} className="flex flex-col">
                                     <label className="text-xs font-medium text-red-700 mb-1">{spec.ebayName} *</label>
                                     {spec.mode === 'SELECTION_ONLY' && spec.allowedValues?.length > 0 ? (
                                       <select
@@ -2935,8 +2976,8 @@ export default function ProListingBuilder() {
                             <div className="mb-4">
                               <p className="text-xs font-bold text-blue-600 mb-2 uppercase">Recommended</p>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {selected.ebayItemSpecifics.filter(s => !s.required && s.usage === 'RECOMMENDED').map((spec, idx) => (
-                                  <div key={`rec-${idx}`} className="flex flex-col">
+                                {selected.ebayItemSpecifics.filter(s => !s.required && s.usage === 'RECOMMENDED').map((spec) => (
+                                  <div key={spec.ebayName || spec.name} className="flex flex-col">
                                     <label className="text-xs font-medium text-blue-700 mb-1">{spec.ebayName}</label>
                                     {spec.mode === 'SELECTION_ONLY' && spec.allowedValues?.length > 0 ? (
                                       <select
@@ -3184,8 +3225,8 @@ export default function ProListingBuilder() {
 
                   {/* Short Description */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2">Meta Description ({selected.shortDescription?.length || 0}/160)</label>
-                    <textarea value={selected.shortDescription || ''} onChange={e => updateField(selected.id, 'shortDescription', e.target.value.slice(0, 160))} className="w-full px-3 py-2 border rounded-lg h-20 text-sm" maxLength={160} />
+                    <label className="block text-sm font-semibold mb-2">Meta Description ({getFieldValue(selected, 'shortDescription').length}/160)</label>
+                    <textarea value={getFieldValue(selected, 'shortDescription')} onChange={e => setFieldValue(selected.id, 'shortDescription', e.target.value.slice(0, 160))} className="w-full px-3 py-2 border rounded-lg h-20 text-sm" maxLength={160} />
                   </div>
 
                   {/* Condition */}
@@ -3255,23 +3296,23 @@ export default function ProListingBuilder() {
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div>
                       <label className="block text-xs font-semibold mb-1">Length (in)</label>
-                      <input type="text" value={selected.boxLength || ''} onChange={e => updateField(selected.id, 'boxLength', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      <input type="text" value={getFieldValue(selected, 'boxLength')} onChange={e => setFieldValue(selected.id, 'boxLength', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold mb-1">Width (in)</label>
-                      <input type="text" value={selected.boxWidth || ''} onChange={e => updateField(selected.id, 'boxWidth', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      <input type="text" value={getFieldValue(selected, 'boxWidth')} onChange={e => setFieldValue(selected.id, 'boxWidth', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold mb-1">Height (in)</label>
-                      <input type="text" value={selected.boxHeight || ''} onChange={e => updateField(selected.id, 'boxHeight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      <input type="text" value={getFieldValue(selected, 'boxHeight')} onChange={e => setFieldValue(selected.id, 'boxHeight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold mb-1">Weight (lbs)</label>
-                      <input type="text" value={selected.weight || ''} onChange={e => updateField(selected.id, 'weight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      <input type="text" value={getFieldValue(selected, 'weight')} onChange={e => setFieldValue(selected.id, 'weight', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold mb-1">Quantity</label>
-                      <input type="number" min="1" value={selected.quantity || '1'} onChange={e => updateField(selected.id, 'quantity', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      <input type="number" min="1" value={getFieldValue(selected, 'quantity') || '1'} onChange={e => setFieldValue(selected.id, 'quantity', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </div>
                   </div>
 
@@ -3279,11 +3320,11 @@ export default function ProListingBuilder() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold mb-2">Price ($) *</label>
-                      <input type="text" placeholder="0.00" value={selected.price || ''} onChange={e => updateField(selected.id, 'price', e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                      <input type="text" placeholder="0.00" value={getFieldValue(selected, 'price')} onChange={e => setFieldValue(selected.id, 'price', e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold mb-2">Shelf Location <span className="text-red-500">*</span></label>
-                      <input type="text" placeholder="A1" value={selected.shelf || ''} onChange={e => { let val = e.target.value; if (val.length > 0) val = val.charAt(0).toUpperCase() + val.slice(1); updateField(selected.id, 'shelf', val); }} className={`w-full px-3 py-2 border rounded-lg ${!selected.shelf && submitAttempted[selected.id] ? 'border-red-500 bg-red-50' : ''}`} />
+                      <input type="text" placeholder="A1" value={getFieldValue(selected, 'shelf')} onChange={e => { let val = e.target.value; if (val.length > 0) val = val.charAt(0).toUpperCase() + val.slice(1); setFieldValue(selected.id, 'shelf', val); }} className={`w-full px-3 py-2 border rounded-lg ${!selected.shelf && submitAttempted[selected.id] ? 'border-red-500 bg-red-50' : ''}`} />
                       {!selected.shelf && submitAttempted[selected.id] && (
                         <p className="text-xs text-red-600 mt-1 font-medium">Shelf location is required before submitting</p>
                       )}
