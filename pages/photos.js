@@ -3,7 +3,7 @@
 // Guided workflow: Queue → Capture → Review → Upload → Complete
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Check, X, LogOut, RefreshCw, Package, AlertCircle, ArrowLeft, Loader } from 'lucide-react';
+import { Camera, Check, X, LogOut, RefreshCw, Package, AlertCircle, ArrowLeft, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
 import { verifyUser, getActiveUsers } from '../lib/auth';
 import { storage, db } from '../firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
@@ -91,6 +91,7 @@ export default function PhotoStation() {
   });
   const [processingBg, setProcessingBg] = useState({});
   const [processedPhotos, setProcessedPhotos] = useState({});
+  const [photoOrder, setPhotoOrder] = useState([]);
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -331,6 +332,15 @@ export default function PhotoStation() {
 
   const handleProceedToReview = () => {
     if (canProceedToReview()) {
+      // Initialize photo order
+      const order = [];
+      if (capturedPhotos.left) order.push('left');
+      if (capturedPhotos.right) order.push('right');
+      if (capturedPhotos.center) order.push('center');
+      if (capturedPhotos.nameplate) order.push('nameplate');
+      capturedPhotos.extra.forEach((_, idx) => order.push(`extra_${idx + 1}`));
+      setPhotoOrder(order);
+
       setScreen('review');
     }
   };
@@ -343,24 +353,71 @@ export default function PhotoStation() {
     // Find the step number for this view
     const stepIndex = PHOTO_STEPS.findIndex(s => s.id === view);
     if (stepIndex !== -1) {
+      // Clear processed photo and background removal flag when retaking
+      setProcessedPhotos(prev => {
+        const updated = { ...prev };
+        delete updated[view];
+        return updated;
+      });
+      setRemoveBgFlags(prev => ({
+        ...prev,
+        [view]: false
+      }));
+
       setCurrentStep(stepIndex + 1);
       setScreen('capture');
     }
   };
 
   const handleRemoveExtraPhoto = (index) => {
+    // Remove from capturedPhotos.extra array
     setCapturedPhotos(prev => ({
       ...prev,
       extra: prev.extra.filter((_, i) => i !== index)
     }));
+
+    // Remove from photoOrder and re-index remaining extras
+    setPhotoOrder(prev => {
+      const viewId = `extra_${index + 1}`;
+      // Remove the deleted extra
+      let newOrder = prev.filter(id => id !== viewId);
+
+      // Re-index remaining extras that come after the deleted one
+      newOrder = newOrder.map(id => {
+        if (id.startsWith('extra_')) {
+          const extraIndex = parseInt(id.split('_')[1]);
+          if (extraIndex > index + 1) {
+            return `extra_${extraIndex - 1}`;
+          }
+        }
+        return id;
+      });
+
+      return newOrder;
+    });
+  };
+
+  const handleMovePhotoLeft = (viewId) => {
+    const currentIndex = photoOrder.indexOf(viewId);
+    if (currentIndex > 0) {
+      const newOrder = [...photoOrder];
+      [newOrder[currentIndex - 1], newOrder[currentIndex]] =
+        [newOrder[currentIndex], newOrder[currentIndex - 1]];
+      setPhotoOrder(newOrder);
+    }
+  };
+
+  const handleMovePhotoRight = (viewId) => {
+    const currentIndex = photoOrder.indexOf(viewId);
+    if (currentIndex < photoOrder.length - 1) {
+      const newOrder = [...photoOrder];
+      [newOrder[currentIndex], newOrder[currentIndex + 1]] =
+        [newOrder[currentIndex + 1], newOrder[currentIndex]];
+      setPhotoOrder(newOrder);
+    }
   };
 
   const handleRemoveBg = async (view, shouldRemove) => {
-    // Don't allow background removal for nameplate
-    if (view === 'nameplate') {
-      return;
-    }
-
     // Toggle flag
     setRemoveBgFlags(prev => ({
       ...prev,
@@ -426,9 +483,13 @@ export default function PhotoStation() {
   };
 
   const handleRemoveAllBackgrounds = async () => {
-    const viewsToProcess = ['left', 'right', 'center'].filter(view =>
-      capturedPhotos[view] && !removeBgFlags[view]
-    );
+    const viewsToProcess = photoOrder.filter(viewId => {
+      const isExtra = viewId.startsWith('extra_');
+      const photo = isExtra
+        ? capturedPhotos.extra[parseInt(viewId.split('_')[1]) - 1]
+        : capturedPhotos[viewId];
+      return photo && !removeBgFlags[viewId];
+    });
 
     if (viewsToProcess.length === 0) {
       alert('All backgrounds already removed!');
@@ -436,8 +497,8 @@ export default function PhotoStation() {
     }
 
     // Process sequentially to avoid rate limiting
-    for (const view of viewsToProcess) {
-      await handleRemoveBg(view, true);
+    for (const viewId of viewsToProcess) {
+      await handleRemoveBg(viewId, true);
     }
   };
 
@@ -450,21 +511,20 @@ export default function PhotoStation() {
       const uploadedPhotos = [];
       const photosToUpload = [];
 
-      // Collect photos to upload
-      if (capturedPhotos.left) {
-        photosToUpload.push({ view: 'left', dataUrl: capturedPhotos.left.dataUrl });
-      }
-      if (capturedPhotos.right) {
-        photosToUpload.push({ view: 'right', dataUrl: capturedPhotos.right.dataUrl });
-      }
-      if (capturedPhotos.center) {
-        photosToUpload.push({ view: 'center', dataUrl: capturedPhotos.center.dataUrl });
-      }
-      if (capturedPhotos.nameplate) {
-        photosToUpload.push({ view: 'nameplate', dataUrl: capturedPhotos.nameplate.dataUrl });
-      }
-      capturedPhotos.extra.forEach((photo, index) => {
-        photosToUpload.push({ view: `extra_${index + 1}`, dataUrl: photo.dataUrl });
+      // Collect photos to upload IN ORDER (photoOrder determines media1, media2, etc.)
+      photoOrder.forEach((viewId, index) => {
+        const isExtra = viewId.startsWith('extra_');
+        const photo = isExtra
+          ? capturedPhotos.extra[parseInt(viewId.split('_')[1]) - 1]
+          : capturedPhotos[viewId];
+
+        if (photo && photo.dataUrl) {
+          photosToUpload.push({
+            view: viewId,
+            dataUrl: photo.dataUrl,
+            position: index + 1 // Position 1 = main image (media1)
+          });
+        }
       });
 
       setUploadProgress(10);
@@ -536,10 +596,11 @@ export default function PhotoStation() {
       // Update Firestore product document
       const productRef = doc(db, 'products', selectedItem.id);
       await updateDoc(productRef, {
-        photos: uploadedPhotos.map(p => p.url),
+        photos: uploadedPhotos.map(p => p.url), // Ordered URLs (position 1 = media1)
         photosNobg: photosNobg, // Object mapping view names to _nobg URLs
         photoCount: uploadedPhotos.length,
-        photoViews: uploadedPhotos.map(p => p.view),
+        photoViews: uploadedPhotos.map(p => p.view), // View names in display order
+        photoOrder: photoOrder, // Explicit order array for Pro Builder
         removeBgFlags: removeBgFlags,
         photographedBy: currentUser.username,
         photographedAt: Timestamp.now(),
@@ -613,6 +674,7 @@ export default function PhotoStation() {
     });
     setProcessingBg({});
     setProcessedPhotos({});
+    setPhotoOrder([]);
     setUploadProgress(0);
     setSuccessMessage('');
   };
@@ -1019,82 +1081,109 @@ export default function PhotoStation() {
           </button>
 
           <div className="space-y-4 mb-6">
-            {/* Required photos */}
-            {['left', 'right', 'center', 'nameplate'].map((view) => (
-              capturedPhotos[view] && (
-                <div key={view} className="bg-white rounded-xl p-4">
+            {/* All photos in order */}
+            {photoOrder.map((viewId, index) => {
+              const isExtra = viewId.startsWith('extra_');
+              const photo = isExtra
+                ? capturedPhotos.extra[parseInt(viewId.split('_')[1]) - 1]
+                : capturedPhotos[viewId];
+
+              if (!photo) return null;
+
+              const position = index + 1;
+              const isFirst = index === 0;
+              const isLast = index === photoOrder.length - 1;
+              const isMain = position === 1;
+
+              // Format view label
+              const viewLabel = isExtra
+                ? `Extra ${viewId.split('_')[1]}`
+                : viewId.charAt(0).toUpperCase() + viewId.slice(1);
+
+              return (
+                <div key={viewId} className="bg-white rounded-xl p-4">
+                  {/* Header with position badge */}
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-bold text-lg text-gray-900 capitalize">{view} View</h3>
-                    <button
-                      onClick={() => handleRetakeFromReview(view)}
-                      className="px-4 py-2 bg-blue-100 text-blue-900 rounded-lg font-semibold hover:bg-blue-200 active:bg-blue-300 transition"
-                    >
-                      Retake
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {/* Position badge */}
+                      <span className={`px-3 py-1 rounded-lg font-bold text-sm ${
+                        isMain
+                          ? 'bg-yellow-500 text-white'
+                          : 'bg-blue-600 text-white'
+                      }`}>
+                        {isMain ? `★ ${position} MAIN` : position}
+                      </span>
+                      {/* View label */}
+                      <h3 className="font-bold text-lg text-gray-900">{viewLabel} View</h3>
+                    </div>
+                    {/* Retake/Delete button */}
+                    {isExtra ? (
+                      <button
+                        onClick={() => handleRemoveExtraPhoto(parseInt(viewId.split('_')[1]) - 1)}
+                        className="px-4 py-2 bg-red-100 text-red-900 rounded-lg font-semibold hover:bg-red-200 active:bg-red-300 transition flex items-center gap-2"
+                      >
+                        <X size={18} />
+                        Delete
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleRetakeFromReview(viewId)}
+                        className="px-4 py-2 bg-blue-100 text-blue-900 rounded-lg font-semibold hover:bg-blue-200 active:bg-blue-300 transition"
+                      >
+                        Retake
+                      </button>
+                    )}
                   </div>
+
+                  {/* Image */}
                   <img
-                    src={processedPhotos[view] || capturedPhotos[view].dataUrl}
-                    alt={view}
+                    src={processedPhotos[viewId] || photo.dataUrl}
+                    alt={viewId}
                     className="w-full rounded-lg mb-3"
                   />
-                  {view === 'nameplate' ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-500 italic">
-                      <input
-                        type="checkbox"
-                        disabled
-                        className="w-5 h-5 opacity-50"
-                      />
-                      <span>Not available for nameplate photos</span>
-                    </div>
-                  ) : (
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={removeBgFlags[view] || false}
-                        onChange={(e) => handleRemoveBg(view, e.target.checked)}
-                        disabled={processingBg[view]}
-                        className="w-5 h-5"
-                      />
-                      <span className="text-sm text-gray-700 font-semibold">
-                        Remove background
-                        {processingBg[view] && (
-                          <Loader size={14} className="inline-block ml-2 animate-spin" />
-                        )}
-                        {removeBgFlags[view] && !processingBg[view] && (
-                          <span className="ml-2 text-green-600">✓</span>
-                        )}
-                      </span>
-                    </label>
-                  )}
-                </div>
-              )
-            ))}
 
-            {/* Extra photos */}
-            {capturedPhotos.extra.length > 0 && (
-              <div className="bg-white rounded-xl p-4">
-                <h3 className="font-bold text-lg text-gray-900 mb-3">
-                  Extra Photos ({capturedPhotos.extra.length})
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {capturedPhotos.extra.map((photo, idx) => (
-                    <div key={idx} className="relative">
-                      <img
-                        src={photo.dataUrl}
-                        alt={`Extra ${idx + 1}`}
-                        className="w-full rounded-lg"
-                      />
-                      <button
-                        onClick={() => handleRemoveExtraPhoto(idx)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 active:bg-red-700 transition"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-                  ))}
+                  {/* Reorder buttons */}
+                  <div className="flex gap-3 mb-3">
+                    <button
+                      onClick={() => handleMovePhotoLeft(viewId)}
+                      disabled={isFirst}
+                      className="flex-1 py-3 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-900 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <ChevronLeft size={20} />
+                      Move Left
+                    </button>
+                    <button
+                      onClick={() => handleMovePhotoRight(viewId)}
+                      disabled={isLast}
+                      className="flex-1 py-3 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-900 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      Move Right
+                      <ChevronRight size={20} />
+                    </button>
+                  </div>
+
+                  {/* Background removal checkbox */}
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={removeBgFlags[viewId] || false}
+                      onChange={(e) => handleRemoveBg(viewId, e.target.checked)}
+                      disabled={processingBg[viewId]}
+                      className="w-5 h-5"
+                    />
+                    <span className="text-sm text-gray-700 font-semibold">
+                      Remove background
+                      {processingBg[viewId] && (
+                        <Loader size={14} className="inline-block ml-2 animate-spin" />
+                      )}
+                      {removeBgFlags[viewId] && !processingBg[viewId] && (
+                        <span className="ml-2 text-green-600">✓</span>
+                      )}
+                    </span>
+                  </label>
                 </div>
-              </div>
-            )}
+              );
+            })}
           </div>
 
           {/* Upload button */}
