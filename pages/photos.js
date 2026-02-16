@@ -7,7 +7,7 @@ import { Camera, Check, X, LogOut, RefreshCw, Package, AlertCircle, ArrowLeft, L
 import { verifyUser, getActiveUsers } from '../lib/auth';
 import { storage, db } from '../firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { collection, doc, updateDoc, Timestamp, addDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, getDoc, Timestamp, addDoc } from 'firebase/firestore';
 
 const CONDITION_OPTIONS = [
   { value: 'New', label: 'New', color: 'bg-green-100 border-green-500 text-green-900' },
@@ -595,7 +595,9 @@ export default function PhotoStation() {
 
       // Update Firestore product document
       const productRef = doc(db, 'products', selectedItem.id);
-      await updateDoc(productRef, {
+
+      // Build update object with photo data
+      const updateData = {
         photos: uploadedPhotos.map(p => p.url), // Ordered URLs (position 1 = media1)
         photosNobg: photosNobg, // Object mapping view names to _nobg URLs
         photoCount: uploadedPhotos.length,
@@ -604,8 +606,19 @@ export default function PhotoStation() {
         removeBgFlags: removeBgFlags,
         photographedBy: currentUser.username,
         photographedAt: Timestamp.now(),
-        status: 'photos_complete'
-      });
+        photosStatus: 'complete', // Track photo completion separately
+        photosCompletedAt: Timestamp.now()
+      };
+
+      // Only update main status if research hasn't completed yet
+      // This prevents overwriting 'complete' status from auto-research
+      const currentProduct = await getDoc(productRef);
+      const currentStatus = currentProduct.data()?.status;
+      if (currentStatus !== 'complete' && currentStatus !== 'searching') {
+        updateData.status = 'photos_complete';
+      }
+
+      await updateDoc(productRef, updateData);
 
       // Log to activity_log collection (optional)
       try {

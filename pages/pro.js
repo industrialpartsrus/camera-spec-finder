@@ -2601,7 +2601,7 @@ export default function ProListingBuilder() {
                 </button>
               </div>
 
-              {selected.status === 'complete' && (
+              {['complete', 'photos_complete', 'searching'].includes(selected.status) && (
                 <div className="space-y-6">
                   {/* Title */}
                   <div>
@@ -3250,24 +3250,37 @@ export default function ProListingBuilder() {
                     </h3>
                     {selected.photos && selected.photos.length > 0 ? (
                       <div className="grid grid-cols-4 gap-2">
-                        {selected.photos.map((url, idx) => (
-                          <div key={idx} className="relative group">
-                            <img
-                              src={url}
-                              alt={`Photo ${idx + 1}`}
-                              className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition cursor-pointer"
-                              onClick={() => window.open(url, '_blank')}
-                            />
-                            <span className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs font-bold px-2 py-0.5 rounded">
-                              {idx + 1}
-                            </span>
-                            {idx === 0 && (
-                              <span className="absolute top-1 right-1 bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                                ★ MAIN
+                        {selected.photos.map((url, idx) => {
+                          // Helper: Get display photo URL (prefer nobg, fallback to original)
+                          const viewName = selected.photoViews?.[idx];
+                          const nobgUrl = viewName ? selected.photosNobg?.[viewName] : null;
+                          const displayUrl = nobgUrl || url;
+                          const isNobg = !!nobgUrl;
+
+                          return (
+                            <div key={idx} className="relative group">
+                              <img
+                                src={displayUrl}
+                                alt={`Photo ${idx + 1}`}
+                                className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition cursor-pointer"
+                                onClick={() => window.open(displayUrl, '_blank')}
+                              />
+                              <span className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs font-bold px-2 py-0.5 rounded">
+                                {idx + 1}
                               </span>
-                            )}
-                          </div>
-                        ))}
+                              {idx === 0 && (
+                                <span className="absolute top-1 right-1 bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                                  ★ MAIN
+                                </span>
+                              )}
+                              {isNobg && (
+                                <span className="absolute bottom-1 right-1 bg-green-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                                  NOBG
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4 text-center">

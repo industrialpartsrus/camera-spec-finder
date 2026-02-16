@@ -115,7 +115,7 @@ export default async function handler(req, res) {
       };
     }
 
-    // Build update object (EXACT copy from pro.js lines 1641-1663)
+    // Build update object (synced with pro.js processItemById)
     const rawDesc = productData.description || '';
     const updateData = {
       status: 'complete',
@@ -127,12 +127,21 @@ export default async function handler(req, res) {
       shortDescription: productData.shortDescription || '',
       metaKeywords: productData.keywords || '',
       specifications: data._resolvedSpecs || productData.specifications || {},
+      rawSpecifications: productData.rawSpecifications || [],
+      qualityFlag: productData.qualityFlag || 'NEEDS_REVIEW',
       condition: productData.condition || product.condition || 'Used - Good',
       conditionNotes: productData.conditionNotes || CONDITION_NOTES[productData.condition] || CONDITION_NOTES[product.condition] || '',
-      ebayCategoryId: data._metadata?.ebayCategoryId || '',
+      ebayCategoryId: data._metadata?.ebayCategoryId || data._metadata?.detectedCategoryId || '',
+      ebayStoreCategoryId: data._metadata?.ebayStoreCategoryId || '',
+      ebayStoreCategoryId2: data._metadata?.ebayStoreCategoryId2 || '23399313015',
       ebayAspects: ebayAspects,
       pass1At: serverTimestamp()
     };
+
+    // Add optional fields if present
+    if (productData.bigcommerceCategoryId) {
+      updateData.bigcommerceCategoryId = productData.bigcommerceCategoryId;
+    }
 
     // Remove undefined values
     Object.keys(updateData).forEach(key => {
@@ -147,8 +156,8 @@ export default async function handler(req, res) {
     const elapsed = Date.now() - startTime;
     console.log(`Auto-research elapsed time: ${elapsed}ms`);
 
-    if (elapsed > 7000) {
-      console.log('Auto-research: Pass 1 complete, skipping Pass 2 (timeout risk)');
+    if (elapsed > 45000) {
+      console.log('Auto-research: Pass 1 complete, skipping Pass 2 (timeout risk - approaching 60s limit)');
       await updateDoc(productRef, {
         pass2Status: 'pending',
         autoResearchNote: 'Pass 2 skipped due to timeout - will run when opened in Pro Builder'

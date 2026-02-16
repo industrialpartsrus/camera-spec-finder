@@ -1306,14 +1306,30 @@ export default async function handler(req, res) {
     }
 
     // === PRODUCT PHOTOS (media1-media12) ===
+    // Prefer background-removed (nobg) versions when available
+    const photoUrls = [];
+
     if (product.photos && Array.isArray(product.photos)) {
-      product.photos.forEach((url, index) => {
+      const photoViews = product.photoViews || [];
+      const photosNobg = product.photosNobg || {};
+
+      product.photos.forEach((originalUrl, index) => {
+        const viewName = photoViews[index];
+        const nobgUrl = viewName ? photosNobg[viewName] : null;
+
+        // Use nobg version if it exists, otherwise use original
+        photoUrls.push(nobgUrl || originalUrl);
+      });
+
+      // Push to SureDone media slots
+      photoUrls.forEach((url, index) => {
         if (url && index < 12) {
           formData.append(`media${index + 1}`, url);
-          console.log(`  media${index + 1} = ${url.substring(0, 80)}...`);
+          const photoType = photoViews[index] && photosNobg[photoViews[index]] ? '(nobg)' : '(original)';
+          console.log(`  media${index + 1} = ${url.substring(0, 60)}... ${photoType}`);
         }
       });
-      console.log(`Total media fields set: ${product.photos.length}`);
+      console.log(`Total media fields set: ${photoUrls.length}`);
     }
 
     // === BIGCOMMERCE FIELDS ===
