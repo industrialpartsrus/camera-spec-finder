@@ -1054,6 +1054,39 @@ export default async function handler(req, res) {
     }
     
     const product = JSON.parse(jsonMatch[0]);
+
+    // Post-process specifications: fix/remove bad field names
+    if (product.specifications) {
+      const FIELD_RENAMES = {
+        'attachmentmodel': null,
+        'eancode': null,
+        'upc': null,
+        'countryoforigin': null,
+        'countryregionofmanufacture': null,
+        'country_of_origin': null,
+      };
+
+      const cleaned = {};
+      for (const [key, value] of Object.entries(product.specifications)) {
+        const lowerKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        if (lowerKey in FIELD_RENAMES) {
+          console.log(`[Spec Cleanup] Removed: ${key} = ${value}`);
+          continue;
+        }
+
+        if (lowerKey.includes('country')) {
+          console.log(`[Spec Cleanup] Removed country field: ${key} = ${value}`);
+          continue;
+        }
+
+        cleaned[key] = value;
+      }
+
+      product.specifications = cleaned;
+      console.log(`[Spec Cleanup] ${Object.keys(product.specifications).length} specs retained`);
+    }
+
     const productType = product.productType || '';
 
     console.log('AI Detected Product Type:', productType);
