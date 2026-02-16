@@ -2062,8 +2062,9 @@ export default function ProListingBuilder() {
       // =================================================================
       // PASS 2 + PASS 3: Auto-fill eBay specifics, then revise title/desc
       // Uses reusable runPass2() which auto-triggers runPass3()
+      // Only run if Pass 2 hasn't already completed via auto-research
       // =================================================================
-      if (data._ebayAspects && data._ebayAspects.all?.length > 0) {
+      if (data._ebayAspects && data._ebayAspects.all?.length > 0 && item.pass2Status !== 'complete') {
         const updatedItem = {
           ...item,
           title: product.title || `${item.brand} ${item.partNumber}`,
@@ -2558,8 +2559,19 @@ export default function ProListingBuilder() {
                 <div>
                   <h2 className="text-2xl font-bold">{selected.brand} {selected.partNumber}</h2>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className={`text-sm px-2 py-1 rounded ${selected.status === 'complete' ? 'bg-green-100 text-green-700' : selected.status === 'error' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {selected.status}
+                    <span className={`text-sm px-2 py-1 rounded flex items-center gap-1 ${
+                      selected.status === 'complete' ? 'bg-green-100 text-green-700' :
+                      selected.status === 'searching' ? 'bg-blue-100 text-blue-700' :
+                      selected.status === 'error' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {selected.status === 'searching' && <Loader size={14} className="animate-spin" />}
+                      {selected.status === 'searching' ? '🔍 Researching...' :
+                       selected.status === 'complete' ? '✅ Ready' :
+                       selected.status === 'needs_photos' ? '📷 Needs Photos' :
+                       selected.status === 'photos_complete' ? '📸 Photos Done' :
+                       selected.status === 'error' ? '❌ Error' :
+                       selected.status}
                     </span>
                     {selected.isEditingExisting && (
                       <span className="text-sm px-2 py-1 rounded bg-amber-100 text-amber-700">
