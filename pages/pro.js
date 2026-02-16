@@ -1558,6 +1558,7 @@ function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpe
 // ============================================
 export default function ProListingBuilder() {
   const [queue, setQueue] = useState([]);
+  const [activeTab, setActiveTab] = useState('all');
   const [brandName, setBrandName] = useState('');
   const [partNumber, setPartNumber] = useState('');
   const [isProcessingImage, setIsProcessingImage] = useState(false);
@@ -2399,12 +2400,81 @@ export default function ProListingBuilder() {
     setIsSending(false);
   };
 
+  // Enhanced status badge for queue items
+  const getStatusBadge = (item) => {
+    const hasPhotos = item.photos && item.photos.length > 0;
+    const hasTitle = item.title && item.title.length > 5;
+    const hasCategory = item.ebayCategoryId;
+
+    if (item.status === 'error') {
+      return <span className="text-xs text-red-600 font-semibold">❌ Error</span>;
+    }
+    if (item.status === 'searching') {
+      return <span className="text-xs text-blue-600 flex items-center gap-1">
+        <Loader size={12} className="animate-spin" /> Researching...
+      </span>;
+    }
+    if (item.status === 'complete' || item.status === 'photos_complete') {
+      if (!hasPhotos) {
+        return <span className="text-xs text-orange-600 font-semibold animate-pulse">📷 Needs Photos</span>;
+      }
+      if (hasPhotos && hasTitle && hasCategory) {
+        return <span className="text-xs text-green-600 font-semibold">✅ Ready to Publish</span>;
+      }
+      return <span className="text-xs text-blue-600 font-semibold">✏️ Editing</span>;
+    }
+    if (item.status === 'needs_photos') {
+      return <span className="text-xs text-gray-500">⏳ Waiting...</span>;
+    }
+    return <span className="text-xs text-gray-400">{item.status}</span>;
+  };
+
   const stats = {
     total: queue.length,
-    complete: queue.filter(q => q.status === 'complete').length,
+    complete: queue.filter(q => q.status === 'complete' || q.status === 'photos_complete').length,
     searching: queue.filter(q => q.status === 'searching').length,
     error: queue.filter(q => q.status === 'error').length
   };
+
+  // Tab-specific counts
+  const tabCounts = {
+    all: queue.length,
+    edit: queue.filter(q => q.status === 'complete' || q.status === 'photos_complete').length,
+    needsPhotos: queue.filter(q =>
+      (q.status === 'complete' || q.status === 'searching' || q.status === 'photos_complete') &&
+      (!q.photos || q.photos.length === 0)
+    ).length,
+    publishReady: queue.filter(q =>
+      (q.status === 'complete' || q.status === 'photos_complete') &&
+      q.photos && q.photos.length > 0 &&
+      q.title && q.title.length > 5 &&
+      q.ebayCategoryId
+    ).length,
+    errors: queue.filter(q => q.status === 'error').length,
+  };
+
+  // Filter queue based on active tab
+  const filteredQueue = queue.filter(item => {
+    // Always show selected item regardless of filter
+    if (item.id === selectedItem) return true;
+
+    switch (activeTab) {
+      case 'edit':
+        return item.status === 'complete' || item.status === 'photos_complete';
+      case 'needsPhotos':
+        return (item.status === 'complete' || item.status === 'searching' || item.status === 'photos_complete') &&
+          (!item.photos || item.photos.length === 0);
+      case 'publishReady':
+        return (item.status === 'complete' || item.status === 'photos_complete') &&
+          item.photos && item.photos.length > 0 &&
+          item.title && item.title.length > 5 &&
+          item.ebayCategoryId;
+      case 'errors':
+        return item.status === 'error';
+      default:
+        return true; // 'all' tab
+    }
+  });
 
   // Login screen
   if (!isNameSet) {
@@ -2458,7 +2528,9 @@ export default function ProListingBuilder() {
         <div className="flex gap-2 flex-wrap">
           <div className="px-3 py-2 bg-blue-50 rounded-lg text-sm">Total: <span className="font-bold text-blue-800">{stats.total}</span></div>
           <div className="px-3 py-2 bg-yellow-50 rounded-lg text-sm">Searching: <span className="font-bold text-yellow-800">{stats.searching}</span></div>
-          <div className="px-3 py-2 bg-green-50 rounded-lg text-sm">Complete: <span className="font-bold text-green-800">{stats.complete}</span></div>
+          <div className="px-3 py-2 bg-blue-50 rounded-lg text-sm">Edit: <span className="font-bold text-blue-800">{tabCounts.edit}</span></div>
+          <div className="px-3 py-2 bg-orange-50 rounded-lg text-sm">Need Photos: <span className="font-bold text-orange-800">{tabCounts.needsPhotos}</span></div>
+          <div className="px-3 py-2 bg-green-50 rounded-lg text-sm">Publish Ready: <span className="font-bold text-green-800">{tabCounts.publishReady}</span></div>
           <div className="px-3 py-2 bg-red-50 rounded-lg text-sm">Errors: <span className="font-bold text-red-800">{stats.error}</span></div>
         </div>
       </div>
@@ -2511,10 +2583,39 @@ export default function ProListingBuilder() {
             />
           </div>
 
+          {/* Queue Filter Tabs */}
+          <div className="p-2 border-b">
+            <div className="flex flex-wrap gap-1 mb-2">
+              {[
+                { key: 'all', label: '📋 All', color: 'gray' },
+                { key: 'edit', label: '✏️ Edit', color: 'blue' },
+                { key: 'needsPhotos', label: '📷 Photos', color: 'orange' },
+                { key: 'publishReady', label: '✅ Publish', color: 'green' },
+                { key: 'errors', label: '❌ Error', color: 'red' },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-2 py-1 rounded-lg font-semibold text-xs transition ${
+                    activeTab === tab.key
+                      ? tab.color === 'gray' ? 'bg-gray-800 text-white' :
+                        tab.color === 'blue' ? 'bg-blue-600 text-white' :
+                        tab.color === 'orange' ? 'bg-orange-500 text-white' :
+                        tab.color === 'green' ? 'bg-green-600 text-white' :
+                        'bg-red-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {tab.label} <span className="font-bold">({tabCounts[tab.key]})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Queue */}
           <div className="p-2">
-            <h3 className="text-sm font-semibold text-gray-600 mb-2 px-2">Queue ({queue.length})</h3>
-            {queue.map(item => (
+            <h3 className="text-sm font-semibold text-gray-600 mb-2 px-2">Queue ({filteredQueue.length})</h3>
+            {filteredQueue.map(item => (
               <div key={item.id} onClick={() => {
                 setSelectedItem(item.id);
                 // If this item has existing data, show comparison
@@ -2534,7 +2635,8 @@ export default function ProListingBuilder() {
                       )}
                     </div>
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
-                    {item.productCategory && <p className="text-xs text-blue-600 mt-1">{item.productCategory}</p>}
+                    <div className="mt-1">{getStatusBadge(item)}</div>
+                    {item.productCategory && <p className="text-xs text-blue-600 mt-0.5">{item.productCategory}</p>}
                     {item.pass2Status === 'complete' && (
                       <p className="text-[10px] text-purple-600 mt-0.5">🏷️ {item.pass2FilledCount || 0} eBay specs filled</p>
                     )}
