@@ -1057,6 +1057,7 @@ export default async function handler(req, res) {
 
     // Post-process specifications: fix/remove bad field names
     if (product.specifications) {
+      console.log('[Spec Cleanup] RUNNING - input specs:', Object.keys(product.specifications));
       const FIELD_RENAMES = {
         'attachmentmodel': null,
         'eancode': null,
