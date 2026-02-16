@@ -192,15 +192,32 @@ export default async function handler(req, res) {
 
       if (pass2Response.ok) {
         const pass2Data = await pass2Response.json();
-        if (pass2Data.success) {
-          await updateDoc(productRef, {
-            ebayItemSpecifics: pass2Data.filledSpecifics || [],
-            ebayItemSpecificsForSuredone: pass2Data.suredoneFields || {},
+        console.log('[Auto-research] Pass 2 response keys:', Object.keys(pass2Data));
+
+        if (pass2Data.success && (pass2Data.data || pass2Data.filledSpecifics)) {
+          // Handle both response formats (pass2Data.data.X or pass2Data.X)
+          const specificsForUI = pass2Data.data?.specificsForUI || pass2Data.filledSpecifics || [];
+          const specificsForSuredone = pass2Data.data?.specificsForSuredone || pass2Data.suredoneFields || {};
+          const filledCount = pass2Data.data?.filledCount || pass2Data.filledCount || 0;
+          const totalCount = pass2Data.data?.totalCount || pass2Data.totalCount || 0;
+
+          const pass2Update = {
+            ebayItemSpecifics: specificsForUI,
+            ebayItemSpecificsForSuredone: specificsForSuredone,
             pass2Status: 'complete',
-            pass2FilledCount: pass2Data.filledCount,
-            pass2TotalCount: pass2Data.totalCount
+            pass2FilledCount: filledCount,
+            pass2TotalCount: totalCount
+          };
+
+          // Safety: remove any undefined values before writing to Firebase
+          Object.keys(pass2Update).forEach(key => {
+            if (pass2Update[key] === undefined) {
+              delete pass2Update[key];
+            }
           });
-          console.log(`Auto-research Pass 2 complete: ${itemId} (${pass2Data.filledCount}/${pass2Data.totalCount} filled)`);
+
+          await updateDoc(productRef, pass2Update);
+          console.log(`[Auto-research] Pass 2 saved: ${filledCount}/${totalCount} fields`);
 
           return res.json({
             success: true,

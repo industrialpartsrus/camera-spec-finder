@@ -934,6 +934,37 @@ IMPORTANT RULES:
 1. "productType" MUST be one of the specific types listed above - be as specific as possible
 2. "type" in specifications should match "productType"
 3. Add ALL relevant technical specifications to the specifications object -- the MORE specs the BETTER
+
+   CATEGORY-SPECIFIC SPECIFICATION RULES:
+
+   For PLCs, PLC Processors, PLC I/O Modules, Communication Modules, Network Modules, PLC Power Supplies, PLC Chassis:
+     INCLUDE: brand, mpn, manufacturer, model, type, series, platform, frn, firmware, inputvoltage, supplyvoltage, outputvoltage, inputcurrent, outputcurrent, power, numberofchannels, numberofinputs, numberofoutputs, communicationprotocol, communicationstandard, networktype, baudrate, connectiontype, mountingtype, operatingtemperature, dimensions, weight
+     EXCLUDE: attachmentmodel, depth, width, height, eancode, emptyweight, ratio, operatinghumidity, storagetemperature, maxconnections, maxiomodules, inputamperage, currentrating, enclosuretype, countryoforigin
+
+   For Servo Motors, Stepper Motors, Electric Motors, AC Motors, DC Motors:
+     INCLUDE: brand, mpn, manufacturer, model, type, series, ratedspeed, ratedtorque, ratedpower, ratedvoltage, ratedcurrent, encodertype, encoderresolution, shaftdiameter, framesize, mountingtype, iprating, insulation, braketype, weight
+     EXCLUDE: attachmentmodel, eancode, emptyweight, ratio, depth, countryoforigin
+
+   For Servo Drives, VFDs, AC Drives, DC Drives:
+     INCLUDE: brand, mpn, manufacturer, model, type, series, frn, firmware, inputvoltage, outputvoltage, inputcurrent, outputcurrent, ratedpower, horsepower, controlmethod, communicationprotocol, enclosuretype, mountingtype, dimensions, weight
+     EXCLUDE: attachmentmodel, eancode, emptyweight, depth, width, height, countryoforigin
+
+   For Sensors (all types):
+     INCLUDE: brand, mpn, manufacturer, model, type, series, sensingdistance, sensingmethod, outputtype, connectiontype, supplyvoltage, outputcurrent, responsetime, iprating, housingmaterial, dimensions, cablelength
+     EXCLUDE: attachmentmodel, eancode, emptyweight, ratio, depth, width, height, maxconnections, countryoforigin
+
+   For ALL categories:
+     NEVER include: countryoforigin (this is set manually)
+     NEVER include: attachmentmodel (heavy equipment only)
+     NEVER include: eancode or upc (these are barcodes, not specs)
+     NEVER include: emptyweight (use "weight" instead)
+     NEVER include: ratio (unless product is a Gearbox or Gear Reducer)
+     NEVER include: maxconnections, maxiomodules (use numberofchannels or numberofinputs/numberofoutputs instead)
+     Prefer SPECIFIC field names over generic ones:
+       - Use "inputvoltage" not "voltage"
+       - Use "ratedcurrent" not "current"
+       - Use "ratedpower" not "power" (when it's a motor/drive rating)
+
 4. Use lowercase keys with no spaces (e.g., "inputvoltage", "outputcurrent", "sensingdistance", "studdiameter")
    APPROVED FIELD NAMES — use these exact names when they match your specification:
    actiontype, actualfieldofview, actualratedinputvoltage, actualvoltageratingac, actualvoltageratingdc, actuation, actuatortype, amperage, amperagerange, analogdigital, analoginput, angle, application, attachmentmodel, axialfanbearingtype, axis, baserpm, beamgap, bladematerial, body, bodymaterial, bodytype, bore, borediameter, bussinput, cable, capacity, capacitymaxweight, centrifugalpumptype, chipsetgpumodel, coilvoltage, color, communications, communicationstandard, compatibleequipmentmake, compatibleequipmenttype, compatiblemountingtype, connectionsize, connectiontype, connectivity, construction, constuction, contactmaterial, controlinput, controllerplatform, controltype, contstalltorqueinlb, conversionfunction, current, currentconversion, currentrating, currenttype, cycles, cylinderaction, cylindertype, datecode, dcstatorwindingtype, dcvoltagerange, depth, diameter, dimensions, dischargeopening, displacement, dynamicloadrating, emptyweight, enclosuretype, equipmentconnection, equipmentmake, equipmenttype, fanblowertype, fanid, fanod, features, firmware, firmwarerevision, flowrate, forklifttype, frame, frequency, fueltype, fullloadamps, fullstepangle, fwrevision, gearratio, gpm, gpu, graphicsprocessingtype, guardedarea, height, highestspindlespeedrpm, horsepower, hours, hydraulicpumptype, hz, increment, indicatortype, inputamperage, inputvoltage, insulationclass, interfacetype, kva, kw, length, liftcapacity, liftheight, load, loadcapacitylbs, loweredmastliftheight, make, material, maxbar, maxfluidpressure, maximumairflow, maximumamperage, maximummastliftheight, maximumoperatingfrequency, maximumpressure, maxinputcurrent, maxmpa, maxoperatingpressure, maxpressure, maxpsi, maxwattage, measuredparameters, mfgdate, minimumoperatingfrequency, minobjsize, modelyear, motortype, mount, mountingstyle, mountingtype, mpa, nemadesignletter, nm, noloadrpm, nominalcurrentrating, nominalpowerrating, nominalratedinputvoltage, nominalvoltageratingac, npt, numberofcircuits, numberofoutlets, numberofphases, numberofpoles, numberofrods, numberofways, operatingdistance, other, ouputvoltage, outlets, outlettype, outputamperage, outputhz, outputpower, outputtype, outputvdc, outputvoltage, overalllength, parttype, payload, phase, pipesize, platformheight, pole, poles, portdiameter, portsize, powerfrequency, powerphase, powerrating, powersource, pressure, primarycurrentrating, primaryinput, primaryvoltageratingac, processor, psi, pulsesperrevolution, pumpaction, ratedfullloadtorque, ratedloadhp, ratedpower, ratedpressure, ratio, refrigerant, replaces, reservoircapacity, resetactuatortype, resolver, responsetime, rev, reversiblenonreversible, revision, rmin, roboticscontrolstype, robottype, rotation, rpm, screensize, secondarycurrentrating, secondaryoutput, secondaryvoltageratingac, sensibleobject, sensingrange, sensingtechnology, sensitivityvdcmm, sensortype, serialnumber, series, shaftdiameter, shaftinput, shape, size, spindlehorsepower, stallcurrent, stalltorque, stroke, strokelength, style, suitablefor, suitablemedia, supplyvoltage, switchaction, switchingfrequency, tablelength, tablewidth, tension, terminationtype, thread, tiretype, tonnage, toolmodel, torque, totalheight, trippingtype, turnsratio, unittype, ventilationtype, version, voltage, voltagecompatibility, voltagerating, watt, watts, width, xaxistravelbed, yaxistravelbed, zaxistravelbed
