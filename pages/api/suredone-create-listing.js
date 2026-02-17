@@ -1545,8 +1545,16 @@ export default async function handler(req, res) {
     }
 
     // Check for uri:55 error (SKU already exists)
-    if (data.result !== 'success' && (data.message?.includes('uri:55') || data.message?.includes('already exists'))) {
-      console.log(`SKU ${sku} already exists in SureDone, retrying with EDIT...`);
+    // SureDone returns nested structure: { "1": { "result": "failure", "codes": "uri:55" }, "result": "success" }
+    // Must check ITEM-level result, not top-level
+    const itemResult = data['1'] || data[1] || {};
+    const itemFailed = itemResult.result === 'failure';
+    const isSkuCollision = data.message?.includes('uri:55') ||
+      itemResult.codes?.includes('uri:55') ||
+      itemResult.messages?.includes('uri:55');
+
+    if (itemFailed && isSkuCollision) {
+      console.log(`SKU ${sku} already exists in SureDone (uri:55), retrying with EDIT...`);
       attemptEdit = true;
 
       // Retry with EDIT endpoint
@@ -1575,7 +1583,11 @@ export default async function handler(req, res) {
       }
     }
 
-    if (data.result === 'success') {
+    // Check ITEM-level success, not just top-level
+    const finalItemResult = data['1'] || data[1] || {};
+    const itemSuccess = finalItemResult.result === 'success' || (data.result === 'success' && !finalItemResult.result);
+
+    if (itemSuccess) {
       const responseObj = {
         success: true,
         message: attemptEdit ? 'Product updated in SureDone' : 'Product created in SureDone',
@@ -1592,7 +1604,7 @@ export default async function handler(req, res) {
     } else {
       res.status(400).json({
         success: false,
-        error: data.message || 'SureDone API error',
+        error: data.message || finalItemResult.codes || finalItemResult.messages || 'SureDone API error',
         details: data
       });
     }
