@@ -1,6 +1,8 @@
 // pages/api/photos/remove-bg.js
 // Remove background from product photo using Remove.bg API
-// Accepts base64 image data, returns processed base64 PNG
+// Flattens transparency onto white background, returns JPEG
+
+import sharp from 'sharp';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -58,18 +60,25 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get the processed image as buffer
+    // Get the processed image as buffer (transparent PNG from remove.bg)
     const imageBuffer = await response.arrayBuffer();
+    const transparentBuffer = Buffer.from(imageBuffer);
+
+    // Flatten transparency onto WHITE background, convert to JPEG
+    const whiteBackgroundBuffer = await sharp(transparentBuffer)
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .jpeg({ quality: 95 })
+      .toBuffer();
 
     // Convert to base64
-    const processedBase64 = Buffer.from(imageBuffer).toString('base64');
+    const processedBase64 = whiteBackgroundBuffer.toString('base64');
 
-    console.log(`Background removed for ${view || 'photo'} (${Math.round(processedBase64.length / 1024)}KB PNG)`);
+    console.log(`Background removed for ${view || 'photo'} (${Math.round(processedBase64.length / 1024)}KB JPEG with white background)`);
 
     return res.status(200).json({
       success: true,
       processedBase64: processedBase64,
-      dataUrl: `data:image/png;base64,${processedBase64}`
+      dataUrl: `data:image/jpeg;base64,${processedBase64}`
     });
   } catch (error) {
     console.error('Background removal error:', error);

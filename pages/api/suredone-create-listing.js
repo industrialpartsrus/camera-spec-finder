@@ -1321,15 +1321,53 @@ export default async function handler(req, res) {
         photoUrls.push(nobgUrl || originalUrl);
       });
 
+      // === APPLY WATERMARKS AT PUBLISH TIME ===
+      let finalPhotoUrls = [...photoUrls];
+
+      if (product.watermarkEnabled !== false) {
+        console.log('Applying watermarks to photos...');
+        const protocol = req.headers?.host?.includes('localhost') ? 'http' : 'https';
+        const host = req.headers?.host || process.env.VERCEL_URL || 'localhost:3000';
+
+        const watermarkPromises = finalPhotoUrls.map(async (url, index) => {
+          try {
+            const wmResponse = await fetch(`${protocol}://${host}/api/photos/watermark`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                imageUrl: url,
+                sku: sku,
+                view: photoViews[index] || `photo_${index + 1}`
+              })
+            });
+
+            if (wmResponse.ok) {
+              const wmData = await wmResponse.json();
+              return wmData.watermarkedUrl || url;
+            }
+            return url; // Fallback to original on error
+          } catch (err) {
+            console.error(`Watermark failed for photo ${index + 1}:`, err);
+            return url;
+          }
+        });
+
+        finalPhotoUrls = await Promise.all(watermarkPromises);
+        console.log(`Watermarked ${finalPhotoUrls.length} photos`);
+      } else {
+        console.log('Watermarks disabled for this listing');
+      }
+
       // Push to SureDone media slots
-      photoUrls.forEach((url, index) => {
+      finalPhotoUrls.forEach((url, index) => {
         if (url && index < 12) {
           formData.append(`media${index + 1}`, url);
           const photoType = photoViews[index] && photosNobg[photoViews[index]] ? '(nobg)' : '(original)';
-          console.log(`  media${index + 1} = ${url.substring(0, 60)}... ${photoType}`);
+          const watermarkStatus = product.watermarkEnabled !== false ? ' [watermarked]' : '';
+          console.log(`  media${index + 1} = ${url.substring(0, 60)}... ${photoType}${watermarkStatus}`);
         }
       });
-      console.log(`Total media fields set: ${photoUrls.length}`);
+      console.log(`Total media fields set: ${finalPhotoUrls.length}`);
     }
 
     // === BIGCOMMERCE FIELDS ===

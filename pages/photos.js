@@ -438,7 +438,12 @@ export default function PhotoStation() {
     setProcessingBg(prev => ({ ...prev, [view]: true }));
 
     try {
-      const photo = capturedPhotos[view];
+      // Handle both standard views and extra photos
+      const isExtra = view.startsWith('extra_');
+      const photo = isExtra
+        ? capturedPhotos.extra?.[parseInt(view.split('_')[1]) - 1]
+        : capturedPhotos[view];
+
       if (!photo || !photo.dataUrl) {
         throw new Error('Photo not found');
       }
