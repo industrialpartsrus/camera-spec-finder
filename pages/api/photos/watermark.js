@@ -1,5 +1,6 @@
 // pages/api/photos/watermark.js
 // Apply logo + contact info watermarks to product photos
+// Uses pre-rendered PNG overlays (Vercel serverless has no font libraries)
 // Caches watermarked versions in Firebase Storage for fast repeat publishes
 
 import sharp from 'sharp';
@@ -100,49 +101,30 @@ export default async function handler(req, res) {
       console.warn(`Logo file not found at ${logoPath}, skipping logo overlay`);
     }
 
-    // === CONTACT INFO TEXT (bottom-right) ===
-    const phoneFontSize = Math.round(height * 0.035);
-    const emailFontSize = Math.round(height * 0.028);
-    const textPadding = 20;
+    // === CONTACT INFO OVERLAY (bottom-right) ===
+    // Use pre-rendered PNG (generated locally with font support)
+    const contactPath = path.join(process.cwd(), 'public', 'watermarks', 'contact-info.png');
+    if (fs.existsSync(contactPath)) {
+      try {
+        // Resize contact overlay to match image dimensions
+        const contactBuffer = await sharp(contactPath)
+          .resize(width, height, { fit: 'fill' })
+          .png()
+          .toBuffer();
 
-    const textSvg = `
-      <svg width="${width}" height="${height}">
-        <defs>
-          <filter id="shadow">
-            <feDropShadow dx="2" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.8)"/>
-          </filter>
-        </defs>
-        <text
-          x="${width - textPadding}"
-          y="${height - 50}"
-          text-anchor="end"
-          font-family="Arial, sans-serif"
-          font-weight="bold"
-          font-size="${phoneFontSize}px"
-          fill="white"
-          filter="url(#shadow)">
-          1-800-380-4913
-        </text>
-        <text
-          x="${width - textPadding}"
-          y="${height - 15}"
-          text-anchor="end"
-          font-family="Arial, sans-serif"
-          font-size="${emailFontSize}px"
-          fill="white"
-          filter="url(#shadow)">
-          SALES@INDUSTRIALPARTSRUS.COM
-        </text>
-      </svg>
-    `;
+        composites.push({
+          input: contactBuffer,
+          top: 0,
+          left: 0
+        });
 
-    composites.push({
-      input: Buffer.from(textSvg),
-      top: 0,
-      left: 0
-    });
-
-    console.log(`Contact text overlay: phone ${phoneFontSize}px, email ${emailFontSize}px`);
+        console.log(`Contact overlay: ${width}x${height}px (pre-rendered PNG)`);
+      } catch (contactErr) {
+        console.warn('Failed to process contact overlay, skipping:', contactErr.message);
+      }
+    } else {
+      console.warn(`Contact overlay not found at ${contactPath}, skipping contact info`);
+    }
 
     // === COMPOSITE AND SAVE ===
     const watermarkedBuffer = await sharp(imageBuffer)
