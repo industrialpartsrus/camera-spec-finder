@@ -2637,6 +2637,11 @@ export default function ProListingBuilder() {
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
                     <div className="mt-1">{getStatusBadge(item)}</div>
                     {item.productCategory && <p className="text-xs text-blue-600 mt-0.5">{item.productCategory}</p>}
+                    {item.shelvedAt && (
+                      <p className="text-[10px] text-green-700 font-semibold mt-0.5">
+                        📦 Shelved at {item.shelf || 'shelf'} ✓
+                      </p>
+                    )}
                     {item.pass2Status === 'complete' && (
                       <p className="text-[10px] text-purple-600 mt-0.5">🏷️ {item.pass2FilledCount || 0} eBay specs filled</p>
                     )}
