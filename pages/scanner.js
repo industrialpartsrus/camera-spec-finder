@@ -5,6 +5,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Edit3, LogOut, Plus, Minus, Check, X, AlertTriangle, Package, RefreshCw } from 'lucide-react';
 import { verifyUser, getActiveUsers } from '../lib/auth';
+import { db } from '../firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
 
 // Condition configuration - matches Pro Builder CONDITION_OPTIONS exactly
 const CONDITIONS = {
@@ -67,6 +69,11 @@ export default function WarehouseScanner() {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [pinInput, setPinInput] = useState('');
 
+  // Scanner mode state
+  const [scannerMode, setScannerMode] = useState('scan'); // 'scan' or 'shelf'
+  const [shelfQueue, setShelfQueue] = useState([]);
+  const [unsubscribe, setUnsubscribe] = useState(null);
+
   // Scan state
   const [brand, setBrand] = useState('');
   const [partNumber, setPartNumber] = useState('');
@@ -111,11 +118,46 @@ export default function WarehouseScanner() {
       if (user) {
         setCurrentUser(user);
         setScreen('scan');
+        setupShelfListener(user.username);
       } else {
         // User no longer active, clear storage
         localStorage.removeItem('scanner_user');
       }
     }
+  };
+
+  const setupShelfListener = (username) => {
+    // Clean up existing listener
+    if (unsubscribe) {
+      unsubscribe();
+    }
+
+    // Listen for items needing shelf return (ALL items, not filtered by user)
+    const q = query(
+      collection(db, 'products'),
+      where('returnToShelf', '==', true)
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Sort by returnToShelfAt (newest first)
+      items.sort((a, b) => {
+        const timeA = a.returnToShelfAt?.toMillis() || 0;
+        const timeB = b.returnToShelfAt?.toMillis() || 0;
+        return timeB - timeA;
+      });
+
+      setShelfQueue(items);
+      console.log(`Shelf queue updated: ${items.length} items`);
+    }, (error) => {
+      console.error('Shelf queue listener error:', error);
+    });
+
+    setUnsubscribe(() => unsub);
   };
 
   // ============================================
@@ -155,6 +197,8 @@ export default function WarehouseScanner() {
       setSelectedUserId(null);
       // Save to localStorage for persistent login
       localStorage.setItem('scanner_user', result.user.username);
+      // Start shelf queue listener
+      setupShelfListener(result.user.username);
     } else {
       alert(result.error || 'Incorrect PIN');
       setPinInput('');
@@ -162,6 +206,12 @@ export default function WarehouseScanner() {
   };
 
   const handleLogout = () => {
+    // Clean up Firebase listener
+    if (unsubscribe) {
+      unsubscribe();
+      setUnsubscribe(null);
+    }
+
     setCurrentUser(null);
     setScreen('login');
     setBrand('');
@@ -169,6 +219,8 @@ export default function WarehouseScanner() {
     setMatches([]);
     setDuplicateWarning(null);
     setSelectedMatch(null);
+    setScannerMode('scan');
+    setShelfQueue([]);
     // Clear stored login
     localStorage.removeItem('scanner_user');
   };
@@ -477,6 +529,22 @@ export default function WarehouseScanner() {
     setScreen('scan');
   };
 
+  const handleConfirmShelved = async (item) => {
+    try {
+      const productRef = doc(db, 'products', item.id);
+      await updateDoc(productRef, {
+        returnToShelf: false,
+        shelvedAt: Timestamp.now(),
+        shelvedBy: currentUser.username
+      });
+
+      console.log(`${item.sku} marked as shelved by ${currentUser.username}`);
+    } catch (error) {
+      console.error('Failed to mark as shelved:', error);
+      alert('Failed to mark as shelved: ' + error.message);
+    }
+  };
+
   const getConditionColor = (condition) => {
     // First try direct lookup by condition ID (e.g., 'used_good')
     if (CONDITIONS[condition]) {
@@ -594,71 +662,166 @@ export default function WarehouseScanner() {
             </button>
           </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Scan Item</h1>
-
-          <div className="space-y-4 mb-6">
+          {/* Mode Toggle */}
+          <div className="flex gap-3 mb-6">
             <button
-              onClick={handleCameraScan}
-              disabled={isCameraScanning}
-              className="w-full p-8 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-4 text-2xl font-bold transition disabled:opacity-50"
+              onClick={() => setScannerMode('scan')}
+              className={`flex-1 py-4 rounded-xl font-bold text-xl transition ${
+                scannerMode === 'scan'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
             >
-              {isCameraScanning ? (
-                <>
-                  <RefreshCw size={32} className="animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Camera size={32} />
-                  📷 Scan Nameplate
-                </>
+              📦 Scan Items
+            </button>
+            <button
+              onClick={() => setScannerMode('shelf')}
+              className={`flex-1 py-4 rounded-xl font-bold text-xl transition relative ${
+                scannerMode === 'shelf'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              📍 Return to Shelf
+              {shelfQueue.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-sm font-bold rounded-full w-8 h-8 flex items-center justify-center animate-pulse">
+                  {shelfQueue.length}
+                </span>
               )}
             </button>
-
-            <div className="text-center text-gray-500 font-semibold">OR</div>
-
-            <div className="bg-white rounded-xl p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Brand (optional)</label>
-                <input
-                  type="text"
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  className="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                  placeholder="Allen-Bradley"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Part Number *</label>
-                <input
-                  type="text"
-                  value={partNumber}
-                  onChange={(e) => setPartNumber(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleManualSearch()}
-                  className="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                  placeholder="1769-L23E-QB1B"
-                  autoCapitalize="characters"
-                />
-              </div>
-              <button
-                onClick={handleManualSearch}
-                disabled={isProcessing}
-                className="w-full p-4 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-lg flex items-center justify-center gap-3 text-xl font-bold transition disabled:opacity-50"
-              >
-                {isProcessing ? (
-                  <>
-                    <RefreshCw size={24} className="animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <Edit3 size={24} />
-                    Search
-                  </>
-                )}
-              </button>
-            </div>
           </div>
+
+          {/* SCAN MODE */}
+          {scannerMode === 'scan' && (
+            <>
+              <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Scan Item</h1>
+
+              <div className="space-y-4 mb-6">
+                <button
+                  onClick={handleCameraScan}
+                  disabled={isCameraScanning}
+                  className="w-full p-8 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-4 text-2xl font-bold transition disabled:opacity-50"
+                >
+                  {isCameraScanning ? (
+                    <>
+                      <RefreshCw size={32} className="animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Camera size={32} />
+                      📷 Scan Nameplate
+                    </>
+                  )}
+                </button>
+
+                <div className="text-center text-gray-500 font-semibold">OR</div>
+
+                <div className="bg-white rounded-xl p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Brand (optional)</label>
+                    <input
+                      type="text"
+                      value={brand}
+                      onChange={(e) => setBrand(e.target.value)}
+                      className="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                      placeholder="Allen-Bradley"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Part Number *</label>
+                    <input
+                      type="text"
+                      value={partNumber}
+                      onChange={(e) => setPartNumber(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleManualSearch()}
+                      className="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                      placeholder="1769-L23E-QB1B"
+                      autoCapitalize="characters"
+                    />
+                  </div>
+                  <button
+                    onClick={handleManualSearch}
+                    disabled={isProcessing}
+                    className="w-full p-4 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-lg flex items-center justify-center gap-3 text-xl font-bold transition disabled:opacity-50"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <RefreshCw size={24} className="animate-spin" />
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 size={24} />
+                        Search
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* SHELF MODE */}
+          {scannerMode === 'shelf' && (
+            <>
+              <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Return Items to Shelf</h1>
+
+              {shelfQueue.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-xl">
+                  <Package size={64} className="mx-auto mb-4 text-gray-300" />
+                  <p className="text-xl font-bold text-gray-900 mb-2">No items to return</p>
+                  <p className="text-gray-600">All items are on their shelves!</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {shelfQueue.length} item{shelfQueue.length !== 1 ? 's' : ''} need{shelfQueue.length === 1 ? 's' : ''} shelf return
+                  </p>
+
+                  <div className="space-y-4">
+                    {shelfQueue.map((item) => (
+                      <div
+                        key={item.id}
+                        className="bg-white border-4 border-yellow-500 rounded-xl p-6"
+                      >
+                        {/* Large shelf location */}
+                        <div className="text-center mb-6">
+                          <p className="text-sm font-semibold text-gray-600 mb-2">RETURN TO SHELF:</p>
+                          <p className="text-6xl font-black text-yellow-900 mb-4">{item.shelf}</p>
+                        </div>
+
+                        {/* Item details */}
+                        <div className="border-t border-gray-200 pt-4 mb-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-bold text-xl text-gray-900">{item.sku}</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${getConditionColor(item.condition)}`}>
+                              {item.condition}
+                            </span>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-700 mb-1">
+                            {item.brand} {item.partNumber}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            Photos by: {item.photoCompletedBy || 'Unknown'}
+                          </p>
+                        </div>
+
+                        {/* Confirm button */}
+                        <button
+                          onClick={() => handleConfirmShelved(item)}
+                          className="w-full p-6 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-xl text-2xl font-bold transition flex items-center justify-center gap-3"
+                        >
+                          <Check size={28} />
+                          ✅ Confirm Shelved
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </div>
       )}
 

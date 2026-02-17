@@ -654,8 +654,23 @@ export default function PhotoStation() {
   // ============================================
 
   const handleConfirmReturn = async () => {
-    // Return to queue (research already triggered at scan time)
-    handleReturnToQueue();
+    try {
+      // Mark item for shelf return in Firestore
+      const productRef = doc(db, 'products', selectedItem.id);
+      await updateDoc(productRef, {
+        returnToShelf: true,
+        returnToShelfAt: Timestamp.now(),
+        photoCompletedBy: currentUser.username
+      });
+
+      console.log(`${selectedItem.sku} marked for shelf return by ${currentUser.username}`);
+
+      // Return to queue
+      handleReturnToQueue();
+    } catch (error) {
+      console.error('Failed to mark for shelf return:', error);
+      alert('Failed to mark for shelf return: ' + error.message);
+    }
   };
 
   const handleReturnToQueue = () => {
