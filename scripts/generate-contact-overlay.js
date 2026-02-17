@@ -38,7 +38,7 @@ const svg = `
   <!-- Phone number (bold, white with shadow) -->
   <text
     x="${WIDTH - PADDING}"
-    y="${HEIGHT - 50}"
+    y="${HEIGHT - 80}"
     text-anchor="end"
     font-family="Arial, Helvetica, sans-serif"
     font-weight="bold"
@@ -51,7 +51,7 @@ const svg = `
   <!-- Email (white with shadow) -->
   <text
     x="${WIDTH - PADDING}"
-    y="${HEIGHT - 15}"
+    y="${HEIGHT - 20}"
     text-anchor="end"
     font-family="Arial, Helvetica, sans-serif"
     font-size="${EMAIL_FONT_SIZE}px"

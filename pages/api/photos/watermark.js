@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Watermark version - increment when watermark logic changes to force cache regeneration
-const WATERMARK_VERSION = 2;
+const WATERMARK_VERSION = 3;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -60,6 +60,14 @@ export default async function handler(req, res) {
     const { width, height } = imageMetadata;
     console.log(`Image dimensions: ${width}x${height}`);
 
+    // === FLATTEN TRANSPARENCY TO WHITE ===
+    // JPEG doesn't support transparency - flatten to white BEFORE compositing watermarks
+    // This prevents transparent nobg photos from getting black backgrounds
+    const flattenedBuffer = await sharp(imageBuffer)
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .toBuffer();
+    console.log('Flattened transparency to white background');
+
     // === PREPARE COMPOSITES ===
     const composites = [];
 
@@ -67,8 +75,8 @@ export default async function handler(req, res) {
     const logoPath = path.join(process.cwd(), 'public', 'watermarks', 'logo.png');
     if (fs.existsSync(logoPath)) {
       try {
-        // Resize logo to ~15% of image width (proportional)
-        const logoWidth = Math.round(width * 0.15);
+        // Resize logo to ~22% of image width (proportional)
+        const logoWidth = Math.round(width * 0.22);
         const logoBuffer = await sharp(logoPath)
           .resize(logoWidth, null, { fit: 'inside' })
           .png()
@@ -131,7 +139,7 @@ export default async function handler(req, res) {
     }
 
     // === COMPOSITE AND SAVE ===
-    const watermarkedBuffer = await sharp(imageBuffer)
+    const watermarkedBuffer = await sharp(flattenedBuffer)
       .composite(composites)
       .jpeg({ quality: 95 })
       .toBuffer();
