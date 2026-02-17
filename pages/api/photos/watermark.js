@@ -9,6 +9,9 @@ import { ref, uploadBytes, getDownloadURL, getMetadata } from 'firebase/storage'
 import fs from 'fs';
 import path from 'path';
 
+// Watermark version - increment when watermark logic changes to force cache regeneration
+const WATERMARK_VERSION = 2;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
@@ -25,7 +28,8 @@ export default async function handler(req, res) {
 
   try {
     // === CHECK CACHE FIRST ===
-    const watermarkedPath = `photos/${sku}/${view}_watermarked.jpg`;
+    // Version the cache path to force regeneration when watermark logic changes
+    const watermarkedPath = `photos/${sku}/${view}_watermarked_v${WATERMARK_VERSION}.jpg`;
     const watermarkedRef = ref(storage, watermarkedPath);
 
     try {

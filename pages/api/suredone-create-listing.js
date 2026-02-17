@@ -1516,7 +1516,11 @@ export default async function handler(req, res) {
     console.log('UserType:', userType);
 
     // === SEND TO SUREDONE ===
-    const response = await fetch(`${SUREDONE_URL}/editor/items/add`, {
+    // Try ADD first, if SKU exists (uri:55 error), retry with EDIT
+    let endpoint = `${SUREDONE_URL}/editor/items/add`;
+    let attemptEdit = false;
+
+    let response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'X-Auth-User': SUREDONE_USER,
@@ -1526,8 +1530,8 @@ export default async function handler(req, res) {
       body: formData.toString()
     });
 
-    const responseText = await response.text();
-    console.log('SureDone response:', responseText);
+    let responseText = await response.text();
+    console.log('SureDone ADD response:', responseText);
 
     let data;
     try {
@@ -1540,16 +1544,48 @@ export default async function handler(req, res) {
       });
     }
 
+    // Check for uri:55 error (SKU already exists)
+    if (data.result !== 'success' && (data.message?.includes('uri:55') || data.message?.includes('already exists'))) {
+      console.log(`SKU ${sku} already exists in SureDone, retrying with EDIT...`);
+      attemptEdit = true;
+
+      // Retry with EDIT endpoint
+      endpoint = `${SUREDONE_URL}/editor/items/edit`;
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'X-Auth-User': SUREDONE_USER,
+          'X-Auth-Token': SUREDONE_TOKEN,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData.toString()
+      });
+
+      responseText = await response.text();
+      console.log('SureDone EDIT response:', responseText);
+
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        return res.status(500).json({
+          success: false,
+          error: 'Invalid response from SureDone EDIT',
+          details: responseText.substring(0, 500)
+        });
+      }
+    }
+
     if (data.result === 'success') {
       const responseObj = {
         success: true,
-        message: 'Product created in SureDone',
+        message: attemptEdit ? 'Product updated in SureDone' : 'Product created in SureDone',
         sku: data.sku || sku,
         upc: upc,
         brandFormatted,
         bigcommerceBrandId,
         bigcommerceCategories: bigcommerceCategoriesStr,
-        userType
+        userType,
+        action: attemptEdit ? 'edit' : 'add'
       };
       if (upcWarning) responseObj.warning = upcWarning;
       res.status(200).json(responseObj);
