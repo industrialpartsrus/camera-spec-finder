@@ -2116,7 +2116,8 @@ export default function ProListingBuilder() {
         ebayShippingProfileId: existingData.ebayshippingprofileid || '69077991015',
         // Mark as editing existing
         isEditingExisting: true,
-        originalSku: existingData.sku || existingData.guid
+        originalSku: existingData.sku || existingData.guid,
+        sku: existingData.sku || existingData.guid
       });
       
       setSelectedItem(docRef.id);
@@ -2823,6 +2824,9 @@ export default function ProListingBuilder() {
                       )}
                     </div>
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
+                    {item.sku && (
+                      <p className="text-[10px] text-gray-500 font-mono mt-0.5">SKU: {item.sku}</p>
+                    )}
                     <div className="mt-1">{getStatusBadge(item)}</div>
                     {item.productCategory && <p className="text-xs text-blue-600 mt-0.5">{item.productCategory}</p>}
                     {item.shelvedAt && (
@@ -2853,6 +2857,9 @@ export default function ProListingBuilder() {
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h2 className="text-2xl font-bold">{selected.brand} {selected.partNumber}</h2>
+                  {selected.sku && (
+                    <p className="text-sm text-gray-600 font-mono mt-1 select-all">SKU: {selected.sku}</p>
+                  )}
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className={`text-sm px-2 py-1 rounded flex items-center gap-1 ${
                       selected.status === 'complete' ? 'bg-green-100 text-green-700' :
