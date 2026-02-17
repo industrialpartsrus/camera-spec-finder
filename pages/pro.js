@@ -3,7 +3,7 @@
 // Updated: January 2025
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, RefreshCw, ChevronDown, ChevronUp, ExternalLink, ArrowRight, Check } from 'lucide-react';
+import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, Download, RefreshCw, ChevronDown, ChevronUp, ExternalLink, ArrowRight, Check } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import InventoryCheckAlert from '../components/InventoryCheckAlert';
@@ -1572,6 +1572,7 @@ export default function ProListingBuilder() {
   const [descriptionViewMode, setDescriptionViewMode] = useState({});
   const [photoOrderOverrides, setPhotoOrderOverrides] = useState({}); // { itemId: [0, 1, 2, 3, ...] }
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [isPullingSuredonePhotos, setIsPullingSuredonePhotos] = useState(false);
   const [showSpecs, setShowSpecs] = useState(true);
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const fileInputRef = useRef(null);
@@ -1784,6 +1785,69 @@ export default function ProListingBuilder() {
       alert('Failed to upload photos: ' + err.message);
     } finally {
       setIsUploadingPhotos(false);
+    }
+  };
+
+  const handlePullPhotosFromSuredone = async (item) => {
+    const sku = item.sku;
+    if (!sku) {
+      alert('No SKU found for this item');
+      return;
+    }
+
+    setIsPullingSuredonePhotos(true);
+
+    try {
+      // Step 1: Get item from SureDone
+      const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku)}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`SureDone API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.item) {
+        throw new Error('Item not found in SureDone');
+      }
+
+      const suredoneItem = data.item;
+
+      // Step 2: Extract media URLs (media1 through media12)
+      const mediaUrls = [];
+      const viewNames = [];
+
+      for (let i = 1; i <= 12; i++) {
+        const url = suredoneItem[`media${i}`];
+        if (url && url.trim() && url !== '' && !url.includes('no-image') && !url.includes('placeholder')) {
+          mediaUrls.push(url);
+          viewNames.push(`suredone_${i}`);
+        }
+      }
+
+      if (mediaUrls.length === 0) {
+        alert(`No photos found in SureDone for SKU: ${sku}`);
+        setIsPullingSuredonePhotos(false);
+        return;
+      }
+
+      // Step 3: Save URLs directly to Firebase
+      // SureDone URLs are already public - no need to re-upload
+      await updateDoc(doc(db, 'products', item.id), {
+        photos: mediaUrls,
+        photoViews: viewNames,
+        photosSource: 'suredone',
+        photosPulledAt: serverTimestamp(),
+        photosPulledFrom: sku
+      });
+
+      console.log(`Pulled ${mediaUrls.length} photos from SureDone for ${sku}`);
+      alert(`✅ Success! Pulled ${mediaUrls.length} photo${mediaUrls.length !== 1 ? 's' : ''} from SureDone`);
+
+    } catch (err) {
+      console.error('Failed to pull photos from SureDone:', err);
+      alert('Failed to pull photos from SureDone:\n' + err.message);
+    } finally {
+      setIsPullingSuredonePhotos(false);
     }
   };
 
@@ -3550,6 +3614,28 @@ export default function ProListingBuilder() {
                       <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4 text-center">
                         <p className="text-orange-700 font-semibold">📷 No photos yet</p>
                         <p className="text-orange-600 text-sm mt-1">Item is in the photo queue — photos will appear here automatically</p>
+
+                        {/* Pull from SureDone option */}
+                        <button
+                          onClick={() => handlePullPhotosFromSuredone(selected)}
+                          disabled={isPullingSuredonePhotos}
+                          className="mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2 mx-auto"
+                        >
+                          {isPullingSuredonePhotos ? (
+                            <>
+                              <Loader size={16} className="animate-spin" />
+                              Pulling from SureDone...
+                            </>
+                          ) : (
+                            <>
+                              <Download size={16} />
+                              Pull Photos from SureDone
+                            </>
+                          )}
+                        </button>
+                        <p className="text-xs text-gray-500 mt-2">
+                          For legacy items with existing photos in SureDone
+                        </p>
                       </div>
                     )}
 
