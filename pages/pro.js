@@ -1570,6 +1570,7 @@ export default function ProListingBuilder() {
   const [coilVoltageVerified, setCoilVoltageVerified] = useState({});
   const [emitterReceiverStatus, setEmitterReceiverStatus] = useState({});
   const [descriptionViewMode, setDescriptionViewMode] = useState({});
+  const [photoOrderOverrides, setPhotoOrderOverrides] = useState({}); // { itemId: [0, 1, 2, 3, ...] }
   const [showSpecs, setShowSpecs] = useState(true);
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const fileInputRef = useRef(null);
@@ -1635,6 +1636,57 @@ export default function ProListingBuilder() {
         [fieldName]: value
       }
     }));
+  };
+
+  // Helper: Get photo order (returns array of indices, respecting local override)
+  const getPhotoOrder = (item) => {
+    if (!item.photos || item.photos.length === 0) return [];
+    // Check if we have a local override for this item
+    if (photoOrderOverrides[item.id]) {
+      return photoOrderOverrides[item.id];
+    }
+    // Default: [0, 1, 2, 3, ...]
+    return Array.from({ length: item.photos.length }, (_, i) => i);
+  };
+
+  // Helper: Move photo left or right
+  const handleMovePhoto = async (item, index, direction) => {
+    const currentOrder = getPhotoOrder(item);
+    const newOrder = [...currentOrder];
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+
+    // Boundary check
+    if (targetIndex < 0 || targetIndex >= newOrder.length) return;
+
+    // Swap positions
+    [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
+
+    // Update local state for immediate UI feedback
+    setPhotoOrderOverrides(prev => ({
+      ...prev,
+      [item.id]: newOrder
+    }));
+
+    // Reorder Firebase arrays
+    const reorderedPhotos = newOrder.map(i => item.photos[i]);
+    const reorderedViews = newOrder.map(i => item.photoViews?.[i] || null).filter(Boolean);
+
+    try {
+      await updateDoc(doc(db, 'products', item.id), {
+        photos: reorderedPhotos,
+        photoViews: reorderedViews
+      });
+      console.log(`Reordered photos for ${item.sku}: ${newOrder}`);
+    } catch (error) {
+      console.error('Failed to reorder photos:', error);
+      alert('Failed to reorder photos: ' + error.message);
+      // Revert local state on error
+      setPhotoOrderOverrides(prev => {
+        const updated = { ...prev };
+        delete updated[item.id];
+        return updated;
+      });
+    }
   };
 
   const compressImage = (file, maxWidth = 1200, quality = 0.8) => {
@@ -3357,34 +3409,67 @@ export default function ProListingBuilder() {
                     </h3>
                     {selected.photos && selected.photos.length > 0 ? (
                       <div className="grid grid-cols-4 gap-2">
-                        {selected.photos.map((url, idx) => {
-                          // Helper: Get display photo URL (prefer nobg, fallback to original)
-                          const viewName = selected.photoViews?.[idx];
+                        {getPhotoOrder(selected).map((originalIdx, displayIdx) => {
+                          const url = selected.photos[originalIdx];
+                          const viewName = selected.photoViews?.[originalIdx];
                           const nobgUrl = viewName ? selected.photosNobg?.[viewName] : null;
                           const displayUrl = nobgUrl || url;
                           const isNobg = !!nobgUrl;
 
                           return (
-                            <div key={idx} className="relative group">
+                            <div key={`${selected.id}-${originalIdx}`} className="relative group">
                               <img
                                 src={displayUrl}
-                                alt={`Photo ${idx + 1}`}
+                                alt={`Photo ${displayIdx + 1}`}
                                 className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition cursor-pointer"
                                 onClick={() => window.open(displayUrl, '_blank')}
                               />
+                              {/* Position badge */}
                               <span className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs font-bold px-2 py-0.5 rounded">
-                                {idx + 1}
+                                {displayIdx + 1}
                               </span>
-                              {idx === 0 && (
+                              {/* Main image badge */}
+                              {displayIdx === 0 && (
                                 <span className="absolute top-1 right-1 bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
                                   ★ MAIN
                                 </span>
                               )}
+                              {/* No-background badge */}
                               {isNobg && (
                                 <span className="absolute bottom-1 right-1 bg-green-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">
                                   NOBG
                                 </span>
                               )}
+                              {/* Reorder arrows - always visible on mobile, hover-reveal on desktop */}
+                              <div className="absolute inset-0 flex items-center justify-between px-1 pointer-events-none">
+                                {displayIdx > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleMovePhoto(selected, displayIdx, 'left');
+                                    }}
+                                    className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition pointer-events-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                    title="Move left"
+                                  >
+                                    ←
+                                  </button>
+                                )}
+                                <div className="flex-1"></div>
+                                {displayIdx < selected.photos.length - 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleMovePhoto(selected, displayIdx, 'right');
+                                    }}
+                                    className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition pointer-events-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                    title="Move right"
+                                  >
+                                    →
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
