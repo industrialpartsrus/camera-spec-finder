@@ -1571,6 +1571,7 @@ export default function ProListingBuilder() {
   const [emitterReceiverStatus, setEmitterReceiverStatus] = useState({});
   const [descriptionViewMode, setDescriptionViewMode] = useState({});
   const [photoOrderOverrides, setPhotoOrderOverrides] = useState({}); // { itemId: [0, 1, 2, 3, ...] }
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const [showSpecs, setShowSpecs] = useState(true);
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const fileInputRef = useRef(null);
@@ -1713,6 +1714,77 @@ export default function ProListingBuilder() {
       };
       reader.onerror = reject;
     });
+  };
+
+  const handlePhotoUpload = async (files, itemId) => {
+    if (!files || files.length === 0) return;
+
+    const item = queue.find(q => q.id === itemId);
+    if (!item) return;
+
+    setIsUploadingPhotos(true);
+
+    try {
+      const sku = item.sku || itemId;
+      const existingPhotos = item.photos || [];
+      const existingViews = item.photoViews || [];
+      const newPhotoUrls = [];
+      const newViewNames = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadIndex = existingPhotos.length + i + 1;
+        const viewName = `upload_${uploadIndex}`;
+
+        // Convert file to base64
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        // Upload via new simple upload API
+        const response = await fetch('/api/photos/upload-simple', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sku: sku,
+            view: viewName,
+            imageData: base64,
+            contentType: file.type || 'image/jpeg'
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          newPhotoUrls.push(data.url);
+          newViewNames.push(viewName);
+          console.log(`Uploaded ${viewName}: ${file.name}`);
+        } else {
+          const errorText = await response.text();
+          console.error(`Failed to upload ${file.name}:`, errorText);
+        }
+      }
+
+      if (newPhotoUrls.length > 0) {
+        // Append to existing arrays in Firebase
+        const updatedPhotos = [...existingPhotos, ...newPhotoUrls];
+        const updatedViews = [...existingViews, ...newViewNames];
+
+        await updateDoc(doc(db, 'products', itemId), {
+          photos: updatedPhotos,
+          photoViews: updatedViews
+        });
+
+        console.log(`Added ${newPhotoUrls.length} photos to ${sku}`);
+      }
+    } catch (err) {
+      console.error('Photo upload error:', err);
+      alert('Failed to upload photos: ' + err.message);
+    } finally {
+      setIsUploadingPhotos(false);
+    }
   };
 
   const handleImageUpload = async (event) => {
@@ -3503,6 +3575,43 @@ export default function ProListingBuilder() {
                         </label>
                       </div>
                     )}
+
+                    {/* Photo Upload from Computer */}
+                    <div className="mt-3">
+                      <label
+                        className="flex items-center justify-center gap-2 w-full py-3 px-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
+                      >
+                        {isUploadingPhotos ? (
+                          <>
+                            <Loader size={18} className="animate-spin text-blue-600" />
+                            <span className="text-sm font-semibold text-blue-600">
+                              Uploading...
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={18} className="text-gray-500" />
+                            <span className="text-sm font-semibold text-gray-600">
+                              Upload Photos from Computer
+                            </span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          disabled={isUploadingPhotos}
+                          onChange={(e) => {
+                            handlePhotoUpload(e.target.files, selected.id);
+                            e.target.value = ''; // Reset so same file can be selected again
+                          }}
+                        />
+                      </label>
+                      <p className="text-xs text-gray-400 mt-1 text-center">
+                        Accepts JPG, PNG, WebP — multiple files OK
+                      </p>
+                    </div>
                   </div>
 
                   {/* Condition */}
