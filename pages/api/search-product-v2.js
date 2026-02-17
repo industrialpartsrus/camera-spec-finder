@@ -7,6 +7,25 @@ import Anthropic from '@anthropic-ai/sdk';
 import { resolveSpecsObject } from '../../lib/field-name-resolver.js';
 
 // ============================================================================
+// SPEC FIELD EXCLUSION LIST
+// Filter out non-product specs that don't belong in listings
+// ============================================================================
+
+const EXCLUDED_SPEC_FIELDS = new Set([
+  'attachmentmodel',       // Mounting hardware, not the product itself
+  'attachmenttype',        // Mounting hardware metadata
+  'productattachments',    // Accessory metadata
+  'packagecontents',       // Not a spec, belongs in description
+  'includedaccessories',   // Not a spec, belongs in description
+  'boxcontents',           // Shipping metadata
+  'accessories',           // Not a spec
+  'mounting',              // Vague, usually covered by mountingtype
+  'installation',          // Instructions, not a spec
+  'warranty',              // Policy, not a spec
+  'compliance',            // Vague, usually covered by certifications
+]);
+
+// ============================================================================
 // PRODUCT TYPE TO EBAY CATEGORY MAPPING (COMPREHENSIVE)
 // AI returns a product type, we map it to eBay Category ID
 // ============================================================================
@@ -1096,7 +1115,20 @@ export default async function handler(req, res) {
     // e.g., "NominalRatedInputVoltage" → "inputvoltage", "Horsepower" → "horsepower"
     const resolvedSpecs = resolveSpecsObject(product.specifications || {});
     console.log('Resolved specs:', Object.keys(resolvedSpecs).length, 'fields');
-    
+
+    // Step 1c: Filter out excluded/irrelevant spec fields
+    const filteredSpecs = {};
+    for (const [key, value] of Object.entries(resolvedSpecs)) {
+      if (!EXCLUDED_SPEC_FIELDS.has(key)) {
+        filteredSpecs[key] = value;
+      }
+    }
+    const excludedCount = Object.keys(resolvedSpecs).length - Object.keys(filteredSpecs).length;
+    if (excludedCount > 0) {
+      console.log(`Filtered out ${excludedCount} irrelevant spec(s):`,
+        Object.keys(resolvedSpecs).filter(k => EXCLUDED_SPEC_FIELDS.has(k)).join(', '));
+    }
+
     // Step 2: Map product type to eBay Category
     const ebayMapping = PRODUCT_TYPE_TO_EBAY_CATEGORY[productType] || null;
     const ebayCategoryId = ebayMapping?.ebayCategoryId || '';
@@ -1147,7 +1179,7 @@ export default async function handler(req, res) {
         requiredAspects: ebayAspects?.required?.length || 0,
         recommendedAspects: ebayAspects?.recommended?.length || 0
       },
-      _resolvedSpecs: resolvedSpecs,
+      _resolvedSpecs: filteredSpecs,
       _ebayAspects: ebayAspects
     });
     

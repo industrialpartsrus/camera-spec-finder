@@ -1554,6 +1554,16 @@ function ComparisonPanel({ existingData, currentData, onUseValue, onClose, isOpe
 }
 
 // ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+// Get SKU from item, checking all possible field names
+const getItemSku = (item) => {
+  if (!item) return '';
+  return item.sku || item.originalSku || item.guid || '';
+};
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 export default function ProListingBuilder() {
@@ -2824,8 +2834,8 @@ export default function ProListingBuilder() {
                       )}
                     </div>
                     <p className="text-xs text-gray-600 truncate">{item.partNumber}</p>
-                    {item.sku && (
-                      <p className="text-[10px] text-gray-500 font-mono mt-0.5">SKU: {item.sku}</p>
+                    {getItemSku(item) && (
+                      <p className="text-[10px] text-gray-500 font-mono mt-0.5">SKU: {getItemSku(item)}</p>
                     )}
                     <div className="mt-1">{getStatusBadge(item)}</div>
                     {item.productCategory && <p className="text-xs text-blue-600 mt-0.5">{item.productCategory}</p>}
@@ -2857,8 +2867,8 @@ export default function ProListingBuilder() {
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h2 className="text-2xl font-bold">{selected.brand} {selected.partNumber}</h2>
-                  {selected.sku && (
-                    <p className="text-sm text-gray-600 font-mono mt-1 select-all">SKU: {selected.sku}</p>
+                  {getItemSku(selected) && (
+                    <p className="text-sm text-gray-600 font-mono mt-1 select-all">SKU: {getItemSku(selected)}</p>
                   )}
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className={`text-sm px-2 py-1 rounded flex items-center gap-1 ${
