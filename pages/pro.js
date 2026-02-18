@@ -2615,9 +2615,10 @@ export default function ProListingBuilder() {
           ...(item.weight && { weight: item.weight }),
           ...(item.shelf && { shelf: item.shelf }),
           ...(item.countryOfOrigin && { countryoforigin: item.countryOfOrigin }),
-          ebaycatid: item.ebayCategoryId || '',
-          ebaystoreid: item.ebayStoreCategoryId || '',
-          ebaystoreid2: item.ebayStoreCategoryId2 || '',
+          // Only send eBay fields if they have values (don't wipe existing data)
+          ...(item.ebayCategoryId && { ebaycatid: item.ebayCategoryId }),
+          ...(item.ebayStoreCategoryId && { ebaystoreid: item.ebayStoreCategoryId }),
+          ...(item.ebayStoreCategoryId2 && { ebaystoreid2: item.ebayStoreCategoryId2 }),
           ebayshippingprofileid: item.ebayShippingProfileId || '69077991015',
           photos: item.photos || [],
           photosNobg: item.photosNobg || {},

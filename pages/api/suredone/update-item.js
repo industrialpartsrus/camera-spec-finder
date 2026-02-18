@@ -1,5 +1,6 @@
 // pages/api/suredone/update-item.js
-// Updates a single item in SureDone
+// Updates a single item in SureDone using the editor API
+// MUST use form-encoded POST to /editor/items/edit (NOT JSON PUT)
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -21,20 +22,69 @@ export default async function handler(req, res) {
   }
 
   try {
-    // SureDone uses PUT to /items to update
-    const url = `${SUREDONE_URL}/editor/items`;
-    
-    console.log('Updating SureDone item:', updateData.guid);
-    console.log('Update payload:', JSON.stringify(updateData));
+    // Build form-encoded data (same format as create listing)
+    const formData = new URLSearchParams();
+    formData.append('action', 'edit');  // Required for edit endpoint
+    formData.append('guid', updateData.guid);  // SKU to update
 
-    const response = await fetch(url, {
-      method: 'PUT',
+    // Only append fields that have actual values
+    // Skip empty strings, empty arrays, and empty objects
+    const appendIfValue = (key, value) => {
+      if (value === null || value === undefined || value === '') return;
+      if (Array.isArray(value) && value.length === 0) return;
+      if (typeof value === 'object' && Object.keys(value).length === 0) return;
+
+      // For arrays and objects, stringify them
+      if (Array.isArray(value) || typeof value === 'object') {
+        formData.append(key, JSON.stringify(value));
+      } else {
+        formData.append(key, String(value));
+      }
+    };
+
+    // Core listing fields
+    appendIfValue('title', updateData.title);
+    appendIfValue('longdescription', updateData.longdescription);
+    appendIfValue('price', updateData.price);
+    appendIfValue('stock', updateData.stock);
+    appendIfValue('brand', updateData.brand);
+    appendIfValue('mpn', updateData.mpn);
+    appendIfValue('model', updateData.model);
+    appendIfValue('condition', updateData.condition);
+    appendIfValue('usertype', updateData.usertype);
+
+    // Dimensions and weight
+    appendIfValue('boxlength', updateData.boxlength);
+    appendIfValue('boxwidth', updateData.boxwidth);
+    appendIfValue('boxheight', updateData.boxheight);
+    appendIfValue('weight', updateData.weight);
+    appendIfValue('shelf', updateData.shelf);
+    appendIfValue('countryoforigin', updateData.countryoforigin);
+
+    // eBay fields (ONLY if they have values)
+    appendIfValue('ebaycatid', updateData.ebaycatid);
+    appendIfValue('ebaystoreid', updateData.ebaystoreid);
+    appendIfValue('ebaystoreid2', updateData.ebaystoreid2);
+    appendIfValue('ebayshippingprofileid', updateData.ebayshippingprofileid);
+
+    // Photos and views
+    appendIfValue('photos', updateData.photos);
+    appendIfValue('photosNobg', updateData.photosNobg);
+    appendIfValue('photoViews', updateData.photoViews);
+    appendIfValue('removeBgFlags', updateData.removeBgFlags);
+
+    console.log('Updating SureDone item:', updateData.guid);
+    console.log('Form data fields:', Array.from(formData.keys()).join(', '));
+
+    // Use correct endpoint and format (matches create listing's edit retry)
+    const response = await fetch(`${SUREDONE_URL}/editor/items/edit`, {
+      method: 'POST',
       headers: {
         'X-Auth-User': SUREDONE_USER,
         'X-Auth-Token': SUREDONE_TOKEN,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: JSON.stringify(updateData)
+      body: formData.toString()
     });
 
     const responseText = await response.text();
