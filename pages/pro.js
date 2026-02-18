@@ -2179,6 +2179,32 @@ export default function ProListingBuilder() {
       console.log('Final productCategory:', productCategory);
       console.log('Final detectedEbayCatId:', detectedEbayCatId);
 
+      // === EXTRACT PHOTOS FROM SUREDONE (media1-media12) ===
+      const mediaUrls = [];
+      const viewNames = [];
+      for (let i = 1; i <= 12; i++) {
+        const url = existingData[`media${i}`];
+        if (url && url.trim() && url !== '' &&
+            !url.includes('no-image') && !url.includes('placeholder')) {
+          mediaUrls.push(url);
+          viewNames.push(`suredone_${i}`);
+        }
+      }
+      console.log(`Extracted ${mediaUrls.length} photos from SureDone`);
+
+      // === EXTRACT EBAY ITEM SPECIFICS FROM SUREDONE ===
+      // Fields like ebayitemspecificsvoltage, ebayitemspecificsenclosuretype, etc.
+      const ebayItemSpecificsForSuredone = {};
+      for (const key in existingData) {
+        if (key.startsWith('ebayitemspecifics') && existingData[key]) {
+          const value = existingData[key].toString().trim();
+          if (value && value !== '') {
+            ebayItemSpecificsForSuredone[key] = value;
+          }
+        }
+      }
+      console.log(`Extracted ${Object.keys(ebayItemSpecificsForSuredone).length} eBay item specifics from SureDone`);
+
       const loadedDesc = existingData.longdescription || '';
       const docRef = await addDoc(collection(db, 'products'), {
         brand: existingData.brand || existingData.manufacturer || '',
@@ -2209,6 +2235,14 @@ export default function ProListingBuilder() {
         ebayStoreCategoryId2: existingData.ebaystoreid2 || '',
         bigcommerceCategoryId: existingData.bigcommercecategories || '',
         ebayShippingProfileId: existingData.ebayshippingprofileid || '69077991015',
+        // Photos (extracted automatically)
+        photos: mediaUrls,
+        photoViews: viewNames,
+        photosSource: 'suredone',
+        photosPulledAt: serverTimestamp(),
+        photosPulledFrom: existingData.sku || existingData.guid,
+        // eBay item specifics (for update roundtrip)
+        ebayItemSpecificsForSuredone: ebayItemSpecificsForSuredone,
         // Mark as editing existing
         isEditingExisting: true,
         originalSku: existingData.sku || existingData.guid,
@@ -2351,6 +2385,14 @@ export default function ProListingBuilder() {
       }
       if (item.sku) {
         updateData.sku = item.sku;
+      }
+      // Preserve photos from SureDone (don't wipe them on re-research)
+      if (item.photos && item.photos.length > 0) {
+        updateData.photos = item.photos;
+        updateData.photoViews = item.photoViews;
+        updateData.photosSource = item.photosSource;
+        updateData.photosPulledAt = item.photosPulledAt;
+        updateData.photosPulledFrom = item.photosPulledFrom;
       }
       
       await updateDoc(doc(db, 'products', itemId), updateData);
@@ -3758,27 +3800,31 @@ export default function ProListingBuilder() {
                         <p className="text-orange-700 font-semibold">📷 No photos yet</p>
                         <p className="text-orange-600 text-sm mt-1">Item is in the photo queue — photos will appear here automatically</p>
 
-                        {/* Pull from SureDone option */}
-                        <button
-                          onClick={() => handlePullPhotosFromSuredone(selected)}
-                          disabled={isPullingSuredonePhotos}
-                          className="mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2 mx-auto"
-                        >
-                          {isPullingSuredonePhotos ? (
-                            <>
-                              <Loader size={16} className="animate-spin" />
-                              Pulling from SureDone...
-                            </>
-                          ) : (
-                            <>
-                              <Download size={16} />
-                              Pull Photos from SureDone
-                            </>
-                          )}
-                        </button>
-                        <p className="text-xs text-gray-500 mt-2">
-                          For legacy items with existing photos in SureDone
-                        </p>
+                        {/* Pull from SureDone option (only for items NOT loaded from SureDone) */}
+                        {!selected.isEditingExisting && (
+                          <>
+                            <button
+                              onClick={() => handlePullPhotosFromSuredone(selected)}
+                              disabled={isPullingSuredonePhotos}
+                              className="mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2 mx-auto"
+                            >
+                              {isPullingSuredonePhotos ? (
+                                <>
+                                  <Loader size={16} className="animate-spin" />
+                                  Pulling from SureDone...
+                                </>
+                              ) : (
+                                <>
+                                  <Download size={16} />
+                                  Pull Photos from SureDone
+                                </>
+                              )}
+                            </button>
+                            <p className="text-xs text-gray-500 mt-2">
+                              For legacy items with existing photos in SureDone
+                            </p>
+                          </>
+                        )}
                       </div>
                     )}
 
