@@ -2332,13 +2332,25 @@ export default function ProListingBuilder() {
         ebayStoreCategoryId: data._metadata?.ebayStoreCategoryId || product.ebayStoreCategoryId || '',
         ebayStoreCategoryId2: data._metadata?.ebayStoreCategoryId2 || '23399313015'
       };
-      
+
       // Only add optional fields if they have values (Firebase doesn't allow undefined)
       if (product.bigcommerceCategoryId) {
         updateData.bigcommerceCategoryId = product.bigcommerceCategoryId;
       }
       if (ebayAspects) {
         updateData.ebayAspects = ebayAspects;
+      }
+
+      // CRITICAL: Preserve existing listing metadata during re-research
+      // Without this, items loaded via "Edit Existing" lose their update flags
+      if (item.isEditingExisting) {
+        updateData.isEditingExisting = item.isEditingExisting;
+      }
+      if (item.originalSku) {
+        updateData.originalSku = item.originalSku;
+      }
+      if (item.sku) {
+        updateData.sku = item.sku;
       }
       
       await updateDoc(doc(db, 'products', itemId), updateData);
