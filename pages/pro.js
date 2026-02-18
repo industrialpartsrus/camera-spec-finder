@@ -1737,7 +1737,7 @@ export default function ProListingBuilder() {
     setIsUploadingPhotos(true);
 
     try {
-      const sku = item.sku || itemId;
+      const sku = getItemSku(item) || itemId;
       const existingPhotos = item.photos || [];
       const existingViews = item.photoViews || [];
       const newPhotoUrls = [];
@@ -1895,7 +1895,8 @@ export default function ProListingBuilder() {
             brand: item.brand,
             partNumber: item.partNumber,
             category: item.productCategory || item.usertype || 'Industrial Part',
-            viewName: viewName
+            viewName: viewName,
+            isPrimary: index === 0
           })
         });
 
@@ -1920,6 +1921,29 @@ export default function ProListingBuilder() {
     } finally {
       setIsGeneratingAltText(false);
     }
+  };
+
+  const handleDeletePhoto = async (item, indexToRemove) => {
+    const updatedPhotos = item.photos.filter((_, i) => i !== indexToRemove);
+    const updatedViews = (item.photoViews || []).filter((_, i) => i !== indexToRemove);
+
+    // Update alt texts (shift keys down)
+    const updatedAltTexts = {};
+    updatedPhotos.forEach((_, i) => {
+      const oldKey = `media${i >= indexToRemove ? i + 2 : i + 1}`;
+      const newKey = `media${i + 1}`;
+      if (item.mediaAltTexts?.[oldKey]) {
+        updatedAltTexts[newKey] = item.mediaAltTexts[oldKey];
+      } else if (item.mediaAltTexts?.[`media${i + 1}`] && i < indexToRemove) {
+        updatedAltTexts[newKey] = item.mediaAltTexts[`media${i + 1}`];
+      }
+    });
+
+    await updateDoc(doc(db, 'products', item.id), {
+      photos: updatedPhotos,
+      photoViews: updatedViews,
+      mediaAltTexts: updatedAltTexts
+    });
   };
 
   const handleImageUpload = async (event) => {
@@ -3658,6 +3682,20 @@ export default function ProListingBuilder() {
                                     NOBG
                                   </span>
                                 )}
+                                {/* Delete button - shifts left for main image to avoid MAIN badge */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (confirm('Remove this photo?')) {
+                                      handleDeletePhoto(selected, displayIdx);
+                                    }
+                                  }}
+                                  className={`absolute top-1 ${displayIdx === 0 ? 'right-14' : 'right-1'} w-5 h-5 bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow-lg hover:bg-red-700 opacity-0 group-hover:opacity-100 transition z-10`}
+                                  title="Delete photo"
+                                >
+                                  ×
+                                </button>
                                 {/* Reorder arrows - always visible on mobile, hover-reveal on desktop */}
                                 <div className="absolute inset-0 flex items-center justify-between px-1 pointer-events-none">
                                   {displayIdx > 0 && (

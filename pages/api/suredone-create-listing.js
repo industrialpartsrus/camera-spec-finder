@@ -1384,7 +1384,8 @@ export default async function handler(req, res) {
                 brand: product.brand,
                 partNumber: product.partNumber,
                 category: product.productCategory || product.usertype || 'Industrial Part',
-                viewName: photoViews[index] || `photo_${index + 1}`
+                viewName: photoViews[index] || `photo_${index + 1}`,
+                isPrimary: index === 0
               })
             });
 
