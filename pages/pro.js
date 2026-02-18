@@ -1583,6 +1583,7 @@ export default function ProListingBuilder() {
   const [photoOrderOverrides, setPhotoOrderOverrides] = useState({}); // { itemId: [0, 1, 2, 3, ...] }
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const [isPullingSuredonePhotos, setIsPullingSuredonePhotos] = useState(false);
+  const [isGeneratingAltText, setIsGeneratingAltText] = useState(false);
   const [showSpecs, setShowSpecs] = useState(true);
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const fileInputRef = useRef(null);
@@ -1858,6 +1859,66 @@ export default function ProListingBuilder() {
       alert('Failed to pull photos from SureDone:\n' + err.message);
     } finally {
       setIsPullingSuredonePhotos(false);
+    }
+  };
+
+  // Alt text generation handlers
+  const handleUpdateAltText = async (itemId, photoIndex, newAltText) => {
+    const item = queue.find(q => q.id === itemId);
+    if (!item) return;
+
+    const mediaKey = `media${photoIndex + 1}`;
+    const updatedAltTexts = {
+      ...(item.mediaAltTexts || {}),
+      [mediaKey]: newAltText
+    };
+
+    await updateDoc(doc(db, 'products', itemId), {
+      mediaAltTexts: updatedAltTexts
+    });
+  };
+
+  const handleGenerateAllAltTexts = async (item) => {
+    if (!item.photos || item.photos.length === 0) return;
+
+    setIsGeneratingAltText(true);
+
+    try {
+      const promises = item.photos.map(async (photoUrl, index) => {
+        const viewName = item.photoViews?.[index] || `photo_${index + 1}`;
+
+        const response = await fetch('/api/photos/generate-alt-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageUrl: photoUrl,
+            brand: item.brand,
+            partNumber: item.partNumber,
+            category: item.productCategory || item.usertype || 'Industrial Part',
+            viewName: viewName
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return { [`media${index + 1}`]: data.altText };
+        }
+        return null;
+      });
+
+      const results = await Promise.all(promises);
+      const newAltTexts = Object.assign({}, ...results.filter(Boolean));
+
+      await updateDoc(doc(db, 'products', item.id), {
+        mediaAltTexts: newAltTexts
+      });
+
+      console.log('Generated alt texts:', newAltTexts);
+    } catch (error) {
+      console.error('Failed to generate alt texts:', error);
+      alert('Failed to generate alt texts: ' + error.message);
+    } finally {
+      setIsGeneratingAltText(false);
     }
   };
 
@@ -3569,60 +3630,74 @@ export default function ProListingBuilder() {
                           const displayUrl = nobgUrl || url;
                           const isNobg = !!nobgUrl;
 
+                          const mediaKey = `media${displayIdx + 1}`;
+                          const altText = selected.mediaAltTexts?.[mediaKey] || '';
+
                           return (
-                            <div key={`${selected.id}-${originalIdx}`} className="relative group">
-                              <img
-                                src={displayUrl}
-                                alt={`Photo ${displayIdx + 1}`}
-                                className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition cursor-pointer"
-                                onClick={() => window.open(displayUrl, '_blank')}
-                              />
-                              {/* Position badge */}
-                              <span className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs font-bold px-2 py-0.5 rounded">
-                                {displayIdx + 1}
-                              </span>
-                              {/* Main image badge */}
-                              {displayIdx === 0 && (
-                                <span className="absolute top-1 right-1 bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                                  ★ MAIN
+                            <div key={`${selected.id}-${originalIdx}`} className="space-y-1">
+                              <div className="relative group">
+                                <img
+                                  src={displayUrl}
+                                  alt={`Photo ${displayIdx + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition cursor-pointer"
+                                  onClick={() => window.open(displayUrl, '_blank')}
+                                />
+                                {/* Position badge */}
+                                <span className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs font-bold px-2 py-0.5 rounded">
+                                  {displayIdx + 1}
                                 </span>
-                              )}
-                              {/* No-background badge */}
-                              {isNobg && (
-                                <span className="absolute bottom-1 right-1 bg-green-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                                  NOBG
-                                </span>
-                              )}
-                              {/* Reorder arrows - always visible on mobile, hover-reveal on desktop */}
-                              <div className="absolute inset-0 flex items-center justify-between px-1 pointer-events-none">
-                                {displayIdx > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleMovePhoto(selected, displayIdx, 'left');
-                                    }}
-                                    className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition pointer-events-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                                    title="Move left"
-                                  >
-                                    ←
-                                  </button>
+                                {/* Main image badge */}
+                                {displayIdx === 0 && (
+                                  <span className="absolute top-1 right-1 bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                                    ★ MAIN
+                                  </span>
                                 )}
-                                <div className="flex-1"></div>
-                                {displayIdx < selected.photos.length - 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleMovePhoto(selected, displayIdx, 'right');
-                                    }}
-                                    className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition pointer-events-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                                    title="Move right"
-                                  >
-                                    →
-                                  </button>
+                                {/* No-background badge */}
+                                {isNobg && (
+                                  <span className="absolute bottom-1 right-1 bg-green-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                                    NOBG
+                                  </span>
                                 )}
+                                {/* Reorder arrows - always visible on mobile, hover-reveal on desktop */}
+                                <div className="absolute inset-0 flex items-center justify-between px-1 pointer-events-none">
+                                  {displayIdx > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMovePhoto(selected, displayIdx, 'left');
+                                      }}
+                                      className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition pointer-events-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                      title="Move left"
+                                    >
+                                      ←
+                                    </button>
+                                  )}
+                                  <div className="flex-1"></div>
+                                  {displayIdx < selected.photos.length - 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMovePhoto(selected, displayIdx, 'right');
+                                      }}
+                                      className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition pointer-events-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                      title="Move right"
+                                    >
+                                      →
+                                    </button>
+                                  )}
+                                </div>
                               </div>
+                              {/* Alt Text Input */}
+                              <input
+                                type="text"
+                                value={altText}
+                                onChange={(e) => handleUpdateAltText(selected.id, displayIdx, e.target.value)}
+                                placeholder="Alt text (SEO)"
+                                className="w-full text-xs text-gray-600 border border-gray-200 rounded px-2 py-1 focus:border-purple-400 focus:outline-none"
+                                maxLength={125}
+                              />
                             </div>
                           );
                         })}
@@ -3677,6 +3752,26 @@ export default function ProListingBuilder() {
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                         </label>
                       </div>
+                    )}
+
+                    {/* Generate Alt Text Button */}
+                    {selected.photos && selected.photos.length > 0 && (
+                      <button
+                        onClick={() => handleGenerateAllAltTexts(selected)}
+                        disabled={isGeneratingAltText}
+                        className="mt-3 w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isGeneratingAltText ? (
+                          <>
+                            <Loader size={16} className="animate-spin" />
+                            Generating Alt Text...
+                          </>
+                        ) : (
+                          <>
+                            🏷️ Generate Alt Text for All Photos
+                          </>
+                        )}
+                      </button>
                     )}
 
                     {/* Photo Upload from Computer */}

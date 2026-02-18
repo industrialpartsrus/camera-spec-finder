@@ -3,6 +3,8 @@
 // Uses SHORT field names (no ebayitemspecifics prefix) to populate INLINE/RECOMMENDED fields
 
 import brandsDb from '../../data/bigcommerce_brands.json';
+import { db } from '../../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
@@ -1358,10 +1360,81 @@ export default async function handler(req, res) {
         console.log('Watermarks disabled for this listing');
       }
 
-      // Push to SureDone media slots
+      // === GENERATE ALT TEXT FOR SEO ===
+      let altTexts = [];
+
+      // Check cache first
+      if (product.mediaAltTexts && Object.keys(product.mediaAltTexts).length === finalPhotoUrls.length) {
+        console.log('Using cached alt texts from Firebase');
+        altTexts = finalPhotoUrls.map((_, index) =>
+          product.mediaAltTexts[`media${index + 1}`] || ''
+        );
+      } else {
+        console.log('Generating alt texts with AI...');
+        const protocol = req.headers?.host?.includes('localhost') ? 'http' : 'https';
+        const host = req.headers?.host || process.env.VERCEL_URL || 'localhost:3000';
+
+        const altTextPromises = finalPhotoUrls.map(async (url, index) => {
+          try {
+            const response = await fetch(`${protocol}://${host}/api/photos/generate-alt-text`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                imageUrl: url,
+                brand: product.brand,
+                partNumber: product.partNumber,
+                category: product.productCategory || product.usertype || 'Industrial Part',
+                viewName: photoViews[index] || `photo_${index + 1}`
+              })
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              return data.altText || '';
+            }
+            return ''; // Fallback to empty
+          } catch (err) {
+            console.error(`Alt text generation failed for photo ${index + 1}:`, err);
+            return '';
+          }
+        });
+
+        altTexts = await Promise.all(altTextPromises);
+        console.log(`Generated ${altTexts.filter(Boolean).length} alt texts`);
+
+        // Cache alt texts in Firebase for next publish
+        if (altTexts.some(Boolean) && product.id) {
+          try {
+            const mediaAltTextsObj = {};
+            altTexts.forEach((text, index) => {
+              if (text) {
+                mediaAltTextsObj[`media${index + 1}`] = text;
+              }
+            });
+
+            await updateDoc(doc(db, 'products', product.id), {
+              mediaAltTexts: mediaAltTextsObj
+            });
+
+            console.log('Cached alt texts to Firebase');
+          } catch (cacheError) {
+            console.error('Failed to cache alt texts:', cacheError);
+            // Non-fatal, continue with publish
+          }
+        }
+      }
+
+      // Push to SureDone media slots WITH ALT TEXT
       finalPhotoUrls.forEach((url, index) => {
         if (url && index < 12) {
           formData.append(`media${index + 1}`, url);
+
+          // Add alt text if available
+          if (altTexts[index]) {
+            formData.append(`media${index + 1}alttext`, altTexts[index]);
+            console.log(`  media${index + 1}alttext = "${altTexts[index]}"`);
+          }
+
           const photoType = photoViews[index] && photosNobg[photoViews[index]] ? '(nobg)' : '(original)';
           const watermarkStatus = product.watermarkEnabled !== false ? ' [watermarked]' : '';
           console.log(`  media${index + 1} = ${url.substring(0, 60)}... ${photoType}${watermarkStatus}`);
