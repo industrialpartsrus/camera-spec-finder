@@ -1654,10 +1654,31 @@ export default function ProListingBuilder() {
       }
     };
 
-    img.onerror = () => {
-      console.error('Failed to load image for editing:', editingPhoto.photoUrl);
-      alert('Failed to load image. Please try again.');
-      setEditingPhoto(null);
+    img.onerror = async () => {
+      // CORS failed - try proxying through our server
+      // This happens with SureDone-hosted images (assets.suredone.com has no CORS headers)
+      console.log('Direct load failed, trying proxy for:', editingPhoto.photoUrl);
+      try {
+        const proxyRes = await fetch(
+          `/api/photos/proxy-image?url=${encodeURIComponent(editingPhoto.photoUrl)}`
+        );
+        if (proxyRes.ok) {
+          const proxyData = await proxyRes.json();
+          if (proxyData.success && proxyData.dataUrl) {
+            console.log('Successfully proxied image, retrying...');
+            img.crossOrigin = undefined; // Remove CORS requirement for data URL
+            img.src = proxyData.dataUrl;
+          } else {
+            throw new Error('Proxy returned invalid data');
+          }
+        } else {
+          throw new Error(`Proxy failed: ${proxyRes.status}`);
+        }
+      } catch (err) {
+        console.error('Proxy also failed:', err);
+        alert('Failed to load image for editing. The image may not be accessible.');
+        setEditingPhoto(null);
+      }
     };
 
     img.src = editingPhoto.photoUrl;
