@@ -22,24 +22,35 @@ export default function PhotoEditor({
   const [showWatermark, setShowWatermark] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
-  const [logoImg, setLogoImg] = useState(null);
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState(photoUrl); // Track current image URL (changes after bg removal)
 
   // Refs
   const editImageRef = useRef(null);                     // Preloaded source image
   const displayCanvasRef = useRef(null);                 // 500x500 preview canvas
+  const watermarkLogoRef = useRef(null);                 // Watermark logo PNG
+  const watermarkContactRef = useRef(null);              // Watermark contact info PNG
 
-  // Load logo for watermark
+  // Load watermark images
   useEffect(() => {
     const logo = new Image();
+    logo.src = '/watermarks/logo.png';
     logo.onload = () => {
-      setLogoImg(logo);
+      watermarkLogoRef.current = logo;
       console.log('✅ Watermark logo loaded:', logo.width, 'x', logo.height);
     };
     logo.onerror = () => {
       console.error('❌ Failed to load watermark logo from /watermarks/logo.png');
     };
-    logo.src = '/watermarks/logo.png';
+
+    const contact = new Image();
+    contact.src = '/watermarks/contact-info.png';
+    contact.onload = () => {
+      watermarkContactRef.current = contact;
+      console.log('✅ Watermark contact loaded:', contact.width, 'x', contact.height);
+    };
+    contact.onerror = () => {
+      console.error('❌ Failed to load watermark contact from /watermarks/contact-info.png');
+    };
   }, []);
 
   // Preload image with CORS fallback
@@ -150,41 +161,39 @@ export default function PhotoEditor({
     ctx.restore();
 
     // Draw watermark preview if enabled
-    if (showWatermark && logoImg) {
-      console.log('🎨 Drawing watermark preview');
-      drawWatermarkPreview(ctx, displaySize);
-    } else if (showWatermark && !logoImg) {
-      console.warn('⚠️ Watermark enabled but logo not loaded');
+    if (showWatermark) {
+      if (watermarkLogoRef.current || watermarkContactRef.current) {
+        console.log('🎨 Drawing watermark preview');
+        drawWatermarkPreview(ctx, displaySize);
+      } else {
+        console.warn('⚠️ Watermark enabled but images not loaded');
+      }
     }
 
-  }, [rotation, brightness, zoom, pan, showWatermark, logoImg]);
+  }, [rotation, brightness, zoom, pan, showWatermark]);
 
   // Draw watermark preview (semi-transparent, NOT saved)
+  // Matches server-side watermark.js positioning
   function drawWatermarkPreview(ctx, canvasSize) {
     ctx.save();
-    ctx.globalAlpha = 0.4; // 40% opacity
 
-    // Semi-transparent white background box
-    const boxHeight = 80;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.fillRect(0, canvasSize - boxHeight, canvasSize, boxHeight);
+    // LOGO: top-left corner, 22% width, 20px padding from edges
+    if (watermarkLogoRef.current) {
+      const logo = watermarkLogoRef.current;
+      const logoWidth = Math.round(canvasSize * 0.22);
+      const logoHeight = Math.round(logoWidth * (logo.height / logo.width));
 
-    // Draw logo if loaded
-    if (logoImg) {
-      const logoHeight = 50;
-      const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
-      ctx.globalAlpha = 0.6;
-      ctx.drawImage(logoImg, 20, canvasSize - boxHeight + 15, logoWidth, logoHeight);
+      ctx.globalAlpha = 0.5; // 50% opacity for preview (server uses 85%)
+      ctx.drawImage(logo, 20, 20, logoWidth, logoHeight);
     }
 
-    // Contact info text
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 16px Arial';
-    ctx.fillText('555-1234', 20, canvasSize - 15);
-    ctx.font = '14px Arial';
-    ctx.fillText('contact@example.com', 150, canvasSize - 15);
-    ctx.fillText('www.example.com', 350, canvasSize - 15);
+    // CONTACT INFO: pre-rendered PNG at full canvas size
+    // The PNG itself has text positioned at the bottom
+    // Drawing at full size ensures correct positioning
+    if (watermarkContactRef.current) {
+      ctx.globalAlpha = 0.5; // 50% opacity for preview
+      ctx.drawImage(watermarkContactRef.current, 0, 0, canvasSize, canvasSize);
+    }
 
     ctx.restore();
   }
