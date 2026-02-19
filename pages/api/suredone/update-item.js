@@ -52,7 +52,25 @@ export default async function handler(req, res) {
     appendIfValue('brand', updateData.brand);
     appendIfValue('mpn', updateData.mpn);
     appendIfValue('model', updateData.model);
-    appendIfValue('condition', updateData.condition);
+
+    // === CONDITION MAPPING (same as create flow) ===
+    // Map user-facing condition labels to SureDone condition codes
+    let suredoneCondition = 'Used';
+    if (updateData.condition) {
+      const condLower = updateData.condition.toLowerCase();
+      if (condLower.includes('new in box') || condLower.includes('nib')) {
+        suredoneCondition = 'New';
+      } else if (condLower.includes('new') && condLower.includes('open')) {
+        suredoneCondition = 'New Other';
+      } else if (condLower.includes('refurbished')) {
+        suredoneCondition = 'Manufacturer Refurbished';
+      } else if (condLower.includes('parts') || condLower.includes('not working')) {
+        suredoneCondition = 'For Parts or Not Working';
+      }
+    }
+    appendIfValue('condition', suredoneCondition);
+    appendIfValue('notes', updateData.conditionNotes);
+
     appendIfValue('usertype', updateData.usertype);
 
     // Dimensions and weight
@@ -91,6 +109,22 @@ export default async function handler(req, res) {
         }
       }
       console.log(`Mapped ${Object.keys(updateData.mediaAltTexts).length} alt texts to media1alttext-media12alttext`);
+    }
+
+    // === MAP EBAY ITEM SPECIFICS (same as create flow) ===
+    // Flatten ebayItemSpecificsForSuredone object into individual form fields
+    // Format: { ebayitemspecificsvoltage: "230/460V", baserpm: "1760", ... }
+    if (updateData.ebayItemSpecificsForSuredone && typeof updateData.ebayItemSpecificsForSuredone === 'object') {
+      const specificsCount = Object.keys(updateData.ebayItemSpecificsForSuredone).length;
+      if (specificsCount > 0) {
+        console.log(`=== EBAY ITEM SPECIFICS: ${specificsCount} fields ===`);
+        for (const [fieldName, value] of Object.entries(updateData.ebayItemSpecificsForSuredone)) {
+          if (value && typeof value === 'string' && value.trim()) {
+            formData.append(fieldName, value.trim());
+            console.log(`  ${fieldName} = ${value}`);
+          }
+        }
+      }
     }
 
     console.log('Updating SureDone item:', updateData.guid);

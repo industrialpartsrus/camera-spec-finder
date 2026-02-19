@@ -2654,6 +2654,7 @@ export default function ProListingBuilder() {
           mpn: item.partNumber,
           model: item.model || item.partNumber,
           condition: conditionOption?.label || 'Used',
+          conditionNotes: item.conditionNotes || '',
           usertype: item.usertype || item.productCategory || '',
           ...(item.boxLength && { boxlength: item.boxLength }),
           ...(item.boxWidth && { boxwidth: item.boxWidth }),
@@ -2666,6 +2667,8 @@ export default function ProListingBuilder() {
           ...(item.ebayStoreCategoryId && { ebaystoreid: item.ebayStoreCategoryId }),
           ...(item.ebayStoreCategoryId2 && { ebaystoreid2: item.ebayStoreCategoryId2 }),
           ebayshippingprofileid: item.ebayShippingProfileId || '69077991015',
+          // eBay item specifics (will be flattened by update-item.js)
+          ebayItemSpecificsForSuredone: item.ebayItemSpecificsForSuredone || {},
           // Photos and metadata (will be mapped to media1-12 by update-item.js)
           photos: item.photos || [],
           photoViews: item.photoViews || [],
