@@ -24,8 +24,10 @@ export default async function handler(req, res) {
   try {
     // Build form-encoded data (same format as create listing)
     const formData = new URLSearchParams();
-    formData.append('action', 'edit');  // Required for edit endpoint
-    formData.append('guid', updateData.guid);  // SKU to update
+    // SureDone requires these fields to identify which item to update
+    formData.append('identifier', 'guid');  // Tell SureDone we're using 'guid' as the identifier
+    formData.append('guid', updateData.guid);  // The SKU value
+    formData.append('sku', updateData.guid);  // Also set sku field to match guid
 
     // Only append fields that have actual values
     // Skip empty strings, empty arrays, and empty objects
@@ -94,15 +96,30 @@ export default async function handler(req, res) {
     console.log('Updating SureDone item:', updateData.guid);
     console.log('Form data fields:', Array.from(formData.keys()).join(', '));
 
+    // === DEBUG: Log full request details ===
+    const url = `${SUREDONE_URL}/editor/items/edit`;
+    const headers = {
+      'X-Auth-User': SUREDONE_USER,
+      'X-Auth-Token': SUREDONE_TOKEN,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    };
+    const body = formData.toString();
+
+    console.log('=== SUREDONE UPDATE DEBUG ===');
+    console.log('URL:', url);
+    console.log('Headers:', JSON.stringify(headers));
+    console.log('GUID value:', JSON.stringify(updateData.guid));
+    console.log('GUID length:', updateData.guid?.length);
+    console.log('GUID charCodes:', updateData.guid ? [...updateData.guid].map(c => c.charCodeAt(0)) : 'N/A');
+    console.log('Full form body (first 500 chars):', body.substring(0, 500));
+    console.log('Form body length:', body.length);
+    console.log('================================');
+
     // Use correct endpoint and format (matches create listing's edit retry)
-    const response = await fetch(`${SUREDONE_URL}/editor/items/edit`, {
+    const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'X-Auth-User': SUREDONE_USER,
-        'X-Auth-Token': SUREDONE_TOKEN,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: formData.toString()
+      headers: headers,
+      body: body
     });
 
     const responseText = await response.text();
