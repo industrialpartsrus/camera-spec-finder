@@ -2667,6 +2667,13 @@ export default function ProListingBuilder() {
           ...(item.ebayStoreCategoryId && { ebaystoreid: item.ebayStoreCategoryId }),
           ...(item.ebayStoreCategoryId2 && { ebaystoreid2: item.ebayStoreCategoryId2 }),
           ebayshippingprofileid: item.ebayShippingProfileId || '69077991015',
+          // BigCommerce SEO fields (same as create flow)
+          bigcommercepagetitle: item.title || '',
+          bigcommercemetadescription: item.shortDescription ||
+            item.metaDescription ||
+            (item.description ? item.description.replace(/<[^>]*>/g, ' ').substring(0, 157) + '...' : ''),
+          bigcommercesearchkeywords: Array.isArray(item.metaKeywords) ? item.metaKeywords.join(', ') : (item.metaKeywords || ''),
+          bigcommercemetakeywords: Array.isArray(item.metaKeywords) ? item.metaKeywords.join(', ') : (item.metaKeywords || ''),
           // eBay item specifics (will be flattened by update-item.js)
           ebayItemSpecificsForSuredone: item.ebayItemSpecificsForSuredone || {},
           // Photos and metadata (will be mapped to media1-12 by update-item.js)

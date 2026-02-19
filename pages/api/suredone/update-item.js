@@ -87,6 +87,12 @@ export default async function handler(req, res) {
     appendIfValue('ebaystoreid2', updateData.ebaystoreid2);
     appendIfValue('ebayshippingprofileid', updateData.ebayshippingprofileid);
 
+    // BigCommerce SEO fields (same as create flow)
+    appendIfValue('bigcommercepagetitle', updateData.bigcommercepagetitle);
+    appendIfValue('bigcommercemetadescription', updateData.bigcommercemetadescription);
+    appendIfValue('bigcommercesearchkeywords', updateData.bigcommercesearchkeywords);
+    appendIfValue('bigcommercemetakeywords', updateData.bigcommercemetakeywords);
+
     // === MAP PHOTOS TO SUREDONE MEDIA FIELDS ===
     // SureDone expects media1, media2... media12 (NOT "photos" array)
     if (updateData.photos && Array.isArray(updateData.photos)) {
