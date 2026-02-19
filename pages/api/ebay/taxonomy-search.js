@@ -26,6 +26,12 @@ export default async function handler(req, res) {
   try {
     const url = `${SUREDONE_URL}/taxonomy/search/ebay/${encodeURIComponent(keyword)}`;
 
+    console.log('=== TAXONOMY SEARCH DEBUG ===');
+    console.log('URL:', url);
+    console.log('Keyword:', keyword);
+    console.log('Auth user:', SUREDONE_USER ? `set (${SUREDONE_USER.substring(0, 3)}***)` : 'MISSING');
+    console.log('Auth token:', SUREDONE_TOKEN ? 'set' : 'MISSING');
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -34,19 +40,44 @@ export default async function handler(req, res) {
       }
     });
 
+    console.log('Response status:', response.status);
+    console.log('Response headers:', JSON.stringify(Object.fromEntries(response.headers)));
+
+    const rawText = await response.text();
+    console.log('Raw response text:', rawText.substring(0, 1000));
+    console.log('Raw text length:', rawText.length);
+    console.log('================================');
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('SureDone taxonomy API error:', response.status, errorText);
+      console.error('SureDone taxonomy API error:', response.status, rawText);
       return res.status(response.status).json({
         error: `SureDone API error: ${response.status}`,
-        details: errorText
+        details: rawText
       });
     }
 
-    const data = await response.json();
+    // Parse the response
+    let data;
+    try {
+      data = rawText ? JSON.parse(rawText) : null;
+    } catch (parseErr) {
+      console.error('JSON parse error:', parseErr.message);
+      return res.status(500).json({
+        error: 'Failed to parse SureDone response',
+        details: parseErr.message,
+        rawText: rawText.substring(0, 500)
+      });
+    }
 
-    // DEBUG: Log raw response format on first call
-    console.log('SureDone taxonomy raw response:', JSON.stringify(data).substring(0, 500));
+    console.log('Parsed data:', JSON.stringify(data).substring(0, 500));
+
+    if (!data) {
+      console.error('SureDone returned null data');
+      return res.status(500).json({
+        error: 'SureDone returned null data',
+        details: 'The taxonomy API returned an empty response. Check auth credentials and API URL.'
+      });
+    }
 
     // SureDone returns: { results: [{ id: "181732", name: "Circuit Breakers...", ... }] }
     // Format for UI: simpler structure with full category path
@@ -55,6 +86,8 @@ export default async function handler(req, res) {
       name: cat.name || cat.categoryname || `Category ${cat.id}`,
       path: cat.path || cat.name || '' // Full breadcrumb path if available
     }));
+
+    console.log(`Formatted ${formatted.length} categories`);
 
     return res.status(200).json({
       success: true,
