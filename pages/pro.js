@@ -1580,6 +1580,10 @@ export default function ProListingBuilder() {
   const [coilVoltageVerified, setCoilVoltageVerified] = useState({});
   const [emitterReceiverStatus, setEmitterReceiverStatus] = useState({});
   const [descriptionViewMode, setDescriptionViewMode] = useState({});
+  const [categorySearchQuery, setCategorySearchQuery] = useState({});  // { itemId: 'keyword' }
+  const [categorySearchResults, setCategorySearchResults] = useState({});  // { itemId: [...] }
+  const [categorySearchLoading, setCategorySearchLoading] = useState({});  // { itemId: boolean }
+  const categorySearchTimers = useRef({});  // Debounce timers
   const [photoOrderOverrides, setPhotoOrderOverrides] = useState({}); // { itemId: [0, 1, 2, 3, ...] }
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const [isPullingSuredonePhotos, setIsPullingSuredonePhotos] = useState(false);
@@ -3103,43 +3107,160 @@ export default function ProListingBuilder() {
                     )}
                     <details className="mt-2">
                       <summary className="text-xs text-blue-600 cursor-pointer hover:underline">Override category manually</summary>
-                      <select
-                        value={selected.ebayCategoryId || ''}
-                        onChange={async (e) => {
-                          const catId = e.target.value;
-                          const catName = EBAY_CATEGORY_ID_TO_NAME[catId] || '';
-                          updateField(selected.id, 'ebayCategoryId', catId);
-                          if (catName) {
-                            updateField(selected.id, 'productCategory', catName);
-                          }
-                          // Re-run Pass 2 with new category's eBay aspects
-                          if (catId) {
-                            try {
-                              const aspectsRes = await fetch(`/api/ebay-category-aspects?categoryId=${catId}`);
-                              if (aspectsRes.ok) {
-                                const aspects = await aspectsRes.json();
-                                if (aspects.all?.length > 0) {
-                                  const item = { ...selected, productCategory: catName };
-                                  await runPass2(selected.id, item, aspects);
-                                  await updateDoc(doc(db, 'products', selected.id), {
-                                    categoryOverrideMessage: `Category changed \u2014 item specifics refreshed for ${catName}`
-                                  });
-                                }
-                              }
-                            } catch (err) {
-                              console.error('Category override error:', err);
+
+                      {/* Live eBay Category Search */}
+                      <div className="mt-2">
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          Search eBay Categories
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Type to search (e.g. 'circuit breakers')..."
+                          value={categorySearchQuery[selected.id] || ''}
+                          onChange={(e) => {
+                            const query = e.target.value;
+                            setCategorySearchQuery(prev => ({ ...prev, [selected.id]: query }));
+
+                            // Clear previous timer
+                            if (categorySearchTimers.current[selected.id]) {
+                              clearTimeout(categorySearchTimers.current[selected.id]);
                             }
-                          }
-                        }}
-                        className="w-full px-3 py-2 border rounded-lg text-xs mt-2"
-                      >
-                        <option value="">Select eBay category...</option>
-                        {CATEGORY_DROPDOWN_OPTIONS.map(cat => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name} ({cat.id})
-                          </option>
-                        ))}
-                      </select>
+
+                            // Clear results if query is too short
+                            if (query.trim().length < 2) {
+                              setCategorySearchResults(prev => ({ ...prev, [selected.id]: [] }));
+                              setCategorySearchLoading(prev => ({ ...prev, [selected.id]: false }));
+                              return;
+                            }
+
+                            // Set loading state
+                            setCategorySearchLoading(prev => ({ ...prev, [selected.id]: true }));
+
+                            // Debounce: wait 400ms before searching
+                            categorySearchTimers.current[selected.id] = setTimeout(async () => {
+                              try {
+                                const res = await fetch(`/api/ebay/taxonomy-search?keyword=${encodeURIComponent(query)}`);
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  setCategorySearchResults(prev => ({ ...prev, [selected.id]: data.categories || [] }));
+                                } else {
+                                  setCategorySearchResults(prev => ({ ...prev, [selected.id]: [] }));
+                                }
+                              } catch (err) {
+                                console.error('Category search error:', err);
+                                setCategorySearchResults(prev => ({ ...prev, [selected.id]: [] }));
+                              } finally {
+                                setCategorySearchLoading(prev => ({ ...prev, [selected.id]: false }));
+                              }
+                            }, 400);
+                          }}
+                          className="w-full px-3 py-2 border rounded-lg text-xs"
+                        />
+
+                        {/* Loading indicator */}
+                        {categorySearchLoading[selected.id] && (
+                          <p className="text-xs text-gray-500 mt-1">Searching eBay categories...</p>
+                        )}
+
+                        {/* Search results */}
+                        {categorySearchResults[selected.id]?.length > 0 && (
+                          <div className="mt-2 max-h-64 overflow-y-auto border rounded-lg">
+                            {categorySearchResults[selected.id].map(cat => (
+                              <button
+                                key={cat.id}
+                                type="button"
+                                onClick={async () => {
+                                  const catId = cat.id;
+                                  const catName = cat.name;
+
+                                  // Update category (same logic as dropdown)
+                                  updateField(selected.id, 'ebayCategoryId', catId);
+                                  updateField(selected.id, 'productCategory', catName);
+
+                                  // Clear search
+                                  setCategorySearchQuery(prev => ({ ...prev, [selected.id]: '' }));
+                                  setCategorySearchResults(prev => ({ ...prev, [selected.id]: [] }));
+
+                                  // Re-run Pass 2 with new category's eBay aspects
+                                  try {
+                                    const aspectsRes = await fetch(`/api/ebay-category-aspects?categoryId=${catId}`);
+                                    if (aspectsRes.ok) {
+                                      const aspects = await aspectsRes.json();
+                                      if (aspects.all?.length > 0) {
+                                        const item = { ...selected, productCategory: catName };
+                                        await runPass2(selected.id, item, aspects);
+                                        await updateDoc(doc(db, 'products', selected.id), {
+                                          categoryOverrideMessage: `Category changed — item specifics refreshed for ${catName}`
+                                        });
+                                      }
+                                    }
+                                  } catch (err) {
+                                    console.error('Category override error:', err);
+                                  }
+                                }}
+                                className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b last:border-b-0 text-xs"
+                              >
+                                <div className="font-semibold text-gray-900">{cat.name}</div>
+                                <div className="text-gray-500 text-xs">ID: {cat.id}</div>
+                                {cat.path && cat.path !== cat.name && (
+                                  <div className="text-gray-400 text-xs mt-1">{cat.path}</div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* No results message */}
+                        {!categorySearchLoading[selected.id] &&
+                         categorySearchQuery[selected.id]?.trim().length >= 2 &&
+                         categorySearchResults[selected.id]?.length === 0 && (
+                          <p className="text-xs text-gray-500 mt-2">No categories found for "{categorySearchQuery[selected.id]}"</p>
+                        )}
+                      </div>
+
+                      {/* Static dropdown fallback */}
+                      <div className="mt-3 pt-3 border-t">
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          Or browse all categories
+                        </label>
+                        <select
+                          value={selected.ebayCategoryId || ''}
+                          onChange={async (e) => {
+                            const catId = e.target.value;
+                            const catName = EBAY_CATEGORY_ID_TO_NAME[catId] || '';
+                            updateField(selected.id, 'ebayCategoryId', catId);
+                            if (catName) {
+                              updateField(selected.id, 'productCategory', catName);
+                            }
+                            // Re-run Pass 2 with new category's eBay aspects
+                            if (catId) {
+                              try {
+                                const aspectsRes = await fetch(`/api/ebay-category-aspects?categoryId=${catId}`);
+                                if (aspectsRes.ok) {
+                                  const aspects = await aspectsRes.json();
+                                  if (aspects.all?.length > 0) {
+                                    const item = { ...selected, productCategory: catName };
+                                    await runPass2(selected.id, item, aspects);
+                                    await updateDoc(doc(db, 'products', selected.id), {
+                                      categoryOverrideMessage: `Category changed — item specifics refreshed for ${catName}`
+                                    });
+                                  }
+                                }
+                              } catch (err) {
+                                console.error('Category override error:', err);
+                              }
+                            }
+                          }}
+                          className="w-full px-3 py-2 border rounded-lg text-xs"
+                        >
+                          <option value="">Select eBay category...</option>
+                          {CATEGORY_DROPDOWN_OPTIONS.map(cat => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name} ({cat.id})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </details>
                     {selected.categoryOverrideMessage && (
                       <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
