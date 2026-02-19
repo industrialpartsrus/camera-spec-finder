@@ -13,6 +13,7 @@ const ReactQuill = dynamic(() => import('react-quill'), {
   ssr: false,
   loading: () => <div className="h-64 border rounded-lg flex items-center justify-center text-gray-400">Loading editor...</div>
 });
+import PhotoEditor from '../components/PhotoEditor';
 
 const QUILL_MODULES = {
   toolbar: [
@@ -1594,158 +1595,13 @@ export default function ProListingBuilder() {
 
   // Photo editing state
   const [editingPhoto, setEditingPhoto] = useState(null);  // { itemId, photoIndex, photoUrl, viewName, sku, originalIdx }
-  const [editRotation, setEditRotation] = useState(0);      // -270, -180, -90, 0, 90, 180, 270
-  const [editBrightness, setEditBrightness] = useState(0); // -50 to +50
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const editCanvasRef = useRef(null);
-  
+
   // NEW: State for SKU comparison
   const [showComparePanel, setShowComparePanel] = useState(false);
   const [existingListingData, setExistingListingData] = useState(null);
 
   // Debounced local state for text inputs (prevents cursor jumping from Firestore writes)
   const [localFields, setLocalFields] = useState({});
-
-  // Canvas preview for photo editing
-  useEffect(() => {
-    if (!editingPhoto || !editCanvasRef.current) return;
-
-    const canvas = editCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    img.crossOrigin = 'anonymous';  // CRITICAL for Firebase Storage CORS
-
-    img.onload = () => {
-      // Calculate dimensions after rotation
-      const isRotated = Math.abs(editRotation) % 180 !== 0;
-      canvas.width = isRotated ? img.height : img.width;
-      canvas.height = isRotated ? img.width : img.height;
-
-      // Scale down for display (max 600px width/height)
-      const maxDisplay = 600;
-      const scale = Math.min(maxDisplay / canvas.width, maxDisplay / canvas.height, 1);
-      canvas.style.width = `${Math.floor(canvas.width * scale)}px`;
-      canvas.style.height = `${Math.floor(canvas.height * scale)}px`;
-
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Apply rotation transformation
-      ctx.save();
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate((editRotation * Math.PI) / 180);
-      ctx.drawImage(img, -img.width / 2, -img.height / 2);
-      ctx.restore();
-
-      // Apply brightness adjustment
-      if (editBrightness !== 0) {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        const adjustment = editBrightness * 2.55;  // Scale -50/+50 to -127.5/+127.5
-
-        for (let i = 0; i < data.length; i += 4) {
-          data[i] = Math.min(255, Math.max(0, data[i] + adjustment));         // R
-          data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + adjustment)); // G
-          data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + adjustment)); // B
-          // data[i + 3] = alpha, leave unchanged
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-      }
-    };
-
-    img.onerror = async () => {
-      // CORS failed - try proxying through our server
-      // This happens with SureDone-hosted images (assets.suredone.com has no CORS headers)
-      console.log('Direct load failed, trying proxy for:', editingPhoto.photoUrl);
-      try {
-        const proxyRes = await fetch(
-          `/api/photos/proxy-image?url=${encodeURIComponent(editingPhoto.photoUrl)}`
-        );
-        if (proxyRes.ok) {
-          const proxyData = await proxyRes.json();
-          if (proxyData.success && proxyData.dataUrl) {
-            console.log('Successfully proxied image, retrying...');
-            img.crossOrigin = undefined; // Remove CORS requirement for data URL
-            img.src = proxyData.dataUrl;
-          } else {
-            throw new Error('Proxy returned invalid data');
-          }
-        } else {
-          throw new Error(`Proxy failed: ${proxyRes.status}`);
-        }
-      } catch (err) {
-        console.error('Proxy also failed:', err);
-        alert('Failed to load image for editing. The image may not be accessible.');
-        setEditingPhoto(null);
-      }
-    };
-
-    img.src = editingPhoto.photoUrl;
-  }, [editingPhoto, editRotation, editBrightness]);
-
-  // Save edited photo
-  const handleSavePhotoEdit = async () => {
-    if (!editingPhoto || !editCanvasRef.current) return;
-
-    setIsSavingEdit(true);
-
-    try {
-      // Export canvas as JPEG base64
-      const canvas = editCanvasRef.current;
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);  // 95% quality
-      const base64 = dataUrl.split(',')[1];
-
-      const sku = editingPhoto.sku;
-      const viewName = editingPhoto.viewName;
-
-      console.log(`Saving edited photo: ${sku} / ${viewName}`);
-
-      // Upload to Firebase Storage via existing API
-      const response = await fetch('/api/photos/upload-simple', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sku: sku,
-          view: `${viewName}_edited`,
-          imageData: base64,
-          contentType: 'image/jpeg'
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
-      }
-
-      const data = await response.json();
-      console.log(`Edited photo uploaded: ${data.url}`);
-
-      // Replace photo URL in Firebase photos array
-      const item = queue.find(q => q.id === editingPhoto.itemId);
-      if (item && item.photos) {
-        const updatedPhotos = [...item.photos];
-        updatedPhotos[editingPhoto.originalIdx] = data.url;
-
-        await updateDoc(doc(db, 'products', editingPhoto.itemId), {
-          photos: updatedPhotos
-        });
-
-        console.log(`Photo array updated at index ${editingPhoto.originalIdx}`);
-      }
-
-      // Close modal and reset
-      setEditingPhoto(null);
-      setEditRotation(0);
-      setEditBrightness(0);
-
-    } catch (err) {
-      console.error('Save photo edit error:', err);
-      alert('Failed to save edit: ' + err.message);
-    } finally {
-      setIsSavingEdit(false);
-    }
-  };
 
   // Real-time Firebase sync
   useEffect(() => {
@@ -3925,48 +3781,7 @@ export default function ProListingBuilder() {
                     )}
                   </div>
 
-                  {/* Product Photos */}
-                  {selected.photos && selected.photos.length > 0 && (
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">
-                        📷 Product Photos ({selected.photos.length})
-                      </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {selected.photoViews.map((view, idx) => {
-                          // Use the download URLs saved in Firestore (includes access tokens)
-                          const originalUrl = selected.photos[idx];
-                          const hasBgRemoved = selected.removeBgFlags && selected.removeBgFlags[view];
-
-                          // Use saved _nobg URL if available, otherwise use original
-                          const imageUrl = (hasBgRemoved && selected.photosNobg && selected.photosNobg[view])
-                            ? selected.photosNobg[view]
-                            : originalUrl;
-
-                          return (
-                            <div key={idx} className="relative border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-                              <div className="aspect-square relative">
-                                <img
-                                  src={imageUrl}
-                                  alt={view}
-                                  className="w-full h-full object-contain"
-                                  onError={(e) => {
-                                    // Fallback to original if _nobg fails to load
-                                    if (hasBgRemoved && originalUrl) {
-                                      e.target.src = originalUrl;
-                                    }
-                                  }}
-                                />
-                              </div>
-                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs px-2 py-1 text-center capitalize">
-                                {view.replace('_', ' ')}
-                                {hasBgRemoved && <span className="ml-1">✨</span>}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  {/* Product Photos - REMOVED: Large preview section consolidated into editable grid below */}
 
                   {/* Short Description */}
                   <div>
@@ -3977,12 +3792,12 @@ export default function ProListingBuilder() {
                   {/* Photos Section */}
                   <div>
                     <h3 className="text-sm font-semibold mb-2">
-                      Product Photos {selected.photos?.length > 0 && (
+                      📷 Product Photos {selected.photos?.length > 0 && (
                         <span className="text-gray-500 font-normal">({selected.photos.length} photo{selected.photos.length !== 1 ? 's' : ''})</span>
                       )}
                     </h3>
                     {selected.photos && selected.photos.length > 0 ? (
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {getPhotoOrder(selected).map((originalIdx, displayIdx) => {
                           const url = selected.photos[originalIdx];
                           const viewName = selected.photoViews?.[originalIdx];
@@ -3995,11 +3810,11 @@ export default function ProListingBuilder() {
 
                           return (
                             <div key={`${selected.id}-${originalIdx}`} className="space-y-1">
-                              <div className="relative group">
+                              <div className="relative group aspect-square">
                                 <img
                                   src={displayUrl}
                                   alt={`Photo ${displayIdx + 1}`}
-                                  className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition cursor-pointer"
+                                  className="w-full h-full object-contain rounded-lg border-2 border-gray-200 hover:border-blue-500 transition cursor-pointer bg-white"
                                   onClick={() => window.open(displayUrl, '_blank')}
                                 />
                                 {/* Position badge */}
@@ -4417,106 +4232,29 @@ export default function ProListingBuilder() {
 
         {/* Photo Edit Modal */}
         {editingPhoto && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <PhotoEditor
+            photoUrl={editingPhoto.photoUrl}
+            sku={editingPhoto.sku}
+            viewName={editingPhoto.viewName}
+            onSave={async (newUrl) => {
+              // Update photos array in Firestore
+              const item = queue.find(q => q.id === editingPhoto.itemId);
+              if (item && item.photos) {
+                const updatedPhotos = [...item.photos];
+                updatedPhotos[editingPhoto.originalIdx] = newUrl;
 
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold">Edit Photo - Position {editingPhoto.photoIndex + 1}</h3>
-                <button
-                  onClick={() => {
-                    setEditingPhoto(null);
-                    setEditRotation(0);
-                    setEditBrightness(0);
-                  }}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
+                await updateDoc(doc(db, 'products', editingPhoto.itemId), {
+                  photos: updatedPhotos
+                });
 
-              {/* Canvas Preview */}
-              <div className="flex justify-center mb-4 bg-gray-100 rounded-lg p-4">
-                <canvas
-                  ref={editCanvasRef}
-                  className="max-w-full border border-gray-300 rounded shadow-lg"
-                />
-              </div>
+                console.log(`Photo array updated at index ${editingPhoto.originalIdx}`);
+              }
 
-              {/* Rotate Controls */}
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Rotate
-                </label>
-                <div className="flex items-center justify-center gap-4">
-                  <button
-                    onClick={() => setEditRotation(r => (r - 90 + 360) % 360)}
-                    className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium"
-                  >
-                    ↺ Rotate Left
-                  </button>
-                  <span className="text-sm text-gray-600 font-mono">
-                    {editRotation}°
-                  </span>
-                  <button
-                    onClick={() => setEditRotation(r => (r + 90) % 360)}
-                    className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium"
-                  >
-                    ↻ Rotate Right
-                  </button>
-                </div>
-              </div>
-
-              {/* Brightness Control */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-semibold text-gray-700">
-                    Brightness: {editBrightness > 0 ? '+' : ''}{editBrightness}
-                  </label>
-                  <button
-                    onClick={() => setEditBrightness(0)}
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Reset
-                  </button>
-                </div>
-                <input
-                  type="range"
-                  min="-50"
-                  max="50"
-                  value={editBrightness}
-                  onChange={(e) => setEditBrightness(parseInt(e.target.value))}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>Darker</span>
-                  <span>Brighter</span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setEditingPhoto(null);
-                    setEditRotation(0);
-                    setEditBrightness(0);
-                  }}
-                  disabled={isSavingEdit}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSavePhotoEdit}
-                  disabled={isSavingEdit || (editRotation === 0 && editBrightness === 0)}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSavingEdit ? 'Saving...' : 'Apply Changes'}
-                </button>
-              </div>
-            </div>
-          </div>
+              setEditingPhoto(null);
+            }}
+            onCancel={() => setEditingPhoto(null)}
+            showWatermarkOption={true}
+          />
         )}
       </div>
     </div>
