@@ -2662,9 +2662,11 @@ export default function ProListingBuilder() {
           ...(item.ebayStoreCategoryId && { ebaystoreid: item.ebayStoreCategoryId }),
           ...(item.ebayStoreCategoryId2 && { ebaystoreid2: item.ebayStoreCategoryId2 }),
           ebayshippingprofileid: item.ebayShippingProfileId || '69077991015',
+          // Photos and metadata (will be mapped to media1-12 by update-item.js)
           photos: item.photos || [],
-          photosNobg: item.photosNobg || {},
           photoViews: item.photoViews || [],
+          mediaAltTexts: item.mediaAltTexts || {},
+          photosNobg: item.photosNobg || {},
           removeBgFlags: item.removeBgFlags || {}
         };
         

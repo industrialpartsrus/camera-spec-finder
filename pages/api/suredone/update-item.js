@@ -67,11 +67,29 @@ export default async function handler(req, res) {
     appendIfValue('ebaystoreid2', updateData.ebaystoreid2);
     appendIfValue('ebayshippingprofileid', updateData.ebayshippingprofileid);
 
-    // Photos and views
-    appendIfValue('photos', updateData.photos);
-    appendIfValue('photosNobg', updateData.photosNobg);
-    appendIfValue('photoViews', updateData.photoViews);
-    appendIfValue('removeBgFlags', updateData.removeBgFlags);
+    // === MAP PHOTOS TO SUREDONE MEDIA FIELDS ===
+    // SureDone expects media1, media2... media12 (NOT "photos" array)
+    if (updateData.photos && Array.isArray(updateData.photos)) {
+      updateData.photos.forEach((url, index) => {
+        if (url && index < 12) {
+          formData.append(`media${index + 1}`, url);
+        }
+      });
+      console.log(`Mapped ${updateData.photos.length} photos to media1-media${updateData.photos.length}`);
+    }
+
+    // === MAP ALT TEXTS TO SUREDONE MEDIA ALT TEXT FIELDS ===
+    // SureDone expects media1alttext, media2alttext... (NOT "mediaAltTexts" object)
+    if (updateData.mediaAltTexts && typeof updateData.mediaAltTexts === 'object') {
+      // mediaAltTexts format: { media1: "alt text", media2: "alt text", ... }
+      for (let i = 1; i <= 12; i++) {
+        const altText = updateData.mediaAltTexts[`media${i}`];
+        if (altText && altText.trim()) {
+          formData.append(`media${i}alttext`, altText);
+        }
+      }
+      console.log(`Mapped ${Object.keys(updateData.mediaAltTexts).length} alt texts to media1alttext-media12alttext`);
+    }
 
     console.log('Updating SureDone item:', updateData.guid);
     console.log('Form data fields:', Array.from(formData.keys()).join(', '));
