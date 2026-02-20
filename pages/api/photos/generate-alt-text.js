@@ -4,6 +4,35 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 
+// ============================================================================
+// RETRY LOGIC FOR CLAUDE API (handles 529 overload errors)
+// ============================================================================
+
+async function callClaudeWithRetry(client, params, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await client.messages.create(params);
+      return response;
+    } catch (error) {
+      const isOverloaded = error.status === 529 ||
+        error.status === 503 ||
+        error.status === 429;
+
+      if (isOverloaded && attempt < maxRetries - 1) {
+        // Exponential backoff: 2s, 4s, 8s
+        const waitTime = Math.pow(2, attempt + 1) * 1000;
+        console.warn(
+          `Claude API overloaded (attempt ${attempt + 1}/${maxRetries}), ` +
+          `retrying in ${waitTime/1000}s...`
+        );
+        await new Promise(r => setTimeout(r, waitTime));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 // View name to description mapping for template fallback
 const VIEW_LABELS = {
   'left': 'Left Side View',
@@ -91,7 +120,7 @@ export default async function handler(req, res) {
         apiKey: process.env.ANTHROPIC_API_KEY
       });
 
-      const message = await anthropic.messages.create({
+      const message = await callClaudeWithRetry(anthropic, {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 100,
         messages: [{

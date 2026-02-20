@@ -15,6 +15,35 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { resolveFieldName } from '../../../lib/field-name-resolver.js';
 
+// ============================================================================
+// RETRY LOGIC FOR CLAUDE API (handles 529 overload errors)
+// ============================================================================
+
+async function callClaudeWithRetry(client, params, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await client.messages.create(params);
+      return response;
+    } catch (error) {
+      const isOverloaded = error.status === 529 ||
+        error.status === 503 ||
+        error.status === 429;
+
+      if (isOverloaded && attempt < maxRetries - 1) {
+        // Exponential backoff: 2s, 4s, 8s
+        const waitTime = Math.pow(2, attempt + 1) * 1000;
+        console.warn(
+          `Claude API overloaded (attempt ${attempt + 1}/${maxRetries}), ` +
+          `retrying in ${waitTime/1000}s...`
+        );
+        await new Promise(r => setTimeout(r, waitTime));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 // Fields that are handled separately — skip them in AI filling
 const SKIP_FIELDS = new Set([
   'Brand', 'MPN', 'Manufacturer Part Number',
@@ -154,7 +183,7 @@ Respond with ONLY valid JSON object (no markdown, no backticks), mapping each eB
     console.log(`Aspects to fill: ${relevantAspects.length}`);
     const startTime = Date.now();
 
-    const response = await client.messages.create({
+    const response = await callClaudeWithRetry(client, {
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       // Enable web search so AI can look up actual product specifications

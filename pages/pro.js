@@ -2393,10 +2393,27 @@ export default function ProListingBuilder() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brand: item.brand, partNumber: item.partNumber })
       });
-      
-      if (!response.ok) throw new Error(`API returned ${response.status}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+
+        // Handle retryable errors (AI service overloaded)
+        if (errorData.retryable) {
+          console.log('AI service busy, retrying in 5 seconds...');
+          await updateDoc(doc(db, 'products', itemId), {
+            status: 'searching',
+            error: '🔄 AI service is busy. Retrying in a few seconds...'
+          });
+
+          // Auto-retry after 5 seconds
+          setTimeout(() => processItemById(itemId, brandOverride, partOverride), 5000);
+          return;
+        }
+
+        throw new Error(`API returned ${response.status}`);
+      }
       const data = await response.json();
-      
+
       // Log metadata about eBay aspects for debugging
       if (data._metadata) {
         console.log('=== eBay Aspects Metadata ===');

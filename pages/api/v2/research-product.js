@@ -4,6 +4,35 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 
+// ============================================================================
+// RETRY LOGIC FOR CLAUDE API (handles 529 overload errors)
+// ============================================================================
+
+async function callClaudeWithRetry(client, params, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await client.messages.create(params);
+      return response;
+    } catch (error) {
+      const isOverloaded = error.status === 529 ||
+        error.status === 503 ||
+        error.status === 429;
+
+      if (isOverloaded && attempt < maxRetries - 1) {
+        // Exponential backoff: 2s, 4s, 8s
+        const waitTime = Math.pow(2, attempt + 1) * 1000;
+        console.warn(
+          `Claude API overloaded (attempt ${attempt + 1}/${maxRetries}), ` +
+          `retrying in ${waitTime/1000}s...`
+        );
+        await new Promise(r => setTimeout(r, waitTime));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 // Condition options with display labels and auto-generated notes
 const CONDITION_CONFIG = {
   'new_in_box': {
@@ -205,7 +234,7 @@ CRITICAL REQUIREMENTS:
 5. If this is a Baldor motor with frame ending in T (like 182T), it's an AC Motor
 6. Research thoroughly - Baldor M3211T is a 3HP 1800RPM 182T frame TEFC 3-phase motor`;
 
-    const response = await client.messages.create({
+    const response = await callClaudeWithRetry(client, {
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4500,
       messages: [{ role: 'user', content: prompt }],

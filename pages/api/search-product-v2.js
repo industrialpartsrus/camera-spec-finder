@@ -7,6 +7,35 @@ import Anthropic from '@anthropic-ai/sdk';
 import { resolveSpecsObject } from '../../lib/field-name-resolver.js';
 
 // ============================================================================
+// RETRY LOGIC FOR CLAUDE API (handles 529 overload errors)
+// ============================================================================
+
+async function callClaudeWithRetry(client, params, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await client.messages.create(params);
+      return response;
+    } catch (error) {
+      const isOverloaded = error.status === 529 ||
+        error.status === 503 ||
+        error.status === 429;
+
+      if (isOverloaded && attempt < maxRetries - 1) {
+        // Exponential backoff: 2s, 4s, 8s
+        const waitTime = Math.pow(2, attempt + 1) * 1000;
+        console.warn(
+          `Claude API overloaded (attempt ${attempt + 1}/${maxRetries}), ` +
+          `retrying in ${waitTime/1000}s...`
+        );
+        await new Promise(r => setTimeout(r, waitTime));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
+// ============================================================================
 // SPEC FIELD EXCLUSION LIST
 // Filter out non-product specs that don't belong in listings
 // ============================================================================
@@ -1032,11 +1061,11 @@ export default async function handler(req, res) {
 
   try {
     const client = new Anthropic();
-    
+
     // Step 1: Have AI identify product and generate listing
     const prompt = buildProductIdentificationPrompt(brand, partNumber);
-    
-    const response = await client.messages.create({
+
+    const response = await callClaudeWithRetry(client, {
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       // =====================================================================
@@ -1185,6 +1214,16 @@ export default async function handler(req, res) {
     
   } catch (error) {
     console.error('Search API error:', error);
+
+    // Handle Claude API overload errors with user-friendly message
+    if (error.status === 529 || error.status === 503 || error.status === 429) {
+      return res.status(503).json({
+        success: false,
+        error: 'AI service is busy — please try again in a moment.',
+        retryable: true,
+      });
+    }
+
     res.status(500).json({ error: error.message });
   }
 }
