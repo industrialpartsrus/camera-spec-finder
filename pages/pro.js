@@ -1616,7 +1616,13 @@ export default function ProListingBuilder() {
 
   // Refresh queue state
   const [refreshComparison, setRefreshComparison] = useState(null); // { sku, before, after, fixed }
-  const [isRelisting, setIsRelisting] = useState(false);
+
+  // Listing actions state
+  const [actionLoading, setActionLoading] = useState(null); // null or action name
+  const [ebayUrl, setEbayUrl] = useState(null);
+  const [bigcommerceUrl, setBigcommerceUrl] = useState(null);
+  const [suredoneUrl, setSuredoneUrl] = useState(null);
+  const [actionChannel, setActionChannel] = useState('all');
 
   // Debounced local state for text inputs (prevents cursor jumping from Firestore writes)
   const [localFields, setLocalFields] = useState({});
@@ -2314,11 +2320,14 @@ export default function ProListingBuilder() {
       setSelectedItem(docRef.id);
       setExistingListingData(existingData);
       setShowComparePanel(true);
-      
+
       // Clear the brand/part fields after loading
       setBrandName('');
       setPartNumber('');
-      
+
+      // Fetch marketplace listing URLs
+      fetchListingUrls(existingData.sku || existingData.guid);
+
     } catch (error) {
       console.error('Error loading existing listing:', error);
       alert('Error loading listing: ' + error.message);
@@ -2330,9 +2339,10 @@ export default function ProListingBuilder() {
     try {
       const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku)}`);
       const data = await response.json();
-      
+
       if (data.success && data.item) {
         await loadExistingListing(data.item);
+        fetchListingUrls(sku);
       } else {
         alert('Could not load listing: ' + (data.error || 'Item not found'));
       }
@@ -2897,33 +2907,82 @@ export default function ProListingBuilder() {
     }
   };
 
-  // eBay Relist: end and relist to reset search ranking
-  const relistOnEbay = async (sku) => {
-    if (!confirm('This will end your current eBay listing and create a new one. Any watchers will be notified. Continue?')) return;
-    setIsRelisting(true);
+  // Fetch marketplace listing URLs for current item
+  const fetchListingUrls = async (sku) => {
+    // Reset URLs when switching items
+    setEbayUrl(null);
+    setBigcommerceUrl(null);
+    setSuredoneUrl(null);
+    if (!sku) return;
     try {
-      // Step 1: End current listing
-      const endRes = await fetch('/api/suredone/update-item', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guid: sku, ebayaction: 'end' }),
-      });
-      if (!endRes.ok) throw new Error('Failed to end listing');
-      // Step 2: Wait 2 seconds
-      await new Promise(r => setTimeout(r, 2000));
-      // Step 3: Relist
-      const relistRes = await fetch('/api/suredone/update-item', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guid: sku, ebayaction: 'relist' }),
-      });
-      if (!relistRes.ok) throw new Error('Failed to relist');
-      alert('Listing relisted on eBay! Search ranking has been reset.');
-    } catch (error) {
-      console.error('Relist error:', error);
-      alert('Relist error: ' + error.message);
+      const res = await fetch(`/api/suredone/get-listing-urls?sku=${encodeURIComponent(sku)}`);
+      const data = await res.json();
+      if (data.ebayUrl) setEbayUrl(data.ebayUrl);
+      if (data.bigcommerceUrl) setBigcommerceUrl(data.bigcommerceUrl);
+      if (data.suredoneUrl) setSuredoneUrl(data.suredoneUrl);
+    } catch (e) {
+      console.warn('Could not fetch listing URLs:', e.message);
     }
-    setIsRelisting(false);
+  };
+
+  // Perform listing action (start/relist/end/revise/delete) via centralized API
+  const performListingAction = async (action, overrideSku) => {
+    const selected = queue.find(q => q.id === selectedItem);
+    const currentSku = overrideSku || selected?.originalSku || selected?.guid || selected?.sku;
+    if (!currentSku) {
+      alert('No SKU selected');
+      return;
+    }
+
+    const channelLabels = { all: 'eBay + BigCommerce', ebay: 'eBay', bigcommerce: 'BigCommerce' };
+    const channelLabel = channelLabels[actionChannel] || 'all channels';
+
+    const confirmMessages = {
+      start: `Start this listing on ${channelLabel}?`,
+      relist: `This will END the current listing and create a new one on ${channelLabel}. This resets search ranking and notifies watchers. Continue?`,
+      end: `End this listing on ${channelLabel}? The item will remain in SureDone but will be removed from the marketplace.`,
+      revise: `Push current changes to the live listing on ${channelLabel}?`,
+      delete: `PERMANENT: This will delete the item from SureDone AND end on ALL channels. This cannot be undone.\n\nType the SKU to confirm:`,
+    };
+
+    if (action === 'delete') {
+      const typed = prompt(confirmMessages.delete);
+      if (typed !== currentSku) {
+        if (typed !== null) alert('SKU did not match. Delete cancelled.');
+        return;
+      }
+    } else {
+      if (!confirm(confirmMessages[action])) return;
+    }
+
+    setActionLoading(action);
+    try {
+      const res = await fetch('/api/suredone/listing-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: currentSku, action, channel: actionChannel }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        alert(`${action} completed for ${currentSku}`);
+        if (data.ebayUrl) setEbayUrl(data.ebayUrl);
+
+        // If deleted, remove from queue
+        if (action === 'delete' && selected) {
+          try { await deleteDoc(doc(db, 'products', selected.id)); } catch (e) { /* ignore */ }
+          setSelectedItem(null);
+          setEbayUrl(null);
+          setBigcommerceUrl(null);
+          setSuredoneUrl(null);
+        }
+      } else {
+        alert(`${action} failed: ${data.error || JSON.stringify(data)}`);
+      }
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+    setActionLoading(null);
   };
 
   // Enhanced status badge for queue items
@@ -4540,6 +4599,106 @@ export default function ProListingBuilder() {
                   >
                     📦 Request Part from Warehouse
                   </button>
+
+                  {/* Listing Actions — only for existing listings */}
+                  {selected.isEditingExisting && (
+                    <div className="mt-6 border border-gray-200 rounded-xl p-4 bg-gray-50">
+                      <h4 className="text-sm font-bold text-gray-700 mb-3">
+                        Listing Actions for {selected.originalSku || selected.sku}
+                      </h4>
+
+                      {/* Channel selector */}
+                      <div className="flex items-center gap-4 mb-3 text-sm">
+                        <span className="text-gray-500 font-medium">Push to:</span>
+                        {[
+                          { key: 'all', label: 'All Channels' },
+                          { key: 'ebay', label: 'eBay Only' },
+                          { key: 'bigcommerce', label: 'BigCommerce Only' },
+                        ].map(ch => (
+                          <label key={ch.key} className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="actionChannel"
+                              value={ch.key}
+                              checked={actionChannel === ch.key}
+                              onChange={() => setActionChannel(ch.key)}
+                              className="accent-blue-600"
+                            />
+                            <span className={actionChannel === ch.key ? 'font-semibold text-gray-800' : 'text-gray-500'}>{ch.label}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {[
+                          { action: 'start', label: 'Start', icon: '▶', bg: 'bg-green-600 hover:bg-green-700', loading: 'Starting...' },
+                          { action: 'relist', label: 'Relist', icon: '🔄', bg: 'bg-blue-600 hover:bg-blue-700', loading: 'Relisting...' },
+                          { action: 'revise', label: 'Revise', icon: '🔃', bg: 'bg-amber-600 hover:bg-amber-700', loading: 'Revising...' },
+                          { action: 'end', label: 'End', icon: '⏹', bg: 'bg-gray-600 hover:bg-gray-700', loading: 'Ending...' },
+                        ].map(btn => (
+                          <button
+                            key={btn.action}
+                            onClick={() => performListingAction(btn.action)}
+                            disabled={actionLoading !== null}
+                            className={`px-3 py-2 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1.5 ${btn.bg}`}
+                          >
+                            {actionLoading === btn.action ? (
+                              <><Loader className="w-4 h-4 animate-spin" /> {btn.loading}</>
+                            ) : (
+                              <>{btn.icon} {btn.label}</>
+                            )}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => performListingAction('delete')}
+                          disabled={actionLoading !== null}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1.5"
+                        >
+                          {actionLoading === 'delete' ? (
+                            <><Loader className="w-4 h-4 animate-spin" /> Deleting...</>
+                          ) : (
+                            <>🗑 Delete</>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Live links */}
+                      <div className="space-y-1.5 text-sm">
+                        <div className="text-gray-500 font-medium mb-1">Live Links:</div>
+                        <div className="flex items-center gap-2">
+                          <span className={ebayUrl ? 'text-green-500' : 'text-gray-300'}>●</span>
+                          <span className="text-gray-600">eBay:</span>
+                          {ebayUrl ? (
+                            <a href={ebayUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 hover:underline">
+                              Active — View ↗
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">Not listed</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={bigcommerceUrl ? 'text-green-500' : 'text-gray-300'}>●</span>
+                          <span className="text-gray-600">BigCommerce:</span>
+                          {bigcommerceUrl ? (
+                            <a href={bigcommerceUrl} target="_blank" rel="noopener noreferrer" className="text-green-500 hover:text-green-400 hover:underline">
+                              Active — View ↗
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">Not listed</span>
+                          )}
+                        </div>
+                        {suredoneUrl && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-blue-400">📎</span>
+                            <a href={suredoneUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 hover:underline">
+                              SureDone Editor ↗
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -4664,17 +4823,27 @@ export default function ProListingBuilder() {
               {/* Action buttons */}
               <div className="flex gap-3">
                 <button
-                  onClick={() => { relistOnEbay(refreshComparison.sku); }}
-                  disabled={isRelisting}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition"
+                  onClick={() => performListingAction('relist', refreshComparison.sku)}
+                  disabled={actionLoading !== null}
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
                 >
-                  {isRelisting ? 'Relisting...' : 'Relist on eBay'}
+                  {actionLoading === 'relist' ? <><Loader className="w-4 h-4 animate-spin" /> Relisting...</> : '🔄 Relist on eBay'}
                 </button>
+                {ebayUrl && (
+                  <a
+                    href={ebayUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-3 bg-gray-100 text-blue-600 rounded-lg font-semibold hover:bg-gray-200 transition text-center"
+                  >
+                    🔗 View on eBay
+                  </a>
+                )}
                 <button
                   onClick={() => setRefreshComparison(null)}
                   className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
                 >
-                  Done
+                  Done - Next Item
                 </button>
               </div>
               <p className="text-[10px] text-gray-400 mt-2 text-center">
