@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "pages/api/photos/upload-simple.js": {
+      "maxDuration": 30
+    }
+  }
+}

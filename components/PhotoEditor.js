@@ -395,7 +395,7 @@ export default function PhotoEditor({
       // Detect if PNG should be used (nobg images or original PNGs)
       const isPng = currentPhotoUrl.includes('.png') || currentPhotoUrl.includes('_nobg') || viewName.includes('nobg');
       const mimeType = isPng ? 'image/png' : 'image/jpeg';
-      const quality = isPng ? undefined : 1.0; // Maximum quality for JPEG, undefined for PNG
+      const quality = isPng ? undefined : 0.95; // 95% quality for JPEG (visually identical to 100%, much smaller), undefined for PNG
 
       console.log(`Exporting as ${mimeType} with ${quality ? 'quality ' + quality : 'lossless PNG'}`);
 
