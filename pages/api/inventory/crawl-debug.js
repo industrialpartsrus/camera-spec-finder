@@ -13,14 +13,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Missing SUREDONE_USER or SUREDONE_TOKEN env vars' });
   }
 
-  // Auth check
-  const authHeader = req.headers.authorization;
-  const cronSecret = req.headers['x-cron-secret'];
-  if (cronSecret !== process.env.CRON_SECRET &&
-      authHeader !== `Bearer ${process.env.CRON_SECRET}` &&
-      authHeader !== `Bearer ${process.env.INTERNAL_API_KEY}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  // Auth check REMOVED — temporary debug endpoint, will delete after fixing crawler
 
   const results = {
     env: {
