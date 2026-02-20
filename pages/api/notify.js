@@ -20,7 +20,7 @@ const db = admin.firestore();
 // MAIN: Send notification to a user's devices
 // ============================================================
 export async function sendWarehouseAlert(userId, alert) {
-  const { type, sku, shelfLocation, message, assignedTo } = alert;
+  const { type, sku, shelfLocation, message, assignedTo, actionUrl } = alert;
 
   const content = buildNotificationContent(type, sku, shelfLocation, message);
   const tokens = await getDeviceTokens(userId, assignedTo);
@@ -30,13 +30,18 @@ export async function sendWarehouseAlert(userId, alert) {
     return { success: false, reason: 'no_devices' };
   }
 
+  // Default action URLs based on alert type — always user-facing pages, never /api/
+  const defaultUrl = type === 'retrieve' || type === 'reshelve'
+    ? (sku ? `/scanner` : '/')
+    : '/';
+
   const fcmMessage = {
     data: {
       alertType:     type,
       sku:           sku || '',
       shelfLocation: shelfLocation || '',
       action:        type,
-      actionUrl:     `/scanner`,
+      actionUrl:     actionUrl || defaultUrl,
       timestamp:     new Date().toISOString(),
       message:       message || '',
     },
@@ -200,17 +205,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId, type, sku, shelfLocation, message, broadcast, requestedBy, priority } = req.body;
+    const { userId, type, sku, shelfLocation, message, broadcast, requestedBy, priority, actionUrl } = req.body;
 
     let result;
 
     if (broadcast) {
-      result = await broadcastAlert({ type, sku, shelfLocation, message, requestedBy });
+      result = await broadcastAlert({ type, sku, shelfLocation, message, requestedBy, actionUrl });
     } else {
       if (!userId) {
         return res.status(400).json({ error: 'userId is required (or set broadcast: true)' });
       }
-      result = await sendWarehouseAlert(userId, { type, sku, shelfLocation, message, requestedBy });
+      result = await sendWarehouseAlert(userId, { type, sku, shelfLocation, message, requestedBy, actionUrl });
     }
 
     // If this is a part_request, also create a partRequests doc

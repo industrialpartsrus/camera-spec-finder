@@ -270,6 +270,7 @@ export default async function handler(req, res) {
           type: 'retrieve',
           sku: '',
           message: `Inventory crawl: Scored ${allResults.length} in-stock items (skipped ${skippedOutOfStock} out-of-stock). Avg: ${avgScore}/100. ${worstItems.length} need attention. ${queuedCount} queued for refresh.`,
+          actionUrl: '/dashboard',
         }),
       });
     } catch (e) {

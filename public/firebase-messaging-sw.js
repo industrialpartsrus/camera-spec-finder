@@ -91,28 +91,55 @@ self.addEventListener('notificationclick', (event) => {
 
   const action = event.action;
   const data = event.notification.data || {};
-  let targetUrl = data.url || '/';
+  const sku = data.sku || '';
 
-  // Route based on which action button was pressed
-  if (action === 'mark-done') {
-    // Mark the task as complete via API then open scanner
-    targetUrl = '/scanner';
-  } else if (action === 'view-details') {
-    targetUrl = '/pro';
-  }
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Focus existing tab if open
-      for (const client of windowClients) {
-        if ('focus' in client) {
-          return client.focus();
-        }
+  event.waitUntil((async () => {
+    // Action button: mark-done — call API in background, no navigation
+    if (action === 'mark-done' && sku) {
+      try {
+        await fetch('/api/tasks/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sku }),
+        });
+        console.log(`✅ Task marked done for ${sku}`);
+      } catch (e) {
+        console.warn('Failed to mark done:', e.message);
       }
-      // Otherwise open new tab
-      return clients.openWindow(targetUrl);
-    })
-  );
+      return;
+    }
+
+    // Action button: snooze — call API in background, no navigation
+    if (action === 'snooze' && sku) {
+      try {
+        await fetch('/api/tasks/snooze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sku }),
+        });
+        console.log(`⏰ Task snoozed for ${sku}`);
+      } catch (e) {
+        console.warn('Failed to snooze:', e.message);
+      }
+      return;
+    }
+
+    // Action button: view-details — open item in Pro Builder
+    // Default click (no action): navigate to actionUrl or home
+    let targetUrl = data.url || '/';
+    if (action === 'view-details' && sku) {
+      targetUrl = `/pro?sku=${encodeURIComponent(sku)}`;
+    }
+
+    const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windowClients) {
+      if ('focus' in client) {
+        client.navigate(targetUrl);
+        return client.focus();
+      }
+    }
+    return clients.openWindow(targetUrl);
+  })());
 });
 
 // ------------------------------------------------------------

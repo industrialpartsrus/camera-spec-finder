@@ -109,6 +109,7 @@ export default async function handler(req, res) {
           type: 'retrieve',
           sku: '',
           message,
+          actionUrl: '/dashboard',
         }),
       });
     } catch (e) {
