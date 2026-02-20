@@ -57,6 +57,7 @@ export default async function handler(req, res) {
     let hasMore = true;
     let fetchErrors = 0;
     let timedOut = false;
+    let skippedOutOfStock = 0;
 
     console.log('Crawl started — fetching items from SureDone /editor/items...');
 
@@ -76,8 +77,14 @@ export default async function handler(req, res) {
           break;
         }
 
-        // Score each item
+        // Score each item (skip out-of-stock — no point refreshing what we don't have)
         for (const item of batch) {
+          const stock = parseInt(item.stock) || 0;
+          if (stock <= 0) {
+            skippedOutOfStock++;
+            continue;
+          }
+
           const quality = scoreListingQuality(item);
           const priority = calculateRefreshPriority(item, quality);
 
@@ -87,7 +94,7 @@ export default async function handler(req, res) {
             brand: item.brand || '',
             mpn: item.mpn || '',
             price: parseFloat(item.price) || 0,
-            stock: parseInt(item.stock) || 0,
+            stock,
             condition: item.condition || '',
             media1: item.media1 || '',
             ebaycatid: item.ebaycatid || '',
@@ -125,7 +132,7 @@ export default async function handler(req, res) {
       }
     }
 
-    console.log(`Crawl fetch complete: ${allResults.length} items from ${page} pages in ${Math.round((Date.now() - START_TIME) / 1000)}s`);
+    console.log(`Crawl fetch complete: ${allResults.length} in-stock items scored, ${skippedOutOfStock} out-of-stock skipped (${page} pages in ${Math.round((Date.now() - START_TIME) / 1000)}s)`);
 
     if (allResults.length === 0) {
       return res.status(200).json({
@@ -243,6 +250,7 @@ export default async function handler(req, res) {
       itemsBelowThreshold: worstItems.length,
       queuedForRefresh: queuedCount,
       topIssues,
+      skippedOutOfStock,
       fetchErrors,
       timedOut,
       pagesProcessed: page,
@@ -261,7 +269,7 @@ export default async function handler(req, res) {
           userId: 'scott',
           type: 'retrieve',
           sku: '',
-          message: `Inventory crawl: ${allResults.length} listings scored (${page} pages${timedOut ? ', timed out' : ''}). Avg: ${avgScore}/100. ${worstItems.length} need attention. ${queuedCount} queued for refresh.`,
+          message: `Inventory crawl: Scored ${allResults.length} in-stock items (skipped ${skippedOutOfStock} out-of-stock). Avg: ${avgScore}/100. ${worstItems.length} need attention. ${queuedCount} queued for refresh.`,
         }),
       });
     } catch (e) {
@@ -274,6 +282,7 @@ export default async function handler(req, res) {
       timedOut,
       pagesProcessed: page,
       totalItems: allResults.length,
+      skippedOutOfStock,
       averageScore: avgScore,
       gradeDistribution,
       itemsBelowThreshold: worstItems.length,
