@@ -81,6 +81,8 @@ export default function PhotoStation() {
   const [previewPhoto, setPreviewPhoto] = useState(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const fileInputRef = useRef(null);
+  const uploadInputRef = useRef(null); // For single slot upload
+  const bulkUploadInputRef = useRef(null); // For bulk upload
 
   // Review state
   const [removeBgFlags, setRemoveBgFlags] = useState({
@@ -303,6 +305,114 @@ export default function PhotoStation() {
 
   const handleRetakePhoto = () => {
     setPreviewPhoto(null);
+  };
+
+  const handleUploadClick = () => {
+    uploadInputRef.current?.click();
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsCapturing(true);
+
+    try {
+      // Compress and convert to base64
+      const base64Data = await compressImage(file);
+
+      // Show preview (same as camera capture)
+      setPreviewPhoto({
+        dataUrl: `data:image/jpeg;base64,${base64Data}`,
+        file: file,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('File upload error:', error);
+      alert('Failed to process file: ' + error.message);
+    }
+
+    setIsCapturing(false);
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
+  };
+
+  const handleBulkUploadClick = () => {
+    bulkUploadInputRef.current?.click();
+  };
+
+  const handleBulkUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    setIsCapturing(true);
+
+    try {
+      // Find empty slots
+      const emptySlots = [];
+      for (const step of PHOTO_STEPS) {
+        if (step.id === 'extra') {
+          // Can always add more extra photos
+          continue;
+        } else if (!capturedPhotos[step.id]) {
+          emptySlots.push(step.id);
+        }
+      }
+
+      // Process files and assign to empty slots
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const base64Data = await compressImage(file);
+
+        if (i < emptySlots.length) {
+          // Assign to specific slot
+          const slotId = emptySlots[i];
+          setCapturedPhotos(prev => ({
+            ...prev,
+            [slotId]: {
+              dataUrl: `data:image/jpeg;base64,${base64Data}`,
+              file: file,
+              timestamp: new Date().toISOString()
+            }
+          }));
+        } else {
+          // Add to extra photos
+          setCapturedPhotos(prev => ({
+            ...prev,
+            extra: [...prev.extra, {
+              dataUrl: `data:image/jpeg;base64,${base64Data}`,
+              file: file,
+              timestamp: new Date().toISOString()
+            }]
+          }));
+        }
+      }
+
+      alert(`✅ Uploaded ${files.length} photo${files.length > 1 ? 's' : ''}`);
+    } catch (error) {
+      console.error('Bulk upload error:', error);
+      alert('Failed to upload files: ' + error.message);
+    }
+
+    setIsCapturing(false);
+    if (bulkUploadInputRef.current) bulkUploadInputRef.current.value = '';
+  };
+
+  const handleBulkDrop = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const files = Array.from(event.dataTransfer.files || []);
+    if (files.length === 0) return;
+
+    // Filter for image files only
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      alert('No image files found');
+      return;
+    }
+
+    // Use the same bulk upload handler
+    handleBulkUpload({ target: { files: imageFiles } });
   };
 
   const handleNextStep = () => {
@@ -741,6 +851,25 @@ export default function PhotoStation() {
         onChange={handleImageCapture}
       />
 
+      {/* Hidden file input for single slot upload */}
+      <input
+        ref={uploadInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
+      {/* Hidden file input for bulk upload */}
+      <input
+        ref={bulkUploadInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleBulkUpload}
+      />
+
       {/* LOGIN SCREEN */}
       {screen === 'login' && (
         <div className="p-6">
@@ -936,6 +1065,21 @@ export default function PhotoStation() {
           <div className="flex-1 p-6">
             {!previewPhoto ? (
               <div className="space-y-6">
+                {/* Bulk Upload Area */}
+                <div
+                  className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDrop={handleBulkDrop}
+                  onClick={handleBulkUploadClick}
+                >
+                  <p className="text-gray-700 font-semibold mb-1">
+                    📁 Drag & drop photos here, or click to browse
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Photos will be assigned to empty slots automatically
+                  </p>
+                </div>
+
                 {/* Step indicator */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-2">
                   {PHOTO_STEPS.map((step) => (
@@ -1000,24 +1144,33 @@ export default function PhotoStation() {
                     return null;
                   })()}
 
-                  {/* Camera button */}
-                  <button
-                    onClick={handleCameraClick}
-                    disabled={isCapturing}
-                    className="w-full py-8 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-4 text-2xl font-bold transition disabled:opacity-50 mb-4"
-                  >
-                    {isCapturing ? (
-                      <>
-                        <RefreshCw size={32} className="animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Camera size={32} />
-                        📷 Take Photo
-                      </>
-                    )}
-                  </button>
+                  {/* Camera and Upload buttons */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <button
+                      onClick={handleCameraClick}
+                      disabled={isCapturing}
+                      className="py-8 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 text-xl font-bold transition disabled:opacity-50"
+                    >
+                      {isCapturing ? (
+                        <>
+                          <RefreshCw size={28} className="animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Camera size={28} />
+                          📷 Capture
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleUploadClick}
+                      disabled={isCapturing}
+                      className="py-8 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-xl flex items-center justify-center gap-2 text-xl font-bold transition disabled:opacity-50"
+                    >
+                      📁 Upload
+                    </button>
+                  </div>
 
                   {/* Navigation buttons */}
                   <div className="flex gap-3">
