@@ -26,6 +26,12 @@ export default function PhotoEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState(photoUrl); // Track current image URL (changes after bg removal)
+  const [showBgOptions, setShowBgOptions] = useState(false); // Show background removal options panel
+  const [bgOptions, setBgOptions] = useState({
+    autoCrop: true,
+    scale: '80%',
+    bgColor: 'white'
+  });
 
   // Refs
   const editImageRef = useRef(null);                     // Preloaded source image
@@ -260,9 +266,10 @@ export default function PhotoEditor({
   const handleRemoveBg = async () => {
     if (!editImageRef.current) return;
     setIsRemovingBg(true);
+    setShowBgOptions(false); // Hide options panel
 
     try {
-      console.log('Removing background...');
+      console.log('Removing background with options:', bgOptions);
 
       // Convert current canvas to base64
       const tempCanvas = document.createElement('canvas');
@@ -280,7 +287,8 @@ export default function PhotoEditor({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: base64,
-          view: viewName
+          view: viewName,
+          ...bgOptions // Pass auto-crop, scale, and background color options
         })
       });
 
@@ -571,15 +579,91 @@ export default function PhotoEditor({
           {/* Remove Background */}
           <div>
             <label className="block text-sm font-semibold mb-2">Background</label>
-            <button
-              onClick={handleRemoveBg}
-              disabled={isRemovingBg}
-              className="w-full px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              {isRemovingBg ? 'Removing Background...' : '🖼️ Remove Background'}
-            </button>
+
+            {!showBgOptions ? (
+              // Show button to open options panel
+              <button
+                onClick={() => setShowBgOptions(true)}
+                disabled={isRemovingBg}
+                className="w-full px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                🖼️ Remove Background
+              </button>
+            ) : (
+              // Show options panel
+              <div className="border-2 border-green-300 rounded-lg p-3 bg-green-50">
+                {/* Auto-crop checkbox */}
+                <label className="flex items-center gap-2 mb-3">
+                  <input
+                    type="checkbox"
+                    checked={bgOptions.autoCrop}
+                    onChange={(e) => setBgOptions(prev => ({ ...prev, autoCrop: e.target.checked }))}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm font-medium">Auto-crop and center</span>
+                </label>
+
+                {/* Scale dropdown */}
+                <div className="mb-3">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Scale (subject fills frame):
+                  </label>
+                  <select
+                    value={bgOptions.scale}
+                    onChange={(e) => setBgOptions(prev => ({ ...prev, scale: e.target.value }))}
+                    disabled={!bgOptions.autoCrop}
+                    className="w-full px-2 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="60%">60% (lots of whitespace)</option>
+                    <option value="70%">70%</option>
+                    <option value="80%">80% (recommended)</option>
+                    <option value="90%">90%</option>
+                    <option value="100%">100% (fills entire frame)</option>
+                  </select>
+                </div>
+
+                {/* Background color dropdown */}
+                <div className="mb-3">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Background:
+                  </label>
+                  <select
+                    value={bgOptions.bgColor}
+                    onChange={(e) => setBgOptions(prev => ({ ...prev, bgColor: e.target.value }))}
+                    className="w-full px-2 py-1 border rounded text-sm"
+                  >
+                    <option value="white">White (eBay standard)</option>
+                    <option value="transparent">Transparent (PNG)</option>
+                    <option value="lightgray">Light Gray</option>
+                  </select>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleRemoveBg}
+                    disabled={isRemovingBg}
+                    className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                  >
+                    {isRemovingBg ? 'Processing...' : '✓ Remove Background'}
+                  </button>
+                  <button
+                    onClick={() => setShowBgOptions(false)}
+                    disabled={isRemovingBg}
+                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             <p className="text-xs text-gray-500 mt-1">
-              Uses Remove.bg API to remove background and flatten to white.
+              {!showBgOptions
+                ? 'Remove background, auto-crop, center, and scale product in one click.'
+                : bgOptions.autoCrop
+                  ? 'Product will be centered and scaled to fill the frame.'
+                  : 'Background removed without cropping or centering.'}
             </p>
           </div>
 
