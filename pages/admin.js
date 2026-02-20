@@ -270,6 +270,16 @@ function SendTestAlertSection() {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
 
+  useEffect(() => {
+    const saved = localStorage.getItem('ipru_admin_api_key');
+    if (saved) setApiKey(saved);
+  }, []);
+
+  const handleKeyChange = (val) => {
+    setApiKey(val);
+    localStorage.setItem('ipru_admin_api_key', val);
+  };
+
   const handleSend = async () => {
     setSending(true);
     setResult(null);
@@ -328,7 +338,7 @@ function SendTestAlertSection() {
           <input
             type="password"
             value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
+            onChange={(e) => handleKeyChange(e.target.value)}
             placeholder="Paste your INTERNAL_API_KEY here"
             className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
@@ -603,6 +613,17 @@ function InventoryCrawlSection() {
   const [apiKey, setApiKey] = useState('');
   const [lastCrawl, setLastCrawl] = useState(null);
 
+  // Load API key from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('ipru_admin_api_key');
+    if (saved) setApiKey(saved);
+  }, []);
+
+  const handleKeyChange = (val) => {
+    setApiKey(val);
+    localStorage.setItem('ipru_admin_api_key', val);
+  };
+
   // Load last crawl on mount
   useEffect(() => {
     const loadLastCrawl = async () => {
@@ -674,7 +695,7 @@ function InventoryCrawlSection() {
         <input
           type="password"
           value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
+          onChange={(e) => handleKeyChange(e.target.value)}
           placeholder="API Key (INTERNAL_API_KEY)"
           className="flex-1 px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500"
         />
