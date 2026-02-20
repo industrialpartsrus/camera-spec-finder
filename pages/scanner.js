@@ -10,6 +10,7 @@ import NotificationCenter from '../components/NotificationCenter';
 import app from '../firebase';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { setCurrentUser as setGlobalUser, getTeamMemberById } from '../lib/users';
 
 // Condition configuration - matches Pro Builder CONDITION_OPTIONS exactly
 const CONDITIONS = {
@@ -200,6 +201,9 @@ export default function WarehouseScanner() {
       setSelectedUserId(null);
       // Save to localStorage for persistent login
       localStorage.setItem('scanner_user', result.user.username);
+      // Also set global user identity for notifications
+      const teamMember = getTeamMemberById(result.user.username?.toLowerCase());
+      if (teamMember) setGlobalUser(teamMember);
       // Start shelf queue listener
       setupShelfListener(result.user.username);
     } else {

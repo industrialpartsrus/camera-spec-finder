@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { getCurrentUser, setCurrentUser, TEAM_MEMBERS, getTeamMemberById } from '../lib/users';
 import NotificationCenter from '../components/NotificationCenter';
+import UserPicker from '../components/UserPicker';
 
 // ============================================================
 // HELPER: Get start of today as Firestore Timestamp
@@ -383,43 +384,6 @@ function WorkerStatus({ workerActivity, loading }) {
 }
 
 // ============================================================
-// COMPONENT: User Picker (when no user is set)
-// ============================================================
-function UserPicker({ onSelect }) {
-  return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6">
-      <div className="bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full border border-gray-700">
-        <h1 className="text-2xl font-bold text-white mb-2 text-center">Dashboard</h1>
-        <p className="text-gray-400 text-sm mb-6 text-center">Select your name to continue</p>
-        <div className="space-y-2">
-          {TEAM_MEMBERS.map((member) => (
-            <button
-              key={member.id}
-              onClick={() => {
-                setCurrentUser(member);
-                onSelect(member);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-600 hover:border-blue-500 hover:bg-gray-700/50 transition-all text-left"
-            >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                style={{ backgroundColor: member.color }}
-              >
-                {member.name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <div className="font-medium text-white">{member.name}</div>
-                <div className="text-xs text-gray-400 capitalize">{member.role}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
 // MAIN DASHBOARD COMPONENT
 // ============================================================
 export default function Dashboard() {
@@ -780,7 +744,7 @@ export default function Dashboard() {
           <title>{'📊 Dashboard — IPRU'}</title>
           <link rel="icon" href="/favicon-dashboard.png" />
         </Head>
-        <UserPicker onSelect={(user) => setCurrentUserState(user)} />
+        <UserPicker title="📊 Dashboard" subtitle="Select your name to continue" onSelect={(user) => setCurrentUserState(user)} />
       </>
     );
   }

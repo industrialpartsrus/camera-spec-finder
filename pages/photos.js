@@ -12,6 +12,7 @@ import { collection, doc, updateDoc, getDoc, Timestamp, addDoc } from 'firebase/
 import NotificationCenter from '../components/NotificationCenter';
 import PartRequestModal from '../components/PartRequestModal';
 import app from '../firebase';
+import { setCurrentUser as setGlobalUser, getTeamMemberById } from '../lib/users';
 
 const CONDITION_OPTIONS = [
   { value: 'New', label: 'New', color: 'bg-green-100 border-green-500 text-green-900' },
@@ -169,6 +170,9 @@ export default function PhotoStation() {
       setScreen('queue');
       // Save to localStorage for persistent login
       localStorage.setItem('photos_user', result.user.username);
+      // Also set global user identity for notifications
+      const teamMember = getTeamMemberById(result.user.username?.toLowerCase());
+      if (teamMember) setGlobalUser(teamMember);
     } else {
       alert(result.error || 'Incorrect PIN');
       setPinInput('');

@@ -10,7 +10,8 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, order
 import InventoryCheckAlert from '../components/InventoryCheckAlert';
 import NotificationCenter from '../components/NotificationCenter';
 import app from '../firebase';
-import { getCurrentUser } from '../lib/users';
+import { getCurrentUser, setCurrentUser, isAdmin } from '../lib/users';
+import UserPicker from '../components/UserPicker';
 import PartRequestModal from '../components/PartRequestModal';
 import { normalizeCoilVoltage, STANDARD_COIL_VOLTAGES } from '../lib/coil-voltage-normalizer';
 import dynamic from 'next/dynamic';
@@ -1609,6 +1610,15 @@ export default function ProListingBuilder() {
   // Debounced local state for text inputs (prevents cursor jumping from Firestore writes)
   const [localFields, setLocalFields] = useState({});
 
+  // Restore user from localStorage on mount
+  useEffect(() => {
+    const saved = getCurrentUser();
+    if (saved && saved.name) {
+      setUserName(saved.name);
+      setIsNameSet(true);
+    }
+  }, []);
+
   // Real-time Firebase sync
   useEffect(() => {
     if (!isNameSet) return;
@@ -2841,23 +2851,18 @@ export default function ProListingBuilder() {
     }
   });
 
-  // Login screen
+  // Login screen — show UserPicker if no user selected
   if (!isNameSet) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-6">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
-          <h1 className="text-2xl font-bold mb-4">Pro Listing Builder</h1>
-          <p className="text-gray-600 mb-6">Enter your name to begin</p>
-          <input type="text" placeholder="Your Name" value={userName}
-            onChange={e => setUserName(e.target.value)}
-            onKeyPress={e => e.key === 'Enter' && userName.trim() && setIsNameSet(true)}
-            className="w-full px-4 py-3 border rounded-lg mb-4" />
-          <button onClick={() => userName.trim() && setIsNameSet(true)} disabled={!userName.trim()}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-            Start
-          </button>
-        </div>
-      </div>
+      <UserPicker
+        title="Pro Listing Builder 🚀"
+        subtitle="Select your name to get started"
+        onSelect={(member) => {
+          setUserName(member.name);
+          setCurrentUser(member);
+          setIsNameSet(true);
+        }}
+      />
     );
   }
 
@@ -2876,18 +2881,27 @@ export default function ProListingBuilder() {
           <div>
             <h1 className="text-2xl font-bold">Pro Listing Builder 🚀</h1>
             <p className="text-sm text-gray-600">
-              Logged in: <span className="font-semibold">{userName}</span> • 
+              Logged in: <span className="font-semibold">{userName}</span>
+              <button onClick={() => { setIsNameSet(false); setUserName(''); }} className="text-blue-500 hover:text-blue-700 ml-1 text-xs">(switch)</button>
               <span className="text-green-600 ml-2">● Live Sync</span>
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {(getCurrentUser()?.role === 'admin' || userName?.toLowerCase() === 'scott') && (
-              <a
-                href="/dashboard"
-                className="px-3 py-2 rounded-lg text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center gap-1"
-              >
-                📊 Dashboard
-              </a>
+            {isAdmin(getCurrentUser()) && (
+              <>
+                <a
+                  href="/dashboard"
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center gap-1"
+                >
+                  📊 Dashboard
+                </a>
+                <a
+                  href="/admin"
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-1"
+                >
+                  ⚙️ Admin
+                </a>
+              </>
             )}
             <NotificationCenter
               firebaseApp={app}
