@@ -1600,6 +1600,12 @@ export default function ProListingBuilder() {
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Inventory keyword search state
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [inventoryResults, setInventoryResults] = useState([]);
+  const [isInventorySearching, setIsInventorySearching] = useState(false);
+  const [searchInStock, setSearchInStock] = useState(false);
+
   // Photo editing state
   const [editingPhoto, setEditingPhoto] = useState(null);  // { itemId, photoIndex, photoUrl, viewName, sku, originalIdx }
 
@@ -1618,6 +1624,33 @@ export default function ProListingBuilder() {
       setIsNameSet(true);
     }
   }, []);
+
+  // Debounced SureDone inventory keyword search
+  useEffect(() => {
+    if (inventorySearch.length < 2) {
+      setInventoryResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsInventorySearching(true);
+      try {
+        const params = new URLSearchParams({
+          query: inventorySearch,
+          inStock: searchInStock.toString(),
+          limit: '25',
+        });
+        const res = await fetch(`/api/suredone/search?${params}`);
+        const data = await res.json();
+        if (data.success) {
+          setInventoryResults(data.results);
+        }
+      } catch (err) {
+        console.error('Inventory search error:', err);
+      }
+      setIsInventorySearching(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [inventorySearch, searchInStock]);
 
   // Real-time Firebase sync
   useEffect(() => {
@@ -2974,9 +3007,99 @@ export default function ProListingBuilder() {
             </button>
           </div>
 
-          {/* NEW: SKU Lookup Section */}
+          {/* Inventory Keyword Search */}
           <div className="p-4 border-b">
-            <SkuLookup 
+            <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2 text-sm">
+              <Search className="w-4 h-4" />
+              Search Inventory
+            </h3>
+            <input
+              type="text"
+              value={inventorySearch}
+              onChange={(e) => setInventorySearch(e.target.value)}
+              placeholder="Search by keyword, brand, part #..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 mb-2"
+            />
+            <label className="flex items-center gap-2 text-xs text-gray-600 mb-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={searchInStock}
+                onChange={(e) => setSearchInStock(e.target.checked)}
+                className="rounded"
+              />
+              In Stock Only
+            </label>
+
+            {isInventorySearching && (
+              <div className="flex items-center gap-2 text-sm text-gray-500 py-3">
+                <Loader className="w-4 h-4 animate-spin" /> Searching SureDone...
+              </div>
+            )}
+
+            {!isInventorySearching && inventorySearch.length >= 2 && inventoryResults.length === 0 && (
+              <div className="text-sm text-gray-400 py-3 text-center">No results found</div>
+            )}
+
+            {inventoryResults.length > 0 && (
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                <div className="text-xs text-gray-500 mb-1">{inventoryResults.length} result{inventoryResults.length !== 1 ? 's' : ''}</div>
+                {inventoryResults.map((item) => (
+                  <div
+                    key={item.sku}
+                    className="bg-white border border-gray-200 rounded-lg p-2.5 hover:border-blue-400 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex gap-2">
+                      {item.media1 ? (
+                        <img
+                          src={item.media1}
+                          alt={item.title}
+                          className="w-12 h-12 object-cover rounded flex-shrink-0 bg-gray-100"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs flex-shrink-0">
+                          No img
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-gray-900 truncate">{item.title || 'Untitled'}</div>
+                        <div className="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                          <span className="font-mono font-bold text-blue-700">{item.sku}</span>
+                          {item.brand && <span>{item.brand}</span>}
+                          {item.mpn && <span>MPN: {item.mpn}</span>}
+                        </div>
+                        <div className="text-xs text-gray-500 flex gap-3 mt-0.5">
+                          {item.price && <span className="font-semibold text-green-700">${item.price}</span>}
+                          <span className={parseInt(item.stock) > 0 ? 'text-green-600' : 'text-red-500'}>
+                            Stock: {item.stock}
+                          </span>
+                          {item.condition && <span>{item.condition}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        loadExistingBySku(item.sku);
+                        setInventorySearch('');
+                        setInventoryResults([]);
+                      }}
+                      className="w-full mt-2 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
+                    >
+                      Load into Editor
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Divider */}
+            <div className="flex items-center gap-2 my-3">
+              <div className="flex-1 border-t border-gray-200"></div>
+              <span className="text-xs text-gray-400">or search by exact SKU</span>
+              <div className="flex-1 border-t border-gray-200"></div>
+            </div>
+
+            <SkuLookup
               onLoadListing={loadExistingListing}
               onCompareClick={openComparePanel}
             />

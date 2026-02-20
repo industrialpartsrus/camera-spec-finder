@@ -55,6 +55,8 @@ const styles = {
     flexDirection: 'column',
     fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
     transition: 'transform 0.3s ease',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
   },
   panelHeader: {
     display: 'flex',
@@ -62,6 +64,7 @@ const styles = {
     justifyContent: 'space-between',
     padding: '16px 20px',
     borderBottom: '1px solid #374151',
+    flexShrink: 0,
   },
   panelTitle: {
     fontSize: '18px',
@@ -81,7 +84,8 @@ const styles = {
   cardList: {
     flex: 1,
     overflowY: 'auto',
-    padding: '12px',
+    padding: '16px',
+    minHeight: 0,
   },
   card: {
     borderRadius: '12px',
@@ -90,6 +94,8 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     border: '1px solid transparent',
+    overflow: 'hidden',
+    wordBreak: 'break-word',
   },
   cardReshelve: {
     background: 'linear-gradient(135deg, #1e3a5f 0%, #1a2744 100%)',
@@ -164,12 +170,13 @@ const styles = {
     opacity: 0.5,
   },
   setupBanner: {
-    margin: '12px',
+    margin: '16px',
     padding: '16px',
     background: '#1e293b',
     borderRadius: '12px',
     border: '1px solid #334155',
     textAlign: 'center',
+    flexShrink: 0,
   },
   setupButton: {
     marginTop: '10px',
@@ -467,6 +474,7 @@ export default function NotificationCenter({ firebaseApp, userId, deviceName }) 
                   fontSize: '11px',
                   color: '#6b7280',
                   textAlign: 'center',
+                  flexShrink: 0,
                 }}
               >
                 📱 Device registered - Notifications active
