@@ -1,8 +1,11 @@
 // components/PhotoEditor.js
 // Reusable photo editor with zoom, pan, rotate, brightness, and watermark preview
-// Outputs 1600x1600 square images (eBay standard) with white background
+// Outputs 2000x2000 square images (eBay standard) with white background
 
 import { useState, useRef, useEffect } from 'react';
+
+// Output canvas size (2000x2000 for high quality eBay images)
+const OUTPUT_SIZE = 2000;
 
 export default function PhotoEditor({
   photoUrl,
@@ -16,7 +19,7 @@ export default function PhotoEditor({
   const [rotation, setRotation] = useState(0);           // 0, 90, 180, 270
   const [brightness, setBrightness] = useState(0);       // -50 to +50
   const [zoom, setZoom] = useState(1);                   // 0.5 to 3.0
-  const [pan, setPan] = useState({ x: 0, y: 0 });        // Offset in export pixels (1600x1600 scale)
+  const [pan, setPan] = useState({ x: 0, y: 0 });        // Offset in export pixels (OUTPUT_SIZE scale)
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [showWatermark, setShowWatermark] = useState(false);
@@ -94,6 +97,26 @@ export default function PhotoEditor({
     img.src = currentPhotoUrl;
   }, [currentPhotoUrl, onCancel]);
 
+  // Auto-zoom to fill frame when image loads
+  useEffect(() => {
+    if (!editImageRef.current) return;
+
+    const img = editImageRef.current;
+    const isRotated = Math.abs(rotation) % 180 !== 0;
+    const imgW = isRotated ? img.height : img.width;
+    const imgH = isRotated ? img.width : img.height;
+
+    // Calculate fit and fill scales
+    const fitScale = Math.min(OUTPUT_SIZE / imgW, OUTPUT_SIZE / imgH);
+    const fillScale = Math.max(OUTPUT_SIZE / imgW, OUTPUT_SIZE / imgH);
+
+    // Default zoom: 85% toward fill (shows product larger without excessive cropping)
+    const autoZoom = Math.min((fillScale / fitScale) * 0.85, 2.0);
+
+    setZoom(autoZoom);
+    setPan({ x: 0, y: 0 }); // Reset pan when auto-zooming
+  }, [editImageRef.current, rotation]);
+
   // Render display canvas (500x500 preview)
   useEffect(() => {
     if (!editImageRef.current || !displayCanvasRef.current) return;
@@ -116,9 +139,9 @@ export default function PhotoEditor({
     ctx.translate(displaySize / 2, displaySize / 2);
     ctx.rotate((rotation * Math.PI) / 180);
 
-    // Apply zoom and pan (scale pan from 1600x1600 to 500x500)
-    const scaledPanX = pan.x * (displaySize / 1600);
-    const scaledPanY = pan.y * (displaySize / 1600);
+    // Apply zoom and pan (scale pan from OUTPUT_SIZE to displaySize)
+    const scaledPanX = pan.x * (displaySize / OUTPUT_SIZE);
+    const scaledPanY = pan.y * (displaySize / OUTPUT_SIZE);
     ctx.translate(scaledPanX, scaledPanY);
     ctx.scale(zoom, zoom);
 
@@ -286,7 +309,33 @@ export default function PhotoEditor({
     }
   };
 
-  // Save edited photo (1600x1600, NO watermark)
+  // Sharpen image after scaling to recover quality
+  const sharpenImage = (ctx, width, height, amount = 0.2) => {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    const copy = new Uint8ClampedArray(data);
+
+    const w = width;
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = (y * w + x) * 4;
+        for (let c = 0; c < 3; c++) {
+          // Unsharp mask: enhance difference from neighbors
+          const center = copy[i + c] * (1 + 4 * amount);
+          const neighbors = (
+            copy[((y - 1) * w + x) * 4 + c] +
+            copy[((y + 1) * w + x) * 4 + c] +
+            copy[(y * w + x - 1) * 4 + c] +
+            copy[(y * w + x + 1) * 4 + c]
+          ) * amount;
+          data[i + c] = Math.min(255, Math.max(0, center - neighbors));
+        }
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+  };
+
+  // Save edited photo (OUTPUT_SIZE x OUTPUT_SIZE, NO watermark)
   const handleSave = async () => {
     if (!editImageRef.current) return;
     setIsSaving(true);
@@ -294,18 +343,18 @@ export default function PhotoEditor({
     try {
       const img = editImageRef.current;
 
-      // Create export canvas (1600x1600)
+      // Create export canvas (OUTPUT_SIZE x OUTPUT_SIZE)
       const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = 1600;
-      exportCanvas.height = 1600;
+      exportCanvas.width = OUTPUT_SIZE;
+      exportCanvas.height = OUTPUT_SIZE;
       const ctx = exportCanvas.getContext('2d');
 
       // White background
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, 1600, 1600);
+      ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
 
       ctx.save();
-      ctx.translate(800, 800); // Center
+      ctx.translate(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2); // Center
       ctx.rotate((rotation * Math.PI) / 180);
       ctx.translate(pan.x, pan.y);
       ctx.scale(zoom, zoom);
@@ -331,18 +380,28 @@ export default function PhotoEditor({
       const isRotated = rotation === 90 || rotation === 270;
       const imgWidth = isRotated ? img.height : img.width;
       const imgHeight = isRotated ? img.width : img.height;
-      const scale = Math.max(1600 / imgWidth, 1600 / imgHeight);
+      const scale = Math.max(OUTPUT_SIZE / imgWidth, OUTPUT_SIZE / imgHeight);
       const drawWidth = imgWidth * scale;
       const drawHeight = imgHeight * scale;
 
       ctx.drawImage(tempCanvas, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
       ctx.restore();
 
+      // Apply subtle sharpening to recover scaling quality
+      sharpenImage(ctx, OUTPUT_SIZE, OUTPUT_SIZE, 0.2);
+
       // NOTE: Watermark NOT drawn on export canvas
+
+      // Detect if PNG should be used (nobg images or original PNGs)
+      const isPng = currentPhotoUrl.includes('.png') || currentPhotoUrl.includes('_nobg') || viewName.includes('nobg');
+      const mimeType = isPng ? 'image/png' : 'image/jpeg';
+      const quality = isPng ? undefined : 1.0; // Maximum quality for JPEG, undefined for PNG
+
+      console.log(`Exporting as ${mimeType} with ${quality ? 'quality ' + quality : 'lossless PNG'}`);
 
       // Convert to blob
       const blob = await new Promise(resolve => {
-        exportCanvas.toBlob(resolve, 'image/jpeg', 0.9);
+        exportCanvas.toBlob(resolve, mimeType, quality);
       });
 
       // Upload to Firebase Storage via existing API
@@ -430,8 +489,56 @@ export default function PhotoEditor({
               className="w-full"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Click and drag on image to pan. Output: 1600×1600 square.
+              Click and drag on image to pan. Output: {OUTPUT_SIZE}×{OUTPUT_SIZE} square.
             </p>
+            {/* Zoom presets */}
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => {
+                  setZoom(1.0);
+                  setPan({ x: 0, y: 0 });
+                }}
+                className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
+              >
+                Fit
+              </button>
+              <button
+                onClick={() => {
+                  // Calculate fill zoom
+                  if (editImageRef.current) {
+                    const img = editImageRef.current;
+                    const isRotated = Math.abs(rotation) % 180 !== 0;
+                    const imgW = isRotated ? img.height : img.width;
+                    const imgH = isRotated ? img.width : img.height;
+                    const fitScale = Math.min(OUTPUT_SIZE / imgW, OUTPUT_SIZE / imgH);
+                    const fillScale = Math.max(OUTPUT_SIZE / imgW, OUTPUT_SIZE / imgH);
+                    setZoom(fillScale / fitScale);
+                    setPan({ x: 0, y: 0 });
+                  }
+                }}
+                className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
+              >
+                Fill
+              </button>
+              <button
+                onClick={() => {
+                  setZoom(1.5);
+                  setPan({ x: 0, y: 0 });
+                }}
+                className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
+              >
+                1.5x
+              </button>
+              <button
+                onClick={() => {
+                  setZoom(2.0);
+                  setPan({ x: 0, y: 0 });
+                }}
+                className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
+              >
+                2x
+              </button>
+            </div>
           </div>
 
           {/* Rotate Buttons */}
