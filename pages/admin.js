@@ -634,6 +634,9 @@ function EmergencyActionsSection() {
       });
       const data = await res.json();
       setClearResult(data);
+      if (data.cleared > 0) {
+        window.dispatchEvent(new CustomEvent('alerts-cleared'));
+      }
     } catch (err) {
       setClearResult({ error: err.message });
     }

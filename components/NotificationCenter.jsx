@@ -4,6 +4,7 @@
 // ============================================================
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   initMessaging,
   requestNotificationPermission,
@@ -308,6 +309,16 @@ export default function NotificationCenter({ firebaseApp, userId, deviceName }) 
     injectKeyframes();
   }, []);
 
+  // Listen for alerts-cleared event (fired by admin Clear All)
+  useEffect(() => {
+    const handleAlertsCleared = () => {
+      setNotifications([]);
+      setIsOpen(false);
+    };
+    window.addEventListener('alerts-cleared', handleAlertsCleared);
+    return () => window.removeEventListener('alerts-cleared', handleAlertsCleared);
+  }, []);
+
   // Check if already set up (token in localStorage)
   useEffect(() => {
     const savedDevice = localStorage.getItem('fcm_device_info');
@@ -398,7 +409,7 @@ export default function NotificationCenter({ firebaseApp, userId, deviceName }) 
     <>
       <NotificationBell unreadCount={unreadCount} onClick={() => setIsOpen(true)} />
 
-      {isOpen && (
+      {isOpen && typeof document !== 'undefined' && createPortal(
         <>
           <div style={styles.overlay} onClick={() => setIsOpen(false)} />
           <div style={{ ...styles.panel, animation: 'slideIn 0.3s ease' }}>
@@ -481,7 +492,8 @@ export default function NotificationCenter({ firebaseApp, userId, deviceName }) 
               </div>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </>
   );
