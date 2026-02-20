@@ -17,6 +17,9 @@
     },
     "pages/api/tasks/snooze.js": {
       "maxDuration": 10
+    },
+    "pages/api/tasks/daily-summary.js": {
+      "maxDuration": 30
     }
   },
   "crons": [
@@ -27,6 +30,10 @@
     {
       "path": "/api/tasks/morning-reminder",
       "schedule": "15 13 * * 1-5"
+    },
+    {
+      "path": "/api/tasks/daily-summary",
+      "schedule": "0 22 * * 1-5"
     }
   ]
 }

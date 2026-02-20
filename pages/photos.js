@@ -3,6 +3,7 @@
 // Guided workflow: Queue → Capture → Review → Upload → Complete
 
 import React, { useState, useRef, useEffect } from 'react';
+import Head from 'next/head';
 import { Camera, Check, X, LogOut, RefreshCw, Package, AlertCircle, ArrowLeft, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
 import { verifyUser, getActiveUsers } from '../lib/auth';
 import { storage, db } from '../firebase';
@@ -845,6 +846,11 @@ export default function PhotoStation() {
 
   return (
     <div className="min-h-screen bg-gray-100 pb-20">
+      <Head>
+        <title>📷 Photos — IPRU</title>
+        <link rel="icon" href="/favicon-photos.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon-photos.svg" />
+      </Head>
       {/* Hidden file input for camera */}
       <input
         ref={fileInputRef}

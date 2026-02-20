@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Rocket icon - Green #10b981 -->
+  <!-- Rocket body -->
+  <path d="M16 3 C16 3 11 10 11 18 L21 18 C21 10 16 3 16 3 Z" fill="#10b981"/>
+  <!-- Nose cone highlight -->
+  <path d="M16 3 C16 3 13.5 8 12.5 14 L16 14 Z" fill="#34d399" opacity="0.5"/>
+  <!-- Window -->
+  <circle cx="16" cy="13" r="2.5" fill="#fff"/>
+  <circle cx="16" cy="13" r="1.5" fill="#065f46"/>
+  <!-- Left fin -->
+  <path d="M11 16 L6 22 L11 20 Z" fill="#10b981"/>
+  <!-- Right fin -->
+  <path d="M21 16 L26 22 L21 20 Z" fill="#10b981"/>
+  <!-- Bottom base -->
+  <rect x="11" y="18" width="10" height="3" rx="1" fill="#059669"/>
+  <!-- Flame center -->
+  <path d="M14 21 L16 29 L18 21 Z" fill="#f59e0b"/>
+  <!-- Flame outer -->
+  <path d="M12.5 21 L16 26 L19.5 21 Z" fill="#ef4444" opacity="0.7"/>
+</svg>

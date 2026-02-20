@@ -3,6 +3,7 @@
 // Fast, one-handed operation with big touch targets
 
 import React, { useState, useRef, useEffect } from 'react';
+import Head from 'next/head';
 import { Camera, Edit3, LogOut, Plus, Minus, Check, X, AlertTriangle, Package, RefreshCw } from 'lucide-react';
 import { verifyUser, getActiveUsers } from '../lib/auth';
 import NotificationCenter from '../components/NotificationCenter';
@@ -565,6 +566,11 @@ export default function WarehouseScanner() {
 
   return (
     <div className="min-h-screen bg-gray-100 pb-20">
+      <Head>
+        <title>📦 Scanner — IPRU</title>
+        <link rel="icon" href="/favicon-scanner.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon-scanner.svg" />
+      </Head>
       {/* Hidden file input for camera */}
       <input
         ref={fileInputRef}

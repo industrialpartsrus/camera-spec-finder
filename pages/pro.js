@@ -3,6 +3,7 @@
 // Updated: January 2025
 
 import React, { useState, useRef, useEffect } from 'react';
+import Head from 'next/head';
 import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, Download, RefreshCw, ChevronDown, ChevronUp, ExternalLink, ArrowRight, Check } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
@@ -2864,6 +2865,11 @@ export default function ProListingBuilder() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Head>
+        <title>🚀 Pro Builder — IPRU</title>
+        <link rel="icon" href="/favicon-pro.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon-pro.svg" />
+      </Head>
       {/* Header */}
       <div className="bg-white border-b px-6 py-4">
         <div className="flex justify-between items-center mb-4">
@@ -2875,6 +2881,14 @@ export default function ProListingBuilder() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {(getCurrentUser()?.role === 'admin' || userName?.toLowerCase() === 'scott') && (
+              <a
+                href="/dashboard"
+                className="px-3 py-2 rounded-lg text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center gap-1"
+              >
+                📊 Dashboard
+              </a>
+            )}
             <NotificationCenter
               firebaseApp={app}
               userId={getCurrentUser()?.id || userName?.toLowerCase() || 'unknown'}
