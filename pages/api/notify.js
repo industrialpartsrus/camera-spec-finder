@@ -132,7 +132,8 @@ async function getDeviceTokens(userId, specificDeviceId = null) {
       tokens.push(doc.data().token);
     }
   });
-  return tokens;
+  // Deduplicate — same browser registering twice creates duplicate tokens
+  return [...new Set(tokens)];
 }
 
 async function sendToDevices(tokens, message) {

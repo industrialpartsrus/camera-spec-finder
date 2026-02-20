@@ -605,7 +605,233 @@ function NotificationLogSection() {
 }
 
 // ============================================================
-// SECTION 4: INVENTORY HEALTH CRAWLER
+// SECTION 4: EMERGENCY ACTIONS (Clear All Alerts)
+// ============================================================
+function EmergencyActionsSection() {
+  const [clearing, setClearing] = useState(false);
+  const [clearResult, setClearResult] = useState(null);
+  const [apiKey, setApiKey] = useState('');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ipru_admin_api_key');
+    if (saved) setApiKey(saved);
+  }, []);
+
+  const handleClearAll = async () => {
+    if (!apiKey) {
+      alert('Enter your API key first');
+      return;
+    }
+    if (!confirm('This will expire ALL pending and acknowledged part requests. Continue?')) return;
+
+    setClearing(true);
+    setClearResult(null);
+    try {
+      const res = await fetch('/api/tasks/clear-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey }),
+      });
+      const data = await res.json();
+      setClearResult(data);
+    } catch (err) {
+      setClearResult({ error: err.message });
+    }
+    setClearing(false);
+  };
+
+  return (
+    <div className="bg-red-900/30 border border-red-800 rounded-xl p-5 shadow-lg">
+      <h2 className="text-lg font-bold text-red-400 mb-3 flex items-center gap-2">
+        {'\u{1F6D1}'} Emergency Actions
+      </h2>
+      <p className="text-sm text-gray-400 mb-4">
+        Stop notification spam by expiring all pending part requests at once.
+      </p>
+      <div className="flex items-center gap-3">
+        <input
+          type="password"
+          placeholder="API Key"
+          value={apiKey}
+          onChange={(e) => {
+            setApiKey(e.target.value);
+            localStorage.setItem('ipru_admin_api_key', e.target.value);
+          }}
+          className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
+        />
+        <button
+          onClick={handleClearAll}
+          disabled={clearing}
+          className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg disabled:opacity-50 transition text-sm"
+        >
+          {clearing ? 'Clearing...' : '\u{1F6D1} Clear All Pending Alerts'}
+        </button>
+      </div>
+      {clearResult && (
+        <div className={`mt-3 text-sm ${clearResult.error ? 'text-red-400' : 'text-green-400'}`}>
+          {clearResult.error ? `Error: ${clearResult.error}` : clearResult.message}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// SECTION 5: DEVICE MANAGEMENT
+// ============================================================
+function DeviceManagementSection() {
+  const [devices, setDevices] = useState({}); // { userId: [{ id, ...data }] }
+  const [loading, setLoading] = useState(true);
+  const [removing, setRemoving] = useState(null); // deviceId or 'all-userId'
+
+  const fetchAllDevices = async () => {
+    setLoading(true);
+    const allDevices = {};
+
+    for (const member of TEAM_MEMBERS) {
+      try {
+        const devicesRef = collection(db, 'users', member.id, 'devices');
+        const snap = await getDocs(devicesRef);
+        const memberDevices = [];
+        snap.forEach(docSnap => {
+          memberDevices.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        if (memberDevices.length > 0) {
+          allDevices[member.id] = memberDevices;
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch devices for ${member.id}:`, e);
+      }
+    }
+
+    setDevices(allDevices);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchAllDevices(); }, []);
+
+  const removeDevice = async (userId, deviceId) => {
+    setRemoving(deviceId);
+    try {
+      await deleteDoc(doc(db, 'users', userId, 'devices', deviceId));
+      await fetchAllDevices();
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+    setRemoving(null);
+  };
+
+  const removeAllDevices = async (userId) => {
+    if (!confirm(`Remove ALL devices for ${userId}? They will need to re-register.`)) return;
+    setRemoving(`all-${userId}`);
+    try {
+      const res = await fetch('/api/devices/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, removeAll: true }),
+      });
+      const data = await res.json();
+      alert(`Removed ${data.removed} device(s)`);
+      await fetchAllDevices();
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+    setRemoving(null);
+  };
+
+  const getPlatformIcon = (platform) => {
+    if (!platform) return '\u{1F4F1}';
+    const p = platform.toLowerCase();
+    if (p.includes('ios') || p.includes('iphone') || p.includes('ipad')) return '\u{1F4F1}';
+    if (p.includes('android')) return '\u{1F4F1}';
+    return '\u{1F4BB}';
+  };
+
+  const totalDevices = Object.values(devices).reduce((sum, arr) => sum + arr.length, 0);
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-5 shadow-lg">
+      <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+        {'\u{1F4F1}'} Device Management
+      </h2>
+      <p className="text-sm text-gray-400 mb-4">
+        {totalDevices} total device registration{totalDevices !== 1 ? 's' : ''} across all users.
+        Remove duplicates to stop notification spam.
+      </p>
+
+      {loading ? (
+        <div className="text-gray-400 text-sm text-center py-6">Loading devices...</div>
+      ) : Object.keys(devices).length === 0 ? (
+        <div className="text-gray-500 text-sm text-center py-6">No devices registered</div>
+      ) : (
+        <div className="space-y-4">
+          {TEAM_MEMBERS.filter(m => devices[m.id]).map(member => (
+            <div key={member.id} className="border border-gray-700 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: member.color }} />
+                  <span className="font-semibold text-white text-sm">{member.name}</span>
+                  <span className="text-xs text-gray-500">({devices[member.id].length} device{devices[member.id].length !== 1 ? 's' : ''})</span>
+                </div>
+                {devices[member.id].length > 1 && (
+                  <button
+                    onClick={() => removeAllDevices(member.id)}
+                    disabled={removing === `all-${member.id}`}
+                    className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
+                  >
+                    {removing === `all-${member.id}` ? 'Removing...' : 'Remove All'}
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                {devices[member.id].map(device => (
+                  <div key={device.id} className="flex items-center justify-between text-xs bg-gray-900/50 rounded px-3 py-2">
+                    <div className="flex items-center gap-2 text-gray-300">
+                      <span>{getPlatformIcon(device.platform)}</span>
+                      <span>{device.deviceName || device.platform || 'Unknown Device'}</span>
+                      <span className="text-gray-600">—</span>
+                      <span className="text-gray-500">
+                        {device.createdAt ? getTimeAgo(device.createdAt) : 'unknown'}
+                      </span>
+                      {!device.notificationsEnabled && (
+                        <span className="text-yellow-500">(disabled)</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removeDevice(member.id, device.id)}
+                      disabled={removing === device.id}
+                      className="text-red-400 hover:text-red-300 disabled:opacity-50 ml-2"
+                    >
+                      {removing === device.id ? '...' : 'Remove'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Highlight if duplicate tokens exist */}
+              {(() => {
+                const tokens = devices[member.id].map(d => d.token).filter(Boolean);
+                const unique = new Set(tokens);
+                if (unique.size < tokens.length) {
+                  return (
+                    <div className="mt-2 text-xs text-yellow-400 bg-yellow-900/20 rounded px-2 py-1">
+                      {'\u26A0\uFE0F'} {tokens.length - unique.size} duplicate token{tokens.length - unique.size !== 1 ? 's' : ''} detected — remove extras to stop spam
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// SECTION 6: INVENTORY HEALTH CRAWLER
 // ============================================================
 function InventoryCrawlSection() {
   const [crawling, setCrawling] = useState(false);
@@ -950,8 +1176,14 @@ export default function AdminPage() {
 
         {/* Main Content */}
         <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+          {/* Emergency: Clear All Alerts */}
+          <EmergencyActionsSection />
+
           {/* Section 1: Team Members */}
           <TeamMembersSection />
+
+          {/* Device Management */}
+          <DeviceManagementSection />
 
           {/* Section 2: Send Test Alert */}
           <SendTestAlertSection />

@@ -39,6 +39,18 @@ export default async function handler(req, res) {
       const request = docSnap.data();
       const minutesAgo = Math.round((Date.now() - request.requestedAt.toMillis()) / 60000);
 
+      // Hard limit: expire if already escalated 3+ times
+      if ((request.escalationCount || 0) >= 3) {
+        await docSnap.ref.update({ status: 'expired', expiredReason: 'max_escalations' });
+        continue;
+      }
+
+      // Hard limit: expire if request is older than 1 hour
+      if (minutesAgo > 60) {
+        await docSnap.ref.update({ status: 'expired', expiredReason: 'timeout_1h' });
+        continue;
+      }
+
       // Get device tokens for the assigned worker
       const assignedTo = request.assignedTo || 'all';
 
@@ -185,5 +197,6 @@ async function getDeviceTokens(userId) {
   snapshot.forEach((doc) => {
     if (doc.data().token) tokens.push(doc.data().token);
   });
-  return tokens;
+  // Deduplicate — same browser registering twice creates duplicate tokens
+  return [...new Set(tokens)];
 }
