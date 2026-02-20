@@ -370,16 +370,15 @@ export default function NotificationCenter({ firebaseApp, userId, deviceName }) 
   const handleDone = useCallback((notification) => {
     setNotifications((prev) => prev.filter((n) => n !== notification));
 
-    if (notification.data?.sku) {
-      fetch('/api/tasks/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sku: notification.data.sku,
-          userId: userId,
-        }),
-      }).catch(console.error);
-    }
+    fetch('/api/tasks/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sku: notification.data?.sku || '',
+        userId: userId,
+        alertId: notification.data?.alertId || '',
+      }),
+    }).catch(console.error);
   }, [userId]);
 
   // Snooze notification

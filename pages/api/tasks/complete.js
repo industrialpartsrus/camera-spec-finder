@@ -1,6 +1,7 @@
 // ============================================================
 // /pages/api/tasks/complete.js
 // Mark a part request as completed + track response time
+// Updates BOTH partRequests and alertHistory collections
 // ============================================================
 
 import admin from 'firebase-admin';
@@ -21,81 +22,118 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { sku, userId, requestId } = req.body;
-
-    if (!sku) {
-      return res.status(400).json({ error: 'SKU is required' });
-    }
-
-    // Find the matching pending/acknowledged request
-    let queryRef = db.collection('partRequests')
-      .where('sku', '==', sku)
-      .where('status', 'in', ['pending', 'acknowledged'])
-      .limit(1);
-
-    const snapshot = await queryRef.get();
-
-    if (snapshot.empty) {
-      // No pending request found — still log as a general completion
-      return res.status(200).json({
-        success: true,
-        message: 'No pending request found for this SKU, but completion noted.',
-      });
-    }
-
-    const docSnap = snapshot.docs[0];
-    const data = docSnap.data();
+    const { sku, userId, alertId } = req.body;
     const now = admin.firestore.FieldValue.serverTimestamp();
-
-    // Calculate response time
+    const nowMs = Date.now();
+    let updated = false;
     let responseTimeMinutes = null;
-    if (data.requestedAt) {
-      responseTimeMinutes = Math.round(
-        (Date.now() - data.requestedAt.toMillis()) / 60000
-      );
+    let requestedBy = null;
+
+    // 1. Try to update matching partRequest (if sku provided)
+    if (sku) {
+      const partRequests = await db.collection('partRequests')
+        .where('sku', '==', sku)
+        .where('status', 'in', ['pending', 'acknowledged'])
+        .limit(1)
+        .get();
+
+      if (!partRequests.empty) {
+        const doc = partRequests.docs[0];
+        const data = doc.data();
+        requestedBy = data.requestedBy || null;
+
+        const requestedAt = data.requestedAt?.toMillis
+          ? data.requestedAt.toMillis()
+          : Date.parse(data.requestedAt);
+        if (requestedAt) {
+          responseTimeMinutes = Math.round((nowMs - requestedAt) / 60000);
+        }
+
+        await doc.ref.update({
+          status: 'completed',
+          completedAt: now,
+          completedBy: userId || 'unknown',
+          responseTimeMinutes: responseTimeMinutes,
+        });
+        updated = true;
+      }
     }
 
-    // Update the request
-    await docSnap.ref.update({
-      status: 'completed',
-      completedAt: now,
-      completedBy: userId || 'unknown',
-      responseTimeMinutes: responseTimeMinutes,
-    });
+    // 2. Update matching alertHistory record
+    if (alertId) {
+      // Direct lookup by document ID
+      const alertDoc = await db.collection('alertHistory').doc(alertId).get();
+      if (alertDoc.exists && alertDoc.data().status !== 'completed') {
+        const alertData = alertDoc.data();
+        const sentAt = alertData.sentAt?.toMillis
+          ? alertData.sentAt.toMillis()
+          : Date.parse(alertData.sentAt);
+        const alertResponseMinutes = sentAt
+          ? Math.round((nowMs - sentAt) / 60000)
+          : null;
 
-    // Also update the alertHistory record if one exists
-    const alertQuery = await db.collection('alertHistory')
-      .where('sku', '==', sku)
-      .where('status', '==', 'sent')
-      .limit(1)
-      .get();
+        await alertDoc.ref.update({
+          status: 'completed',
+          completedAt: now,
+          respondedAt: now,
+          respondedBy: userId || 'unknown',
+          responseTimeMinutes: alertResponseMinutes,
+        });
+        updated = true;
+        if (!responseTimeMinutes) responseTimeMinutes = alertResponseMinutes;
+      }
+    } else {
+      // Fallback: find by userId and/or sku in recent alerts
+      const alerts = await db.collection('alertHistory')
+        .orderBy('sentAt', 'desc')
+        .limit(10)
+        .get();
 
-    if (!alertQuery.empty) {
-      await alertQuery.docs[0].ref.update({
-        status: 'completed',
-        completedAt: now,
-        completedBy: userId || 'unknown',
-        responseTimeMinutes: responseTimeMinutes,
-      });
+      for (const doc of alerts.docs) {
+        const data = doc.data();
+        const matchUser = !userId || data.userId === userId;
+        const matchSku = !sku || data.sku === sku;
+        const notCompleted = data.status !== 'completed';
+
+        if (matchUser && matchSku && notCompleted) {
+          const sentAt = data.sentAt?.toMillis
+            ? data.sentAt.toMillis()
+            : Date.parse(data.sentAt);
+          const alertResponseMinutes = sentAt
+            ? Math.round((nowMs - sentAt) / 60000)
+            : null;
+
+          await doc.ref.update({
+            status: 'completed',
+            completedAt: now,
+            respondedAt: now,
+            respondedBy: userId || 'unknown',
+            responseTimeMinutes: alertResponseMinutes,
+          });
+          updated = true;
+          if (!responseTimeMinutes) responseTimeMinutes = alertResponseMinutes;
+          break; // Only update the most recent matching one
+        }
+      }
     }
 
-    // Notify the requester that part is on its way
-    if (data.requestedBy) {
-      const tokens = await getDeviceTokens(data.requestedBy);
+    // 3. Notify the requester that part is on its way
+    if (requestedBy && sku) {
+      const tokens = await getDeviceTokens(requestedBy);
       if (tokens.length > 0) {
         const workerName = userId || 'Someone';
         const message = {
           data: {
             alertType: 'reshelve',
             sku: sku,
-            shelfLocation: data.shelfLocation || '',
+            shelfLocation: '',
             action: 'reshelve',
             actionUrl: '/pro',
             timestamp: new Date().toISOString(),
-            message: `✅ ${sku} picked up by ${workerName}. Response time: ${responseTimeMinutes || '?'} min`,
+            message: `\u2705 ${sku} picked up by ${workerName}. Response time: ${responseTimeMinutes || '?'} min`,
           },
           notification: {
-            title: '✅ Part Request Completed',
+            title: '\u2705 Part Request Completed',
             body: `${sku} picked up by ${workerName}${responseTimeMinutes ? ` (${responseTimeMinutes} min)` : ''}`,
           },
         };
@@ -111,10 +149,11 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({
-      success: true,
-      sku: sku,
+      success: updated,
+      sku: sku || '',
       responseTimeMinutes: responseTimeMinutes,
       completedBy: userId || 'unknown',
+      message: updated ? 'Response recorded' : 'No matching alert found',
     });
   } catch (err) {
     console.error('Task complete error:', err);
@@ -130,5 +169,5 @@ async function getDeviceTokens(userId) {
   snapshot.forEach((doc) => {
     if (doc.data().token) tokens.push(doc.data().token);
   });
-  return tokens;
+  return [...new Set(tokens)];
 }

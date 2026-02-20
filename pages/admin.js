@@ -40,7 +40,12 @@ function getTimeAgo(date) {
   return d.toLocaleDateString();
 }
 
-function formatResponseTime(sentAt, completedAt) {
+function formatResponseTime(alert) {
+  // Prefer pre-calculated responseTimeMinutes if available
+  if (alert.responseTimeMinutes != null) return alert.responseTimeMinutes;
+  // Fall back to computing from timestamps
+  const sentAt = alert.sentAt;
+  const completedAt = alert.respondedAt || alert.completedAt;
   if (!sentAt || !completedAt) return null;
   let s = sentAt;
   let c = completedAt;
@@ -99,11 +104,15 @@ function StatusBadge({ status }) {
     completed: 'bg-green-600 text-green-100',
     pending: 'bg-gray-600 text-gray-200',
     acknowledged: 'bg-blue-600 text-blue-100',
+    expired: 'bg-orange-700 text-orange-100',
     failed: 'bg-red-700 text-red-100',
+  };
+  const labels = {
+    completed: 'done',
   };
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${styles[status] || 'bg-gray-600 text-gray-200'}`}>
-      {status}
+      {labels[status] || status}
     </span>
   );
 }
@@ -562,7 +571,7 @@ function NotificationLogSection() {
             </thead>
             <tbody>
               {filteredAlerts.map(alert => {
-                const responseMinutes = formatResponseTime(alert.sentAt, alert.completedAt);
+                const responseMinutes = formatResponseTime(alert);
                 const isSlowResponse = responseMinutes !== null && responseMinutes > 10;
 
                 return (

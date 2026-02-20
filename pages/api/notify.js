@@ -64,8 +64,25 @@ export async function sendWarehouseAlert(userId, alert) {
     },
   };
 
+  // Log alert first to get the document ID for response tracking
+  const alertId = await logAlert(userId, alert, { pending: true });
+  if (alertId) {
+    fcmMessage.data.alertId = alertId;
+  }
+
   const results = await sendToDevices(tokens, fcmMessage);
-  await logAlert(userId, alert, results);
+
+  // Update the log entry with send results
+  if (alertId) {
+    try {
+      await db.collection('alertHistory').doc(alertId).update({
+        result: results,
+      });
+    } catch (err) {
+      console.warn('Failed to update alert log with results:', err);
+    }
+  }
+
   return results;
 }
 
@@ -168,7 +185,7 @@ async function sendToDevices(tokens, message) {
 
 async function logAlert(userId, alert, result) {
   try {
-    await db.collection('alertHistory').add({
+    const docRef = await db.collection('alertHistory').add({
       userId,
       alertType:     alert.type,
       sku:           alert.sku || '',
@@ -182,8 +199,10 @@ async function logAlert(userId, alert, result) {
       responseTimeMinutes: null,
       escalationCount: 0,
     });
+    return docRef.id;
   } catch (err) {
     console.warn('Failed to log alert:', err);
+    return null;
   }
 }
 
