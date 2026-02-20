@@ -17,16 +17,17 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-const SUREDONE_USER = process.env.SUREDONE_USER;
-const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
-const SUREDONE_URL = process.env.SUREDONE_URL || 'https://api.suredone.com/v1';
+const SUREDONE_USER = process.env.SUREDONE_API_USER;
+const SUREDONE_TOKEN = process.env.SUREDONE_API_TOKEN;
+const SUREDONE_BASE = 'https://api.suredone.com/v1';
 
 // Configuration
-const BATCH_SIZE = 100;
+const PAGE_SIZE = 20; // SureDone always returns 20 per page, ignores limit param
 const REFRESH_QUEUE_SIZE = 20;
 const MIN_SCORE_THRESHOLD = 60;
 const MAX_HEALTH_WRITES = 500;
-const MAX_PAGES = 100; // Safety cap: 10,000 items
+const MAX_PAGES = 400; // Safety cap: 400 pages × 20 = 8,000 items
+const MAX_RUNTIME = 4.5 * 60 * 1000; // 4.5 minutes — stop before Vercel 5-min timeout
 
 export const config = {
   maxDuration: 300, // 5 minutes — crawling thousands of items takes time
@@ -47,18 +48,28 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'SureDone credentials not configured' });
   }
 
-  const startTime = Date.now();
+  const START_TIME = Date.now();
 
   try {
-    // Step 1: Pull all items from SureDone in batches
+    // Step 1: Pull all items from SureDone using /editor/items (paginated, 20 per page)
     let page = 1;
     let allResults = [];
     let hasMore = true;
     let fetchErrors = 0;
+    let timedOut = false;
+
+    console.log('Crawl started — fetching items from SureDone /editor/items...');
 
     while (hasMore && page <= MAX_PAGES) {
+      // Safety: stop before Vercel timeout
+      if (Date.now() - START_TIME > MAX_RUNTIME) {
+        console.warn(`Approaching timeout at page ${page}, stopping crawl with ${allResults.length} items`);
+        timedOut = true;
+        break;
+      }
+
       try {
-        const batch = await fetchSuredoneBatch(page, BATCH_SIZE);
+        const batch = await fetchSuredonePage(page);
 
         if (batch.length === 0) {
           hasMore = false;
@@ -92,13 +103,18 @@ export default async function handler(req, res) {
           });
         }
 
-        if (batch.length < BATCH_SIZE) {
+        if (page % 50 === 0) {
+          console.log(`Crawl progress: page ${page}, ${allResults.length} items scored (${Math.round((Date.now() - START_TIME) / 1000)}s elapsed)`);
+        }
+
+        // SureDone returns exactly 20 per page; fewer means last page
+        if (batch.length < PAGE_SIZE) {
           hasMore = false;
         } else {
           page++;
         }
       } catch (batchError) {
-        console.error(`Batch ${page} error:`, batchError.message);
+        console.error(`Page ${page} error:`, batchError.message);
         fetchErrors++;
         if (fetchErrors >= 3) {
           console.error('Too many fetch errors, stopping crawl');
@@ -108,6 +124,8 @@ export default async function handler(req, res) {
         }
       }
     }
+
+    console.log(`Crawl fetch complete: ${allResults.length} items from ${page} pages in ${Math.round((Date.now() - START_TIME) / 1000)}s`);
 
     if (allResults.length === 0) {
       return res.status(200).json({
@@ -215,7 +233,7 @@ export default async function handler(req, res) {
     }
 
     // Step 6: Save crawl history
-    const elapsedMs = Date.now() - startTime;
+    const elapsedMs = Date.now() - START_TIME;
     await db.collection('crawlHistory').add({
       completedAt: admin.firestore.FieldValue.serverTimestamp(),
       elapsedMs,
@@ -226,6 +244,8 @@ export default async function handler(req, res) {
       queuedForRefresh: queuedCount,
       topIssues,
       fetchErrors,
+      timedOut,
+      pagesProcessed: page,
     });
 
     // Step 7: Notify admin
@@ -241,7 +261,7 @@ export default async function handler(req, res) {
           userId: 'scott',
           type: 'retrieve',
           sku: '',
-          message: `Inventory crawl: ${allResults.length} listings scored. Avg: ${avgScore}/100. ${worstItems.length} need attention. ${queuedCount} queued for refresh.`,
+          message: `Inventory crawl: ${allResults.length} listings scored (${page} pages${timedOut ? ', timed out' : ''}). Avg: ${avgScore}/100. ${worstItems.length} need attention. ${queuedCount} queued for refresh.`,
         }),
       });
     } catch (e) {
@@ -251,6 +271,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       elapsedMs,
+      timedOut,
+      pagesProcessed: page,
       totalItems: allResults.length,
       averageScore: avgScore,
       gradeDistribution,
@@ -269,65 +291,37 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error('Crawl error:', err);
-    return res.status(500).json({ error: err.message, elapsedMs: Date.now() - startTime });
+    return res.status(500).json({ error: err.message, elapsedMs: Date.now() - START_TIME });
   }
 }
 
 // ============================================================
-// Fetch a batch of items from SureDone
-// Uses search/items with wildcard to get all items, paginated
+// Fetch a single page of items from SureDone /editor/items
+// Returns up to 20 items per page (SureDone fixed page size)
 // ============================================================
-async function fetchSuredoneBatch(page, limit) {
-  // SureDone search: use guid:* to match all items
-  // Pagination via page parameter in the search URL
-  const searchQuery = `guid:*`;
-  const url = `${SUREDONE_URL}/search/items/${encodeURIComponent(searchQuery)}?page=${page}&limit=${limit}`;
+async function fetchSuredonePage(page) {
+  const url = `${SUREDONE_BASE}/editor/items?page=${page}`;
 
   const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'x-auth-user': SUREDONE_USER,
-      'x-auth-token': SUREDONE_TOKEN,
+      'X-Auth-User': SUREDONE_USER,
+      'X-Auth-Token': SUREDONE_TOKEN,
     },
   });
 
   if (!response.ok) {
-    // Try alternative endpoint: /editor/items with pagination
-    const altUrl = `${SUREDONE_URL}/editor/items?page=${page}&limit=${limit}`;
-    const altResponse = await fetch(altUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-auth-user': SUREDONE_USER,
-        'x-auth-token': SUREDONE_TOKEN,
-      },
-    });
-
-    if (!altResponse.ok) {
-      throw new Error(`SureDone API error: ${altResponse.status}`);
-    }
-
-    return parseItemsFromResponse(await altResponse.json());
+    throw new Error(`SureDone API error: ${response.status}`);
   }
 
-  return parseItemsFromResponse(await response.json());
-}
+  const data = await response.json();
 
-function parseItemsFromResponse(data) {
-  if (!data || typeof data !== 'object') return [];
-
+  // SureDone returns items as numeric keys "1", "2", ... "20"
   const items = [];
-
-  if (Array.isArray(data)) {
-    for (const item of data) {
-      if (item && item.guid) items.push(item);
-    }
-  } else {
-    for (const key in data) {
-      if (data[key] && typeof data[key] === 'object' && data[key].guid) {
-        items.push(data[key]);
-      }
+  for (const key of Object.keys(data)) {
+    if (!isNaN(key) && data[key] && data[key].guid) {
+      items.push(data[key]);
     }
   }
 

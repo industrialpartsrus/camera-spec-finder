@@ -13,59 +13,29 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Query must be at least 2 characters' });
   }
 
-  const SUREDONE_USER = process.env.SUREDONE_USER;
-  const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
-  const SUREDONE_URL = process.env.SUREDONE_URL || 'https://api.suredone.com/v1';
+  const SUREDONE_USER = process.env.SUREDONE_API_USER;
+  const SUREDONE_TOKEN = process.env.SUREDONE_API_TOKEN;
+  const SUREDONE_BASE = 'https://api.suredone.com/v1';
 
   if (!SUREDONE_USER || !SUREDONE_TOKEN) {
     return res.status(500).json({ error: 'SureDone credentials not configured' });
   }
 
   try {
-    // Build SureDone search query
-    // Search across title, brand, mpn, and guid using wildcard
-    // SureDone search syntax: field:*term* for wildcard matching
-    // Use OR grouping to search multiple fields
-    let searchQuery = `title:*${query}* OR brand:*${query}* OR mpn:*${query}* OR guid:*${query}*`;
-
-    // Add filters
-    if (brand) searchQuery += ` brand:${brand}`;
-    if (inStock === 'true') searchQuery += ` stock:>0`;
-
-    const searchUrl = `${SUREDONE_URL}/search/items/${encodeURIComponent(searchQuery)}`;
+    // Use /editor/items/search/all/{keyword} — confirmed working via debug endpoint
+    const searchUrl = `${SUREDONE_BASE}/editor/items/search/all/${encodeURIComponent(query)}`;
 
     const response = await fetch(searchUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'x-auth-user': SUREDONE_USER,
-        'x-auth-token': SUREDONE_TOKEN,
+        'X-Auth-User': SUREDONE_USER,
+        'X-Auth-Token': SUREDONE_TOKEN,
       },
     });
 
     if (!response.ok) {
-      // If OR syntax doesn't work, fall back to simple title search
-      const fallbackQuery = `title:*${query}*` +
-        (brand ? ` brand:${brand}` : '') +
-        (inStock === 'true' ? ' stock:>0' : '');
-
-      const fallbackUrl = `${SUREDONE_URL}/search/items/${encodeURIComponent(fallbackQuery)}`;
-      const fallbackResponse = await fetch(fallbackUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-auth-user': SUREDONE_USER,
-          'x-auth-token': SUREDONE_TOKEN,
-        },
-      });
-
-      if (!fallbackResponse.ok) {
-        throw new Error(`SureDone API error: ${fallbackResponse.status}`);
-      }
-
-      const fallbackData = await fallbackResponse.json();
-      const results = parseResults(fallbackData, parseInt(limit));
-      return res.status(200).json({ success: true, count: results.length, results });
+      throw new Error(`SureDone API error: ${response.status}`);
     }
 
     const data = await response.json();
