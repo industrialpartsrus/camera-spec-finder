@@ -27,11 +27,9 @@ export default function PhotoEditor({
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState(photoUrl); // Track current image URL (changes after bg removal)
   const [showBgOptions, setShowBgOptions] = useState(false); // Show background removal options panel
-  const [bgOptions, setBgOptions] = useState({
-    autoCrop: true,
-    scale: '80%',
-    bgColor: 'white'
-  });
+  const [selectedBg, setSelectedBg] = useState('white');
+  const [autoCropCenter, setAutoCropCenter] = useState(true);
+  const [productScale, setProductScale] = useState(80);
 
   // Refs
   const editImageRef = useRef(null);                     // Preloaded source image
@@ -269,7 +267,11 @@ export default function PhotoEditor({
     setShowBgOptions(false); // Hide options panel
 
     try {
-      console.log('Removing background with options:', bgOptions);
+      console.log('Removing background with options:', {
+        background: selectedBg,
+        autoCrop: autoCropCenter,
+        scale: productScale
+      });
 
       // Convert current canvas to base64
       const tempCanvas = document.createElement('canvas');
@@ -288,7 +290,9 @@ export default function PhotoEditor({
         body: JSON.stringify({
           imageBase64: base64,
           view: viewName,
-          ...bgOptions // Pass auto-crop, scale, and background color options
+          background: selectedBg,
+          autoCrop: autoCropCenter,
+          scale: productScale
         })
       });
 
@@ -590,67 +594,92 @@ export default function PhotoEditor({
                 🖼️ Remove Background
               </button>
             ) : (
-              // Show options panel
-              <div className="border-2 border-green-300 rounded-lg p-3 bg-green-50">
-                {/* Auto-crop checkbox */}
-                <label className="flex items-center gap-2 mb-3">
+              // Show options panel with background templates
+              <div className="border-2 border-green-300 rounded-lg p-4 bg-green-50">
+                <h4 className="font-medium mb-3 text-sm">Background Options</h4>
+
+                {/* Background template selector */}
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {[
+                    { id: 'white', label: 'White', preview: '#ffffff' },
+                    { id: 'transparent', label: 'Transparent', preview: 'checkerboard' },
+                    { id: 'lightgray', label: 'Light Gray', preview: '#f5f5f5' },
+                    { id: 'warehouse', label: 'Warehouse', preview: '/bg-templates/warehouse-floor.jpg' },
+                    { id: 'studio', label: 'Studio', preview: '/bg-templates/studio-gradient.jpg' },
+                    { id: 'industrial', label: 'Industrial', preview: '/bg-templates/industrial.jpg' },
+                  ].map(bg => (
+                    <button
+                      key={bg.id}
+                      type="button"
+                      onClick={() => setSelectedBg(bg.id)}
+                      className={`p-2 rounded border-2 text-center text-xs transition ${
+                        selectedBg === bg.id
+                          ? 'border-green-500 bg-green-100 shadow-md'
+                          : 'border-gray-200 hover:border-gray-400 bg-white'
+                      }`}
+                    >
+                      {/* Preview swatch */}
+                      <div
+                        className="w-full h-12 rounded mb-1 border border-gray-300"
+                        style={{
+                          background: bg.preview.startsWith('#')
+                            ? bg.preview
+                            : bg.preview === 'checkerboard'
+                            ? 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 16px 16px'
+                            : `url(${bg.preview}) center/cover`
+                        }}
+                      />
+                      <span className="font-medium">{bg.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Auto-crop toggle */}
+                <label className="flex items-center gap-2 mb-3 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={bgOptions.autoCrop}
-                    onChange={(e) => setBgOptions(prev => ({ ...prev, autoCrop: e.target.checked }))}
-                    className="w-4 h-4"
+                    checked={autoCropCenter}
+                    onChange={(e) => setAutoCropCenter(e.target.checked)}
+                    className="w-4 h-4 rounded"
                   />
-                  <span className="text-sm font-medium">Auto-crop and center</span>
+                  <span className="text-sm font-medium">Auto-crop & center product</span>
                 </label>
 
-                {/* Scale dropdown */}
-                <div className="mb-3">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    Scale (subject fills frame):
-                  </label>
-                  <select
-                    value={bgOptions.scale}
-                    onChange={(e) => setBgOptions(prev => ({ ...prev, scale: e.target.value }))}
-                    disabled={!bgOptions.autoCrop}
-                    className="w-full px-2 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="60%">60% (lots of whitespace)</option>
-                    <option value="70%">70%</option>
-                    <option value="80%">80% (recommended)</option>
-                    <option value="90%">90%</option>
-                    <option value="100%">100% (fills entire frame)</option>
-                  </select>
-                </div>
-
-                {/* Background color dropdown */}
-                <div className="mb-3">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    Background:
-                  </label>
-                  <select
-                    value={bgOptions.bgColor}
-                    onChange={(e) => setBgOptions(prev => ({ ...prev, bgColor: e.target.value }))}
-                    className="w-full px-2 py-1 border rounded text-sm"
-                  >
-                    <option value="white">White (eBay standard)</option>
-                    <option value="transparent">Transparent (PNG)</option>
-                    <option value="lightgray">Light Gray</option>
-                  </select>
-                </div>
+                {/* Scale slider (only when auto-crop is on) */}
+                {autoCropCenter && (
+                  <div className="mb-4">
+                    <label className="text-sm text-gray-600 font-medium mb-1 block">
+                      Product scale: {productScale}%
+                    </label>
+                    <input
+                      type="range"
+                      min="50"
+                      max="95"
+                      step="5"
+                      value={productScale}
+                      onChange={(e) => setProductScale(parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>More whitespace</span>
+                      <span>Fills frame</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Action buttons */}
                 <div className="flex gap-2">
                   <button
                     onClick={handleRemoveBg}
                     disabled={isRemovingBg}
-                    className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
-                    {isRemovingBg ? 'Processing...' : '✓ Remove Background'}
+                    {isRemovingBg ? '⏳ Processing...' : '🖼️ Remove Background'}
                   </button>
                   <button
                     onClick={() => setShowBgOptions(false)}
                     disabled={isRemovingBg}
-                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 text-sm"
+                    className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-medium"
                   >
                     Cancel
                   </button>
@@ -658,12 +687,12 @@ export default function PhotoEditor({
               </div>
             )}
 
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-2">
               {!showBgOptions
-                ? 'Remove background, auto-crop, center, and scale product in one click.'
-                : bgOptions.autoCrop
-                  ? 'Product will be centered and scaled to fill the frame.'
-                  : 'Background removed without cropping or centering.'}
+                ? 'Choose from white, transparent, or custom background templates.'
+                : autoCropCenter
+                ? `Product will be centered and scaled to ${productScale}% of the frame.`
+                : 'Background removed without cropping or centering.'}
             </p>
           </div>
 

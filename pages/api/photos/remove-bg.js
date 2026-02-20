@@ -12,10 +12,10 @@ export default async function handler(req, res) {
   const {
     imageBase64,
     view,
-    // Enhanced options for auto-crop + center + scale
+    // Enhanced options for auto-crop + center + scale + templates
+    background = 'white',  // 'white', 'transparent', 'lightgray', 'warehouse', 'studio', 'industrial'
     autoCrop = true,
-    scale = '80%',
-    bgColor = 'white'
+    scale = 80  // 50-95 as integer
   } = req.body;
 
   if (!imageBase64) {
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log(`Processing background removal for ${view || 'photo'} (crop: ${autoCrop}, scale: ${scale}, bg: ${bgColor})...`);
+    console.log(`Processing background removal for ${view || 'photo'} (crop: ${autoCrop}, scale: ${scale}%, bg: ${background})...`);
 
     // Call Remove.bg API with enhanced parameters
     const formData = new FormData();
@@ -45,16 +45,43 @@ export default async function handler(req, res) {
     if (autoCrop) {
       formData.append('crop', 'true');
       formData.append('crop_margin', '10%'); // Small margin around subject
-      formData.append('scale', scale); // Subject fills X% of frame
+      formData.append('scale', `${scale}%`); // Subject fills X% of frame
       formData.append('position', 'center'); // Center the product
     }
 
-    // Background color handling
-    if (bgColor === 'transparent') {
-      formData.append('format', 'png'); // PNG for transparency
+    // Background handling: solid colors, transparent, or custom templates
+    const templateBackgrounds = ['warehouse', 'studio', 'industrial'];
+
+    if (background === 'transparent') {
+      // Transparent PNG
+      formData.append('format', 'png');
+    } else if (background === 'white') {
+      // White background
+      formData.append('format', 'png');
+      formData.append('bg_color', 'white');
+    } else if (background === 'lightgray') {
+      // Light gray background
+      formData.append('format', 'png');
+      formData.append('bg_color', 'f5f5f5');
+    } else if (templateBackgrounds.includes(background)) {
+      // Custom background template using bg_image_url
+      const templateMap = {
+        'warehouse': '/bg-templates/warehouse-floor.jpg',
+        'studio': '/bg-templates/studio-gradient.jpg',
+        'industrial': '/bg-templates/industrial.jpg',
+      };
+
+      // Remove.bg needs a full URL, not a relative path
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://camera-spec-finder.vercel.app';
+      const bgImageUrl = baseUrl + templateMap[background];
+
+      formData.append('format', 'png');
+      formData.append('bg_image_url', bgImageUrl);
+      console.log(`Using custom background template: ${bgImageUrl}`);
     } else {
-      formData.append('format', 'png'); // Still get PNG from API
-      formData.append('bg_color', bgColor); // white, or hex like 'f0f0f0'
+      // Fallback to white
+      formData.append('format', 'png');
+      formData.append('bg_color', 'white');
     }
 
     const response = await fetch('https://api.remove.bg/v1.0/removebg', {
@@ -83,26 +110,32 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get the processed image as buffer (PNG from remove.bg, possibly with bg_color already applied)
+    // Get the processed image as buffer (PNG from remove.bg, possibly with bg_color or bg_image_url already applied)
     const imageBuffer = await response.arrayBuffer();
     const processedBuffer = Buffer.from(imageBuffer);
 
-    // If transparent was requested, return PNG as-is
-    // Otherwise, flatten to JPEG (Remove.bg already applied bg_color, but ensure solid background)
+    // Determine output format based on background selection
     let finalBuffer;
     let mimeType;
 
-    if (bgColor === 'transparent') {
-      // Return PNG with transparency
+    if (background === 'transparent') {
+      // Return PNG with transparency (no flattening)
       finalBuffer = processedBuffer;
       mimeType = 'image/png';
+    } else if (['warehouse', 'studio', 'industrial'].includes(background)) {
+      // Custom template backgrounds - Remove.bg already composited, return as PNG
+      // Convert to JPEG for smaller file size (templates are already opaque)
+      finalBuffer = await sharp(processedBuffer)
+        .jpeg({ quality: 95 })
+        .toBuffer();
+      mimeType = 'image/jpeg';
     } else {
-      // Flatten to solid background and convert to JPEG for smaller file size
-      // Remove.bg should have already applied bg_color, but we flatten to be sure
-      const bgRgb = bgColor === 'white'
+      // Solid color backgrounds (white, lightgray) - flatten to JPEG for smaller file size
+      // Remove.bg should have already applied bg_color, but we flatten to ensure solid background
+      const bgRgb = background === 'white'
         ? { r: 255, g: 255, b: 255 }
-        : bgColor === 'lightgray'
-        ? { r: 240, g: 240, b: 240 }
+        : background === 'lightgray'
+        ? { r: 245, g: 245, b: 245 }
         : { r: 255, g: 255, b: 255 }; // default white
 
       finalBuffer = await sharp(processedBuffer)
@@ -115,7 +148,7 @@ export default async function handler(req, res) {
     // Convert to base64
     const processedBase64 = finalBuffer.toString('base64');
 
-    console.log(`Background removed for ${view || 'photo'} (${Math.round(processedBase64.length / 1024)}KB ${mimeType} with ${bgColor} background)`);
+    console.log(`Background removed for ${view || 'photo'} (${Math.round(processedBase64.length / 1024)}KB ${mimeType} with ${background} background)`);
 
     return res.status(200).json({
       success: true,
