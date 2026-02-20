@@ -7,6 +7,10 @@ import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Uplo
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import InventoryCheckAlert from '../components/InventoryCheckAlert';
+import NotificationCenter from '../components/NotificationCenter';
+import app from '../firebase';
+import { getCurrentUser } from '../lib/users';
+import PartRequestModal from '../components/PartRequestModal';
 import { normalizeCoilVoltage, STANDARD_COIL_VOLTAGES } from '../lib/coil-voltage-normalizer';
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), {
@@ -1577,6 +1581,7 @@ export default function ProListingBuilder() {
   const [isNameSet, setIsNameSet] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [showPartRequest, setShowPartRequest] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState({});
   const [coilVoltageVerified, setCoilVoltageVerified] = useState({});
   const [emitterReceiverStatus, setEmitterReceiverStatus] = useState({});
@@ -2869,20 +2874,27 @@ export default function ProListingBuilder() {
               <span className="text-green-600 ml-2">● Live Sync</span>
             </p>
           </div>
-          {/* Toggle Compare Panel Button */}
-          {selected?.isEditingExisting && (
-            <button
-              onClick={() => setShowComparePanel(!showComparePanel)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                showComparePanel 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <ExternalLink className="w-4 h-4" />
-              {showComparePanel ? 'Hide Comparison' : 'Show Comparison'}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            <NotificationCenter
+              firebaseApp={app}
+              userId={getCurrentUser()?.id || userName?.toLowerCase() || 'unknown'}
+              deviceName={`${userName || 'User'}'s Pro Builder`}
+            />
+            {/* Toggle Compare Panel Button */}
+            {selected?.isEditingExisting && (
+              <button
+                onClick={() => setShowComparePanel(!showComparePanel)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                  showComparePanel
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <ExternalLink className="w-4 h-4" />
+                {showComparePanel ? 'Hide Comparison' : 'Show Comparison'}
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex gap-2 flex-wrap">
           <div className="px-3 py-2 bg-blue-50 rounded-lg text-sm">Total: <span className="font-bold text-blue-800">{stats.total}</span></div>
@@ -4188,6 +4200,14 @@ export default function ProListingBuilder() {
                       </>
                     );
                   })()}
+
+                  {/* Request Part Button */}
+                  <button
+                    onClick={() => setShowPartRequest(true)}
+                    className="w-full mt-3 px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-semibold text-base flex items-center justify-center gap-2"
+                  >
+                    📦 Request Part from Warehouse
+                  </button>
                 </div>
               )}
 
@@ -4254,6 +4274,15 @@ export default function ProListingBuilder() {
             }}
             onCancel={() => setEditingPhoto(null)}
             showWatermarkOption={true}
+          />
+        )}
+
+        {/* Part Request Modal */}
+        {showPartRequest && selected && (
+          <PartRequestModal
+            item={selected}
+            currentUser={getCurrentUser() || { id: userName?.toLowerCase(), name: userName }}
+            onClose={() => setShowPartRequest(false)}
           />
         )}
       </div>

@@ -5,6 +5,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Edit3, LogOut, Plus, Minus, Check, X, AlertTriangle, Package, RefreshCw } from 'lucide-react';
 import { verifyUser, getActiveUsers } from '../lib/auth';
+import NotificationCenter from '../components/NotificationCenter';
+import app from '../firebase';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
 
@@ -653,13 +655,20 @@ export default function WarehouseScanner() {
               <p className="text-sm text-gray-600">Logged in as</p>
               <p className="text-xl font-bold text-gray-900">{currentUser?.username}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-900 rounded-lg font-semibold hover:bg-red-200 active:bg-red-300 transition"
-            >
-              <LogOut size={20} />
-              Log Out
-            </button>
+            <div className="flex items-center gap-3">
+              <NotificationCenter
+                firebaseApp={app}
+                userId={currentUser?.id || currentUser?.username?.toLowerCase() || 'unknown'}
+                deviceName={`${currentUser?.username || 'User'}'s Scanner`}
+              />
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-900 rounded-lg font-semibold hover:bg-red-200 active:bg-red-300 transition"
+              >
+                <LogOut size={20} />
+                Log Out
+              </button>
+            </div>
           </div>
 
           {/* Mode Toggle */}

@@ -2,6 +2,31 @@
   "functions": {
     "pages/api/photos/upload-simple.js": {
       "maxDuration": 30
+    },
+    "pages/api/notify.js": {
+      "maxDuration": 30
+    },
+    "pages/api/tasks/escalate.js": {
+      "maxDuration": 30
+    },
+    "pages/api/tasks/morning-reminder.js": {
+      "maxDuration": 30
+    },
+    "pages/api/tasks/complete.js": {
+      "maxDuration": 10
+    },
+    "pages/api/tasks/snooze.js": {
+      "maxDuration": 10
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/tasks/escalate",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/tasks/morning-reminder",
+      "schedule": "15 13 * * 1-5"
+    }
+  ]
 }

@@ -8,6 +8,9 @@ import { verifyUser, getActiveUsers } from '../lib/auth';
 import { storage, db } from '../firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { collection, doc, updateDoc, getDoc, Timestamp, addDoc } from 'firebase/firestore';
+import NotificationCenter from '../components/NotificationCenter';
+import PartRequestModal from '../components/PartRequestModal';
+import app from '../firebase';
 
 const CONDITION_OPTIONS = [
   { value: 'New', label: 'New', color: 'bg-green-100 border-green-500 text-green-900' },
@@ -68,6 +71,7 @@ export default function PhotoStation() {
   const [queueItems, setQueueItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isLoadingQueue, setIsLoadingQueue] = useState(false);
+  const [showPartRequest, setShowPartRequest] = useState(false);
 
   // Photo capture state
   const [capturedPhotos, setCapturedPhotos] = useState({
@@ -950,13 +954,20 @@ export default function PhotoStation() {
               <p className="text-sm text-gray-600">Logged in as</p>
               <p className="text-xl font-bold text-gray-900">{currentUser?.username}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-900 rounded-lg font-semibold hover:bg-red-200 active:bg-red-300 transition"
-            >
-              <LogOut size={20} />
-              Log Out
-            </button>
+            <div className="flex items-center gap-3">
+              <NotificationCenter
+                firebaseApp={app}
+                userId={currentUser?.id || currentUser?.username?.toLowerCase() || 'unknown'}
+                deviceName={`${currentUser?.username || 'User'}'s Photo Station`}
+              />
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-900 rounded-lg font-semibold hover:bg-red-200 active:bg-red-300 transition"
+              >
+                <LogOut size={20} />
+                Log Out
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between mb-6">
@@ -1043,6 +1054,12 @@ export default function PhotoStation() {
               {selectedItem.brand} {selectedItem.partNumber}
             </p>
             <p className="text-sm text-gray-600">📍 Shelf: {selectedItem.shelf}</p>
+            <button
+              onClick={() => setShowPartRequest(true)}
+              className="mt-2 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600"
+            >
+              📦 Request Part
+            </button>
           </div>
 
           {/* Progress bar */}
@@ -1437,6 +1454,15 @@ export default function PhotoStation() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Part Request Modal */}
+      {showPartRequest && selectedItem && (
+        <PartRequestModal
+          item={selectedItem}
+          currentUser={currentUser}
+          onClose={() => setShowPartRequest(false)}
+        />
       )}
     </div>
   );
