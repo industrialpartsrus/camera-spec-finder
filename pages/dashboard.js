@@ -9,7 +9,7 @@ import app from '../firebase';
 import {
   collection, query, where, onSnapshot, doc, getDocs, orderBy, limit, Timestamp
 } from 'firebase/firestore';
-import { getCurrentUser, setCurrentUser, TEAM_MEMBERS, getTeamMemberById } from '../lib/users';
+import { getCurrentUser, setCurrentUser, TEAM_MEMBERS, getTeamMemberById, isAdmin } from '../lib/users';
 import NotificationCenter from '../components/NotificationCenter';
 import UserPicker from '../components/UserPicker';
 
@@ -1014,6 +1014,35 @@ export default function Dashboard() {
           <link rel="icon" href="/favicon-dashboard.png" />
         </Head>
         <UserPicker title="📊 Dashboard" subtitle="Select your name to continue" onSelect={(user) => setCurrentUserState(user)} />
+      </>
+    );
+  }
+
+  // ============================================================
+  // ACCESS CONTROL: Admin only
+  // ============================================================
+  if (!isAdmin(currentUserState)) {
+    return (
+      <>
+        <Head>
+          <title>{'📊 Dashboard — IPRU'}</title>
+          <link rel="icon" href="/favicon-dashboard.png" />
+        </Head>
+        <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-6">
+          <div className="max-w-md text-center">
+            <div className="text-6xl mb-4">🔒</div>
+            <h1 className="text-2xl font-bold mb-2">Access Restricted</h1>
+            <p className="text-gray-400 mb-6">
+              The Dashboard is only accessible to administrators.
+            </p>
+            <a
+              href="/pro"
+              className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
+            >
+              ← Back to Pro Builder
+            </a>
+          </div>
+        </div>
       </>
     );
   }

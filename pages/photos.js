@@ -4,15 +4,15 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
-import { Camera, Check, X, LogOut, RefreshCw, Package, AlertCircle, ArrowLeft, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
-import { verifyUser, getActiveUsers } from '../lib/auth';
+import { Camera, Check, X, RefreshCw, Package, AlertCircle, ArrowLeft, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
 import { storage, db } from '../firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { collection, doc, updateDoc, getDoc, Timestamp, addDoc } from 'firebase/firestore';
 import NotificationCenter from '../components/NotificationCenter';
 import PartRequestModal from '../components/PartRequestModal';
+import UserPicker from '../components/UserPicker';
 import app from '../firebase';
-import { setCurrentUser as setGlobalUser, getTeamMemberById } from '../lib/users';
+import { getCurrentUser, clearCurrentUser } from '../lib/users';
 
 const CONDITION_OPTIONS = [
   { value: 'New', label: 'New', color: 'bg-green-100 border-green-500 text-green-900' },
@@ -63,11 +63,8 @@ const PHOTO_STEPS = [
 
 export default function PhotoStation() {
   // Auth state
-  const [screen, setScreen] = useState('login'); // login, queue, capture, review, uploading, complete
+  const [screen, setScreen] = useState('queue'); // queue, capture, review, uploading, complete
   const [currentUser, setCurrentUser] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState(null);
-  const [pinInput, setPinInput] = useState('');
 
   // Queue state
   const [queueItems, setQueueItems] = useState([]);
@@ -106,85 +103,32 @@ export default function PhotoStation() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Load users on mount
+  // Load current user on mount
   useEffect(() => {
-    loadUsers();
-    checkStoredLogin();
+    // Clean up old login keys
+    localStorage.removeItem('photos_user');
+
+    // Load current user from unified system
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      loadQueue();
+    }
   }, []);
 
-  const loadUsers = async () => {
-    const activeUsers = await getActiveUsers();
-    setUsers(activeUsers);
-  };
-
-  const checkStoredLogin = async () => {
-    const storedUsername = localStorage.getItem('photos_user');
-    if (storedUsername) {
-      const activeUsers = await getActiveUsers();
-      const user = activeUsers.find(u => u.username === storedUsername);
-      if (user) {
-        setCurrentUser(user);
-        loadQueue();
-        setScreen('queue');
-      } else {
-        // User no longer active, clear storage
-        localStorage.removeItem('photos_user');
-      }
-    }
-  };
-
   // ============================================
-  // LOGIN SCREEN
+  // USER LOGIN/LOGOUT
   // ============================================
 
-  const handleUserSelect = (userId) => {
-    setSelectedUserId(userId);
-    setPinInput('');
+  const handleUserSelect = (user) => {
+    setCurrentUser(user);
+    loadQueue();
   };
 
-  const handlePinDigit = (digit) => {
-    const newPin = pinInput + digit;
-    setPinInput(newPin);
-
-    // Auto-submit when 4 digits entered
-    if (newPin.length === 4) {
-      handlePinSubmit(newPin);
-    }
-  };
-
-  const handlePinBackspace = () => {
-    setPinInput(pinInput.slice(0, -1));
-  };
-
-  const handlePinSubmit = async (pin) => {
-    const selectedUser = users.find(u => u.id === selectedUserId);
-    if (!selectedUser) return;
-
-    const result = await verifyUser(selectedUser.username, pin);
-
-    if (result.success) {
-      setCurrentUser(result.user);
-      setPinInput('');
-      setSelectedUserId(null);
-      loadQueue();
-      setScreen('queue');
-      // Save to localStorage for persistent login
-      localStorage.setItem('photos_user', result.user.username);
-      // Also set global user identity for notifications
-      const teamMember = getTeamMemberById(result.user.username?.toLowerCase());
-      if (teamMember) setGlobalUser(teamMember);
-    } else {
-      alert(result.error || 'Incorrect PIN');
-      setPinInput('');
-    }
-  };
-
-  const handleLogout = () => {
+  const handleSwitchUser = () => {
+    clearCurrentUser();
     setCurrentUser(null);
-    setScreen('login');
     resetAllState();
-    // Clear stored login
-    localStorage.removeItem('photos_user');
   };
 
   // ============================================
@@ -884,98 +828,40 @@ export default function PhotoStation() {
         onChange={handleBulkUpload}
       />
 
-      {/* LOGIN SCREEN */}
-      {screen === 'login' && (
-        <div className="p-6">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">📷 Photo Station</h1>
-            <p className="text-gray-600">Select your name to begin</p>
-          </div>
-
-          {selectedUserId === null ? (
-            <div className="space-y-4">
-              {users.map(user => (
-                <button
-                  key={user.id}
-                  onClick={() => handleUserSelect(user.id)}
-                  className="w-full p-6 bg-white border-2 border-gray-300 rounded-xl text-xl font-semibold text-gray-900 hover:bg-blue-50 hover:border-blue-500 active:bg-blue-100 transition"
-                >
-                  {user.username}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl p-6">
-              <h2 className="text-2xl font-bold text-center mb-6">Enter PIN</h2>
-              <div className="flex justify-center mb-6">
-                <div className="flex gap-3">
-                  {[0, 1, 2, 3].map(i => (
-                    <div
-                      key={i}
-                      className={`w-16 h-16 rounded-lg border-4 flex items-center justify-center text-3xl font-bold ${
-                        pinInput.length > i ? 'border-blue-500 bg-blue-100 text-blue-900' : 'border-gray-300 bg-gray-50 text-gray-400'
-                      }`}
-                    >
-                      {pinInput.length > i ? '●' : ''}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(digit => (
-                  <button
-                    key={digit}
-                    onClick={() => handlePinDigit(digit.toString())}
-                    className="h-20 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg text-3xl font-bold text-gray-900 transition"
-                  >
-                    {digit}
-                  </button>
-                ))}
-                <button
-                  onClick={handlePinBackspace}
-                  className="h-20 bg-red-200 hover:bg-red-300 active:bg-red-400 rounded-lg text-xl font-bold text-red-900 transition"
-                >
-                  ← Del
-                </button>
-                <button
-                  onClick={() => handlePinDigit('0')}
-                  className="h-20 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg text-3xl font-bold text-gray-900 transition"
-                >
-                  0
-                </button>
-                <button
-                  onClick={() => setSelectedUserId(null)}
-                  className="h-20 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg text-lg font-bold text-gray-900 transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* User Picker Modal - shows when no user selected */}
+      {!currentUser && (
+        <UserPicker
+          onSelect={handleUserSelect}
+          title="📷 Photo Station"
+          subtitle="Select your name to begin"
+        />
       )}
 
       {/* QUEUE SCREEN */}
-      {screen === 'queue' && (
+      {screen === 'queue' && currentUser && (
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <p className="text-sm text-gray-600">Logged in as</p>
-              <p className="text-xl font-bold text-gray-900">{currentUser?.username}</p>
+            <div className="flex items-center gap-2">
+              <span
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: currentUser.color }}
+              />
+              <div>
+                <p className="text-sm text-gray-600">Logged in as</p>
+                <p className="text-xl font-bold text-gray-900">{currentUser.name}</p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <NotificationCenter
                 firebaseApp={app}
-                userId={currentUser?.id || currentUser?.username?.toLowerCase() || 'unknown'}
-                deviceName={`${currentUser?.username || 'User'}'s Photo Station`}
+                userId={currentUser.id}
+                deviceName={`${currentUser.name}'s Photo Station`}
               />
               <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-900 rounded-lg font-semibold hover:bg-red-200 active:bg-red-300 transition"
+                onClick={handleSwitchUser}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 active:bg-gray-400 transition text-sm"
               >
-                <LogOut size={20} />
-                Log Out
+                Switch User
               </button>
             </div>
           </div>
