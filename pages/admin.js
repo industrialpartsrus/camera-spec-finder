@@ -595,6 +595,237 @@ function NotificationLogSection() {
 }
 
 // ============================================================
+// SECTION 4: INVENTORY HEALTH CRAWLER
+// ============================================================
+function InventoryCrawlSection() {
+  const [crawling, setCrawling] = useState(false);
+  const [crawlResults, setCrawlResults] = useState(null);
+  const [apiKey, setApiKey] = useState('');
+  const [lastCrawl, setLastCrawl] = useState(null);
+
+  // Load last crawl on mount
+  useEffect(() => {
+    const loadLastCrawl = async () => {
+      try {
+        const q = query(
+          collection(db, 'crawlHistory'),
+          orderBy('completedAt', 'desc'),
+          limit(1)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          setLastCrawl({ id: snap.docs[0].id, ...snap.docs[0].data() });
+        }
+      } catch (e) {
+        console.warn('Failed to load last crawl:', e);
+      }
+    };
+    loadLastCrawl();
+  }, []);
+
+  const runCrawl = async () => {
+    if (!apiKey.trim()) {
+      alert('Enter API key to authorize the crawl');
+      return;
+    }
+    setCrawling(true);
+    setCrawlResults(null);
+    try {
+      const res = await fetch('/api/inventory/crawl', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      });
+      const data = await res.json();
+      setCrawlResults(data);
+      if (data.success) setLastCrawl(data);
+    } catch (err) {
+      setCrawlResults({ error: err.message });
+    }
+    setCrawling(false);
+  };
+
+  const gradeColor = {
+    A: 'bg-green-500', B: 'bg-blue-500', C: 'bg-yellow-500', D: 'bg-orange-500', F: 'bg-red-500'
+  };
+
+  return (
+    <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
+      <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <span className="text-purple-400">{'🔍'}</span> Inventory Health Crawler
+      </h2>
+
+      {/* Last crawl info */}
+      {lastCrawl && !crawlResults && (
+        <div className="bg-gray-700/50 rounded-lg p-3 mb-4 text-sm">
+          <div className="text-gray-400 mb-1">Last crawl:</div>
+          <div className="flex flex-wrap gap-4 text-white">
+            <span><strong>{lastCrawl.totalItems?.toLocaleString()}</strong> items</span>
+            <span>Avg score: <strong>{lastCrawl.averageScore}/100</strong></span>
+            <span className="text-red-400"><strong>{lastCrawl.itemsBelowThreshold}</strong> below threshold</span>
+            <span className="text-blue-400"><strong>{lastCrawl.queuedForRefresh}</strong> queued</span>
+          </div>
+        </div>
+      )}
+
+      {/* API Key + Run button */}
+      <div className="flex gap-2 mb-4">
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="API Key (INTERNAL_API_KEY)"
+          className="flex-1 px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500"
+        />
+        <button
+          onClick={runCrawl}
+          disabled={crawling}
+          className={`px-5 py-2 rounded-lg font-semibold text-sm text-white transition ${
+            crawling ? 'bg-gray-600 cursor-wait' : 'bg-purple-600 hover:bg-purple-700'
+          }`}
+        >
+          {crawling ? 'Crawling...' : 'Run Crawl'}
+        </button>
+      </div>
+
+      {crawling && (
+        <div className="text-center py-8 text-gray-400">
+          <div className="text-3xl mb-2 animate-pulse">{'🔄'}</div>
+          <div className="text-sm">Crawling SureDone inventory... This may take a few minutes.</div>
+        </div>
+      )}
+
+      {/* Crawl results */}
+      {crawlResults && (
+        <div className="space-y-4">
+          {crawlResults.error ? (
+            <div className="bg-red-900/30 border border-red-800 rounded-lg p-3 text-red-300 text-sm">
+              Error: {crawlResults.error}
+            </div>
+          ) : (
+            <>
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-white">{crawlResults.totalItems?.toLocaleString()}</div>
+                  <div className="text-xs text-gray-400">Total Items</div>
+                </div>
+                <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-white">{crawlResults.averageScore}<span className="text-sm text-gray-400">/100</span></div>
+                  <div className="text-xs text-gray-400">Avg Score</div>
+                </div>
+                <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-red-400">{crawlResults.itemsBelowThreshold}</div>
+                  <div className="text-xs text-gray-400">Need Attention</div>
+                </div>
+                <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-blue-400">{crawlResults.queuedForRefresh}</div>
+                  <div className="text-xs text-gray-400">Queued for Refresh</div>
+                </div>
+              </div>
+
+              {/* Grade distribution */}
+              {crawlResults.gradeDistribution && (
+                <div className="bg-gray-700/50 rounded-lg p-3">
+                  <div className="text-sm font-semibold text-gray-300 mb-2">Grade Distribution</div>
+                  <div className="flex gap-1 h-8 rounded-lg overflow-hidden">
+                    {['A', 'B', 'C', 'D', 'F'].map(grade => {
+                      const count = crawlResults.gradeDistribution[grade] || 0;
+                      const pct = crawlResults.totalItems > 0
+                        ? (count / crawlResults.totalItems) * 100
+                        : 0;
+                      if (pct < 1) return null;
+                      return (
+                        <div
+                          key={grade}
+                          className={`${gradeColor[grade]} flex items-center justify-center text-white text-xs font-bold`}
+                          style={{ width: `${pct}%`, minWidth: pct > 3 ? '30px' : '0' }}
+                          title={`${grade}: ${count} (${Math.round(pct)}%)`}
+                        >
+                          {pct > 5 ? `${grade}: ${count}` : grade}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-3 mt-2 text-xs text-gray-400 flex-wrap">
+                    {['A', 'B', 'C', 'D', 'F'].map(grade => (
+                      <span key={grade}>
+                        <span className={`inline-block w-2 h-2 rounded-full ${gradeColor[grade]} mr-1`}></span>
+                        {grade}: {(crawlResults.gradeDistribution[grade] || 0).toLocaleString()}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Top issues */}
+              {crawlResults.topIssues?.length > 0 && (
+                <div className="bg-gray-700/50 rounded-lg p-3">
+                  <div className="text-sm font-semibold text-gray-300 mb-2">Top Issues</div>
+                  <div className="space-y-1">
+                    {crawlResults.topIssues.map((issue, i) => (
+                      <div key={i} className="flex justify-between text-sm">
+                        <span className="text-gray-300">{issue.message}</span>
+                        <span className="text-gray-500 font-mono">{issue.count.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Worst items */}
+              {crawlResults.worstItems?.length > 0 && (
+                <div className="bg-gray-700/50 rounded-lg p-3">
+                  <div className="text-sm font-semibold text-gray-300 mb-2">Top 10 Worst Listings</div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-gray-500 border-b border-gray-600">
+                          <th className="text-left py-1 pr-3">SKU</th>
+                          <th className="text-left py-1 pr-3">Title</th>
+                          <th className="text-center py-1 pr-3">Score</th>
+                          <th className="text-center py-1 pr-3">Grade</th>
+                          <th className="text-right py-1 pr-3">Price</th>
+                          <th className="text-left py-1">Issues</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {crawlResults.worstItems.map((item, i) => (
+                          <tr key={i} className="border-b border-gray-700/50 hover:bg-gray-600/30">
+                            <td className="py-1.5 pr-3 font-mono text-blue-400">{item.sku}</td>
+                            <td className="py-1.5 pr-3 text-gray-300 max-w-[200px] truncate">{item.title}</td>
+                            <td className="py-1.5 pr-3 text-center font-bold text-red-400">{item.score}</td>
+                            <td className="py-1.5 pr-3 text-center">
+                              <span className={`px-1.5 py-0.5 rounded text-white text-xs font-bold ${gradeColor[item.grade]}`}>
+                                {item.grade}
+                              </span>
+                            </td>
+                            <td className="py-1.5 pr-3 text-right text-green-400">${item.price}</td>
+                            <td className="py-1.5 text-gray-400">{item.issues?.slice(0, 3).join(', ')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Elapsed time */}
+              {crawlResults.elapsedMs && (
+                <div className="text-xs text-gray-500 text-center">
+                  Completed in {(crawlResults.elapsedMs / 1000).toFixed(1)}s
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // MAIN: Admin Page
 // ============================================================
 export default function AdminPage() {
@@ -706,6 +937,9 @@ export default function AdminPage() {
 
           {/* Section 3: Notification Log */}
           <NotificationLogSection />
+
+          {/* Section 4: Inventory Health Crawler */}
+          <InventoryCrawlSection />
         </main>
 
         {/* Footer */}
