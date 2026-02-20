@@ -23,6 +23,9 @@
     },
     "pages/api/inventory/crawl.js": {
       "maxDuration": 300
+    },
+    "pages/api/inventory/weekly-report.js": {
+      "maxDuration": 30
     }
   },
   "crons": [
@@ -41,6 +44,10 @@
     {
       "path": "/api/inventory/crawl",
       "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/inventory/weekly-report",
+      "schedule": "0 1 * * 0"
     }
   ]
 }

@@ -6,7 +6,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, Download, RefreshCw, ChevronDown, ChevronUp, ExternalLink, ArrowRight, Check } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, increment } from 'firebase/firestore';
 import InventoryCheckAlert from '../components/InventoryCheckAlert';
 import NotificationCenter from '../components/NotificationCenter';
 import app from '../firebase';
@@ -20,6 +20,7 @@ const ReactQuill = dynamic(() => import('react-quill'), {
   loading: () => <div className="h-64 border rounded-lg flex items-center justify-center text-gray-400">Loading editor...</div>
 });
 import PhotoEditor from '../components/PhotoEditor';
+import { scoreListingQuality } from '../lib/listingScorer';
 
 const QUILL_MODULES = {
   toolbar: [
@@ -1613,6 +1614,10 @@ export default function ProListingBuilder() {
   const [showComparePanel, setShowComparePanel] = useState(false);
   const [existingListingData, setExistingListingData] = useState(null);
 
+  // Refresh queue state
+  const [refreshComparison, setRefreshComparison] = useState(null); // { sku, before, after, fixed }
+  const [isRelisting, setIsRelisting] = useState(false);
+
   // Debounced local state for text inputs (prevents cursor jumping from Firestore writes)
   const [localFields, setLocalFields] = useState({});
 
@@ -2749,8 +2754,47 @@ export default function ProListingBuilder() {
         if (!response.ok || !responseData.success) {
           throw new Error(responseData.error || 'Failed to update listing');
         }
-        alert(`✅ Successfully updated in SureDone!\n\nSKU: ${item.originalSku}\n\n${item.title}`);
-        
+        // If this was a refresh item, show before/after score comparison
+        if (item.refreshSource) {
+          try {
+            // Re-fetch the updated item from SureDone to re-score
+            const freshRes = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(item.originalSku)}`);
+            const freshData = await freshRes.json();
+            if (freshData.success && freshData.item) {
+              const afterScore = scoreListingQuality(freshData.item);
+              const beforeScore = item.refreshOriginalScore || 0;
+              const beforeGrade = beforeScore >= 80 ? 'A' : beforeScore >= 60 ? 'B' : beforeScore >= 40 ? 'C' : beforeScore >= 20 ? 'D' : 'F';
+              // Figure out what was fixed
+              const beforeIssues = (item.qualityIssues || []).map(i => i.message);
+              const afterIssues = afterScore.issues.map(i => i.message);
+              const fixed = beforeIssues.filter(msg => !afterIssues.includes(msg));
+
+              // Update inventoryHealth with refresh info
+              await updateDoc(doc(db, 'inventoryHealth', item.originalSku), {
+                lastRefreshed: serverTimestamp(),
+                refreshCount: increment(1),
+                previousScore: beforeScore,
+                currentScore: afterScore.score,
+              }).catch(() => {});
+
+              setRefreshComparison({
+                sku: item.originalSku,
+                title: item.title,
+                before: { score: beforeScore, grade: beforeGrade },
+                after: { score: afterScore.score, grade: afterScore.grade },
+                fixed,
+              });
+            } else {
+              alert(`✅ Successfully updated in SureDone!\n\nSKU: ${item.originalSku}`);
+            }
+          } catch (scoreErr) {
+            console.warn('Could not re-score after refresh:', scoreErr);
+            alert(`✅ Successfully updated in SureDone!\n\nSKU: ${item.originalSku}`);
+          }
+        } else {
+          alert(`✅ Successfully updated in SureDone!\n\nSKU: ${item.originalSku}\n\n${item.title}`);
+        }
+
       } else {
         // CREATE new listing
         const productData = {
@@ -2808,12 +2852,91 @@ export default function ProListingBuilder() {
     setIsSending(false);
   };
 
+  // Load & Refresh: load a refresh-queue item into the editor
+  const loadRefreshItem = async (item) => {
+    try {
+      const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(item.guid || item.id)}`);
+      const data = await response.json();
+      if (data.success && data.item) {
+        await loadExistingListing(data.item);
+        // Update the refresh item status to 'edit' so it moves out of refresh tab
+        await updateDoc(doc(db, 'products', item.id), { status: 'complete', refreshSource: true, refreshOriginalScore: item.qualityScore || 0 });
+      } else {
+        alert('Could not load listing: ' + (data.error || 'Item not found'));
+      }
+    } catch (error) {
+      console.error('Error loading refresh item:', error);
+      alert('Error loading listing: ' + error.message);
+    }
+  };
+
+  // Skip: move refresh item to bottom of queue (lower priority)
+  const skipRefreshItem = async (item) => {
+    try {
+      await updateDoc(doc(db, 'products', item.id), {
+        refreshPriority: Math.max(0, (item.refreshPriority || 0) - 100),
+      });
+    } catch (error) {
+      console.error('Error skipping refresh item:', error);
+    }
+  };
+
+  // Dismiss: remove from refresh queue (won't re-queue for 30 days)
+  const dismissRefreshItem = async (item) => {
+    try {
+      // Mark as dismissed in inventoryHealth so crawler skips it for 30 days
+      await updateDoc(doc(db, 'inventoryHealth', item.guid || item.id), {
+        lastRefreshed: serverTimestamp(),
+        dismissedAt: serverTimestamp(),
+      });
+      // Delete from products queue
+      await deleteDoc(doc(db, 'products', item.id));
+    } catch (error) {
+      // If inventoryHealth doc doesn't exist, just delete the product
+      try { await deleteDoc(doc(db, 'products', item.id)); } catch (e) { /* ignore */ }
+    }
+  };
+
+  // eBay Relist: end and relist to reset search ranking
+  const relistOnEbay = async (sku) => {
+    if (!confirm('This will end your current eBay listing and create a new one. Any watchers will be notified. Continue?')) return;
+    setIsRelisting(true);
+    try {
+      // Step 1: End current listing
+      const endRes = await fetch('/api/suredone/update-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guid: sku, ebayaction: 'end' }),
+      });
+      if (!endRes.ok) throw new Error('Failed to end listing');
+      // Step 2: Wait 2 seconds
+      await new Promise(r => setTimeout(r, 2000));
+      // Step 3: Relist
+      const relistRes = await fetch('/api/suredone/update-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guid: sku, ebayaction: 'relist' }),
+      });
+      if (!relistRes.ok) throw new Error('Failed to relist');
+      alert('Listing relisted on eBay! Search ranking has been reset.');
+    } catch (error) {
+      console.error('Relist error:', error);
+      alert('Relist error: ' + error.message);
+    }
+    setIsRelisting(false);
+  };
+
   // Enhanced status badge for queue items
   const getStatusBadge = (item) => {
     const hasPhotos = item.photos && item.photos.length > 0;
     const hasTitle = item.title && item.title.length > 5;
     const hasCategory = item.ebayCategoryId;
 
+    if (item.status === 'refresh') {
+      const grade = item.qualityGrade || 'F';
+      const gradeColors = { A: 'text-green-600', B: 'text-blue-600', C: 'text-yellow-600', D: 'text-orange-600', F: 'text-red-600' };
+      return <span className={`text-xs font-semibold ${gradeColors[grade] || 'text-red-600'}`}>🔄 Refresh ({grade} {item.qualityScore || 0})</span>;
+    }
     if (item.status === 'error') {
       return <span className="text-xs text-red-600 font-semibold">❌ Error</span>;
     }
@@ -2858,6 +2981,7 @@ export default function ProListingBuilder() {
       q.title && q.title.length > 5 &&
       q.ebayCategoryId
     ).length,
+    refresh: queue.filter(q => q.status === 'refresh').length,
     errors: queue.filter(q => q.status === 'error').length,
   };
 
@@ -2877,6 +3001,8 @@ export default function ProListingBuilder() {
           item.photos && item.photos.length > 0 &&
           item.title && item.title.length > 5 &&
           item.ebayCategoryId;
+      case 'refresh':
+        return item.status === 'refresh';
       case 'errors':
         return item.status === 'error';
       default:
@@ -3113,6 +3239,7 @@ export default function ProListingBuilder() {
                 { key: 'edit', label: '✏️ Edit', color: 'blue' },
                 { key: 'needsPhotos', label: '📷 Photos', color: 'orange' },
                 { key: 'publishReady', label: '✅ Publish', color: 'green' },
+                { key: 'refresh', label: '🔄 Refresh', color: 'purple' },
                 { key: 'errors', label: '❌ Error', color: 'red' },
               ].map(tab => (
                 <button
@@ -3124,6 +3251,7 @@ export default function ProListingBuilder() {
                         tab.color === 'blue' ? 'bg-blue-600 text-white' :
                         tab.color === 'orange' ? 'bg-orange-500 text-white' :
                         tab.color === 'green' ? 'bg-green-600 text-white' :
+                        tab.color === 'purple' ? 'bg-purple-600 text-white' :
                         'bg-red-600 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
@@ -3137,7 +3265,60 @@ export default function ProListingBuilder() {
           {/* Queue */}
           <div className="p-2">
             <h3 className="text-sm font-semibold text-gray-600 mb-2 px-2">Queue ({filteredQueue.length})</h3>
-            {filteredQueue.map(item => (
+            {filteredQueue.map(item => item.status === 'refresh' ? (
+              /* ========== REFRESH QUEUE CARD ========== */
+              <div key={item.id} className="p-3 mb-2 rounded-lg border border-purple-200 bg-purple-50 cursor-pointer transition hover:border-purple-400" onClick={() => setSelectedItem(item.id)}>
+                <div className="flex items-start justify-between mb-1">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-sm">⚠️</span>
+                    <span className="text-sm font-bold text-gray-800 truncate">{item.brand} {item.mpn || item.partNumber || item.guid}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      (item.qualityGrade === 'A') ? 'bg-green-100 text-green-700' :
+                      (item.qualityGrade === 'B') ? 'bg-blue-100 text-blue-700' :
+                      (item.qualityGrade === 'C') ? 'bg-yellow-100 text-yellow-700' :
+                      (item.qualityGrade === 'D') ? 'bg-orange-100 text-orange-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>{item.qualityGrade || 'F'}</span>
+                    <span className="text-[10px] font-mono text-gray-500">{item.qualityScore || 0}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600 truncate mb-1">{item.title}</p>
+                <p className="text-[10px] text-gray-500 mb-2">
+                  ${item.price || '0'} | SKU: {item.guid || item.id}
+                </p>
+                {/* Issues */}
+                {item.qualityIssues && item.qualityIssues.length > 0 && (
+                  <div className="mb-2 space-y-0.5">
+                    {item.qualityIssues.slice(0, 4).map((issue, i) => (
+                      <p key={i} className="text-[10px]">
+                        {issue.severity === 'critical' ? '🔴' : issue.severity === 'warning' ? '🟡' : '🔵'} {issue.message}
+                      </p>
+                    ))}
+                    {item.qualityIssues.length > 4 && (
+                      <p className="text-[10px] text-gray-400">+{item.qualityIssues.length - 4} more issues</p>
+                    )}
+                  </div>
+                )}
+                {/* Action buttons */}
+                <div className="flex gap-1.5">
+                  <button onClick={(e) => { e.stopPropagation(); loadRefreshItem(item); }}
+                    className="flex-1 px-2 py-1.5 bg-purple-600 text-white text-[11px] font-semibold rounded-md hover:bg-purple-700 transition">
+                    Load & Refresh
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); skipRefreshItem(item); }}
+                    className="px-2 py-1.5 bg-gray-200 text-gray-600 text-[11px] font-semibold rounded-md hover:bg-gray-300 transition">
+                    Skip
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); dismissRefreshItem(item); }}
+                    className="px-2 py-1.5 bg-gray-200 text-gray-600 text-[11px] font-semibold rounded-md hover:bg-gray-300 transition">
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* ========== STANDARD QUEUE CARD ========== */
               <div key={item.id} onClick={() => {
                 setSelectedItem(item.id);
                 // If this item has existing data, show comparison
@@ -4435,6 +4616,72 @@ export default function ProListingBuilder() {
             currentUser={getCurrentUser() || { id: userName?.toLowerCase(), name: userName }}
             onClose={() => setShowPartRequest(false)}
           />
+        )}
+
+        {/* Refresh Score Comparison Modal */}
+        {refreshComparison && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-green-700 mb-4">Listing Refreshed!</h3>
+
+              {/* Before / After */}
+              <div className="flex items-center justify-center gap-4 mb-5">
+                <div className="text-center">
+                  <div className="text-sm text-gray-500 mb-1">Before</div>
+                  <div className={`text-3xl font-bold ${
+                    refreshComparison.before.grade === 'A' ? 'text-green-600' :
+                    refreshComparison.before.grade === 'B' ? 'text-blue-600' :
+                    refreshComparison.before.grade === 'C' ? 'text-yellow-600' :
+                    refreshComparison.before.grade === 'D' ? 'text-orange-600' : 'text-red-600'
+                  }`}>{refreshComparison.before.score}/100</div>
+                  <div className="text-sm font-semibold text-gray-400">({refreshComparison.before.grade})</div>
+                </div>
+                <ArrowRight className="w-6 h-6 text-gray-400" />
+                <div className="text-center">
+                  <div className="text-sm text-gray-500 mb-1">After</div>
+                  <div className={`text-3xl font-bold ${
+                    refreshComparison.after.grade === 'A' ? 'text-green-600' :
+                    refreshComparison.after.grade === 'B' ? 'text-blue-600' :
+                    refreshComparison.after.grade === 'C' ? 'text-yellow-600' :
+                    refreshComparison.after.grade === 'D' ? 'text-orange-600' : 'text-red-600'
+                  }`}>{refreshComparison.after.score}/100</div>
+                  <div className="text-sm font-semibold text-gray-400">({refreshComparison.after.grade})</div>
+                </div>
+              </div>
+
+              {/* Fixed Issues */}
+              {refreshComparison.fixed.length > 0 && (
+                <div className="mb-5 bg-green-50 rounded-lg p-3">
+                  <div className="text-sm font-semibold text-green-800 mb-2">Fixed:</div>
+                  {refreshComparison.fixed.map((msg, i) => (
+                    <p key={i} className="text-sm text-green-700 flex items-center gap-1.5">
+                      <Check className="w-4 h-4 flex-shrink-0" /> {msg}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { relistOnEbay(refreshComparison.sku); }}
+                  disabled={isRelisting}
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition"
+                >
+                  {isRelisting ? 'Relisting...' : 'Relist on eBay'}
+                </button>
+                <button
+                  onClick={() => setRefreshComparison(null)}
+                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
+                >
+                  Done
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2 text-center">
+                SKU: {refreshComparison.sku} | Relisting resets eBay search ranking
+              </p>
+            </div>
+          </div>
         )}
       </div>
     </div>

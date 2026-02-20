@@ -384,6 +384,170 @@ function WorkerStatus({ workerActivity, loading }) {
 }
 
 // ============================================================
+// SECTION: Inventory Health
+// ============================================================
+function InventoryHealthSection({ healthData, loading, onRunCrawl, isCrawling, currentUser }) {
+  if (loading) {
+    return (
+      <div className="mb-8">
+        <SectionHeader icon="📊" title="INVENTORY HEALTH" subtitle="Listing quality overview" />
+        <div className="flex items-center justify-center py-8"><Spinner size="lg" /></div>
+      </div>
+    );
+  }
+
+  if (!healthData) {
+    return (
+      <div className="mb-8">
+        <SectionHeader icon="📊" title="INVENTORY HEALTH" subtitle="Listing quality overview" />
+        <div className="bg-gray-800 rounded-xl p-6 text-center text-gray-500">
+          No crawl data yet. Run a crawl from the Admin page to get started.
+        </div>
+      </div>
+    );
+  }
+
+  const { avgScore, gradeDistribution, totalItems, topIssues, worstItems, refreshActivity, lastCrawl } = healthData;
+  const gradeColors = { A: 'bg-green-500', B: 'bg-blue-500', C: 'bg-yellow-500', D: 'bg-orange-500', F: 'bg-red-500' };
+  const gradeTextColors = { A: 'text-green-400', B: 'text-blue-400', C: 'text-yellow-400', D: 'text-orange-400', F: 'text-red-400' };
+  const scoreColor = avgScore >= 80 ? 'text-green-400' : avgScore >= 60 ? 'text-yellow-400' : 'text-red-400';
+  const totalGraded = Object.values(gradeDistribution || {}).reduce((s, v) => s + v, 0) || 1;
+
+  return (
+    <div className="mb-8">
+      <SectionHeader icon="📊" title="INVENTORY HEALTH" subtitle={lastCrawl ? `Last crawled: ${lastCrawl}` : 'Listing quality overview'} />
+
+      {/* Overall Score + Grade Distribution */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        {/* Score Gauge */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 flex flex-col items-center justify-center">
+          <div className="text-sm text-gray-400 mb-1">Average Quality Score</div>
+          <div className={`text-5xl font-bold ${scoreColor}`}>{avgScore}<span className="text-2xl text-gray-500">/100</span></div>
+          <div className="text-sm text-gray-500 mt-1">{totalItems?.toLocaleString()} listings scored</div>
+          {currentUser && (
+            <button
+              onClick={onRunCrawl}
+              disabled={isCrawling}
+              className="mt-3 px-4 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition"
+            >
+              {isCrawling ? 'Crawling...' : 'Run Crawl Now'}
+            </button>
+          )}
+        </div>
+
+        {/* Grade Distribution */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <div className="text-sm text-gray-400 mb-3">Grade Distribution</div>
+          {['A', 'B', 'C', 'D', 'F'].map(grade => {
+            const count = gradeDistribution?.[grade] || 0;
+            const pct = Math.round((count / totalGraded) * 100);
+            return (
+              <div key={grade} className="flex items-center gap-2 mb-2">
+                <span className={`text-sm font-bold w-4 ${gradeTextColors[grade]}`}>{grade}</span>
+                <div className="flex-1 bg-gray-700 rounded-full h-4 overflow-hidden">
+                  <div className={`h-full ${gradeColors[grade]} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                </div>
+                <span className="text-xs text-gray-400 w-20 text-right">{count.toLocaleString()} ({pct}%)</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Top Issues + Refresh Activity */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        {/* Top Issues */}
+        <div className="bg-gray-800 rounded-xl p-5 border border-gray-700">
+          <div className="text-sm font-semibold text-gray-300 mb-3">Top Issues</div>
+          {topIssues && topIssues.length > 0 ? (
+            <div className="space-y-2">
+              {topIssues.slice(0, 5).map((issue, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300 truncate flex-1">{i + 1}. {issue.message}</span>
+                  <span className="text-xs text-gray-500 ml-2 whitespace-nowrap">{issue.count?.toLocaleString()} listings</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">No issue data available</div>
+          )}
+        </div>
+
+        {/* Refresh Activity */}
+        <div className="bg-gray-800 rounded-xl p-5 border border-gray-700">
+          <div className="text-sm font-semibold text-gray-300 mb-3">Refresh Activity</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-2xl font-bold text-purple-400">{refreshActivity?.refreshedThisWeek || 0}</div>
+              <div className="text-xs text-gray-500">Refreshed this week</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-400">
+                {refreshActivity?.avgBefore || '--'} → {refreshActivity?.avgAfter || '--'}
+              </div>
+              <div className="text-xs text-gray-500">Avg score improvement</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-blue-400">${refreshActivity?.totalValue?.toLocaleString() || '0'}</div>
+              <div className="text-xs text-gray-500">Value refreshed</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-orange-400">{refreshActivity?.queueRemaining || 0}</div>
+              <div className="text-xs text-gray-500">Queue remaining</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Worst Listings Table */}
+      {worstItems && worstItems.length > 0 && (
+        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-700">
+            <div className="text-sm font-semibold text-gray-300">Worst Listings</div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-500 uppercase border-b border-gray-700">
+                  <th className="px-4 py-2 text-left">SKU</th>
+                  <th className="px-4 py-2 text-left">Title</th>
+                  <th className="px-4 py-2 text-center">Score</th>
+                  <th className="px-4 py-2 text-right">Price</th>
+                  <th className="px-4 py-2 text-center">Issues</th>
+                  <th className="px-4 py-2 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {worstItems.slice(0, 10).map((item, i) => (
+                  <tr key={item.sku || i} className={`border-b border-gray-700/50 ${i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'}`}>
+                    <td className="px-4 py-2 font-mono text-xs text-gray-400">{item.sku}</td>
+                    <td className="px-4 py-2 text-gray-300 truncate max-w-[200px]">{item.title}</td>
+                    <td className="px-4 py-2 text-center">
+                      <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                        item.grade === 'A' ? 'bg-green-900/50 text-green-400' :
+                        item.grade === 'B' ? 'bg-blue-900/50 text-blue-400' :
+                        item.grade === 'C' ? 'bg-yellow-900/50 text-yellow-400' :
+                        item.grade === 'D' ? 'bg-orange-900/50 text-orange-400' :
+                        'bg-red-900/50 text-red-400'
+                      }`}>{item.grade} {item.score}</span>
+                    </td>
+                    <td className="px-4 py-2 text-right text-gray-300">${item.price || 0}</td>
+                    <td className="px-4 py-2 text-center text-xs text-gray-500">{item.issues?.length || 0}</td>
+                    <td className="px-4 py-2 text-center">
+                      <a href={`/pro`} className="text-xs text-purple-400 hover:text-purple-300 font-medium">Load</a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // MAIN DASHBOARD COMPONENT
 // ============================================================
 export default function Dashboard() {
@@ -421,6 +585,11 @@ export default function Dashboard() {
   // --- Worker Status ---
   const [workerActivity, setWorkerActivity] = useState({});
   const [workerLoading, setWorkerLoading] = useState(true);
+
+  // --- Inventory Health ---
+  const [healthData, setHealthData] = useState(null);
+  const [healthLoading, setHealthLoading] = useState(true);
+  const [isCrawling, setIsCrawling] = useState(false);
 
   // --- Tick for age timers ---
   const [, setTick] = useState(0);
@@ -702,6 +871,106 @@ export default function Dashboard() {
   }, [currentUserState, fetchWorkerActivity]);
 
   // ============================================================
+  // DATA: Inventory Health (from crawlHistory + inventoryHealth)
+  // ============================================================
+  const fetchHealthData = useCallback(async () => {
+    try {
+      // Get latest crawl from crawlHistory
+      const crawlQ = query(collection(db, 'crawlHistory'), orderBy('completedAt', 'desc'), limit(1));
+      const crawlSnap = await getDocs(crawlQ);
+
+      if (crawlSnap.empty) {
+        setHealthData(null);
+        setHealthLoading(false);
+        return;
+      }
+
+      const latestCrawl = crawlSnap.docs[0].data();
+      const lastCrawlDate = latestCrawl.completedAt?.toDate?.();
+      const lastCrawl = lastCrawlDate
+        ? `${lastCrawlDate.toLocaleDateString()} ${lastCrawlDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : 'Unknown';
+
+      // Get worst items from inventoryHealth (top 10 by score ascending)
+      const healthQ = query(collection(db, 'inventoryHealth'), orderBy('score', 'asc'), limit(10));
+      const healthSnap = await getDocs(healthQ);
+      const worstItems = [];
+      healthSnap.forEach(d => {
+        const data = d.data();
+        worstItems.push({ sku: d.id, ...data });
+      });
+
+      // Get refresh activity stats this week
+      const weekAgo = getDaysAgo(7);
+      const refreshQ = query(collection(db, 'inventoryHealth'), where('lastRefreshed', '>=', weekAgo));
+      const refreshSnap = await getDocs(refreshQ);
+      let refreshedThisWeek = 0;
+      let totalBefore = 0;
+      let totalAfter = 0;
+      let totalValue = 0;
+      refreshSnap.forEach(d => {
+        const data = d.data();
+        refreshedThisWeek++;
+        if (data.previousScore != null) totalBefore += data.previousScore;
+        if (data.currentScore != null) totalAfter += data.currentScore;
+        if (data.price) totalValue += parseFloat(data.price) || 0;
+      });
+
+      // Get refresh queue remaining
+      const refreshQueueQ = query(collection(db, 'products'), where('status', '==', 'refresh'));
+      const refreshQueueSnap = await getDocs(refreshQueueQ);
+
+      setHealthData({
+        avgScore: latestCrawl.averageScore || 0,
+        gradeDistribution: latestCrawl.gradeDistribution || {},
+        totalItems: latestCrawl.totalItems || 0,
+        topIssues: latestCrawl.topIssues || [],
+        worstItems,
+        lastCrawl,
+        refreshActivity: {
+          refreshedThisWeek,
+          avgBefore: refreshedThisWeek > 0 ? Math.round(totalBefore / refreshedThisWeek) : '--',
+          avgAfter: refreshedThisWeek > 0 ? Math.round(totalAfter / refreshedThisWeek) : '--',
+          totalValue: Math.round(totalValue),
+          queueRemaining: refreshQueueSnap.size,
+        },
+      });
+      setHealthLoading(false);
+    } catch (error) {
+      console.error('Health data fetch error:', error);
+      setHealthLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!currentUserState) return;
+    fetchHealthData();
+  }, [currentUserState, fetchHealthData]);
+
+  // ============================================================
+  // ACTION: Run crawl from dashboard
+  // ============================================================
+  const handleRunCrawl = async () => {
+    setIsCrawling(true);
+    try {
+      const res = await fetch('/api/inventory/crawl', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${prompt('Enter admin API key:')}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Crawl complete! ${data.totalItems} items scored. Avg: ${data.averageScore}/100`);
+        fetchHealthData(); // Refresh data
+      } else {
+        alert('Crawl failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      alert('Crawl error: ' + error.message);
+    }
+    setIsCrawling(false);
+  };
+
+  // ============================================================
   // ACTION: Nudge (re-send alert)
   // ============================================================
   const handleNudge = async (alert) => {
@@ -805,6 +1074,13 @@ export default function Dashboard() {
           <ResponseLeaderboard leaderboard={leaderboard} loading={leaderboardLoading} />
           <QueueStatus queueStats={queueStats} loading={queueLoading} />
           <WorkerStatus workerActivity={workerActivity} loading={workerLoading} />
+          <InventoryHealthSection
+            healthData={healthData}
+            loading={healthLoading}
+            onRunCrawl={handleRunCrawl}
+            isCrawling={isCrawling}
+            currentUser={currentUserState}
+          />
         </main>
       </div>
     </>
