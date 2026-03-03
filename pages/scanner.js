@@ -9,7 +9,7 @@ import NotificationCenter from '../components/NotificationCenter';
 import UserPicker from '../components/UserPicker';
 import app from '../firebase';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getCurrentUser, clearCurrentUser, getTeamMemberById } from '../lib/users';
 
 // Condition configuration - matches Pro Builder CONDITION_OPTIONS exactly
@@ -71,9 +71,11 @@ export default function WarehouseScanner() {
   const [currentUser, setCurrentUser] = useState(null);
 
   // Scanner mode state
-  const [scannerMode, setScannerMode] = useState('scan'); // 'scan' or 'shelf'
+  const [scannerMode, setScannerMode] = useState('scan'); // 'scan', 'shelf', or 'requests'
   const [shelfQueue, setShelfQueue] = useState([]);
+  const [requestQueue, setRequestQueue] = useState([]);
   const [unsubscribe, setUnsubscribe] = useState(null);
+  const [unsubRequests, setUnsubRequests] = useState(null);
 
   // Scan state
   const [brand, setBrand] = useState('');
@@ -147,6 +149,38 @@ export default function WarehouseScanner() {
     });
 
     setUnsubscribe(() => unsub);
+
+    // Clean up existing requests listener
+    if (unsubRequests) {
+      unsubRequests();
+    }
+
+    // Listen for pending part requests from office
+    const requestsQuery = query(
+      collection(db, 'partRequests'),
+      where('status', 'in', ['pending', 'acknowledged'])
+    );
+
+    const unsubReq = onSnapshot(requestsQuery, (snapshot) => {
+      const requests = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+      // Sort: urgent first, then by requestedAt (oldest first)
+      requests.sort((a, b) => {
+        if (a.priority === 'urgent' && b.priority !== 'urgent') return -1;
+        if (b.priority === 'urgent' && a.priority !== 'urgent') return 1;
+        const timeA = a.requestedAt?.toMillis?.() || 0;
+        const timeB = b.requestedAt?.toMillis?.() || 0;
+        return timeA - timeB;
+      });
+      setRequestQueue(requests);
+      console.log(`Request queue updated: ${requests.length} items`);
+    }, (error) => {
+      console.error('Request queue listener error:', error);
+    });
+
+    setUnsubRequests(() => unsubReq);
   };
 
   // ============================================
@@ -175,10 +209,14 @@ export default function WarehouseScanner() {
   };
 
   const handleSwitchUser = () => {
-    // Clean up Firebase listener
+    // Clean up Firebase listeners
     if (unsubscribe) {
       unsubscribe();
       setUnsubscribe(null);
+    }
+    if (unsubRequests) {
+      unsubRequests();
+      setUnsubRequests(null);
     }
 
     clearCurrentUser();
@@ -514,6 +552,52 @@ export default function WarehouseScanner() {
     }
   };
 
+  const handleClaimRequest = async (req) => {
+    try {
+      await updateDoc(doc(db, 'partRequests', req.id), {
+        status: 'acknowledged',
+        claimedBy: currentUser?.id || currentUser?.name || 'unknown',
+        claimedByName: currentUser?.name || 'Unknown',
+        claimedAt: serverTimestamp(),
+      });
+      updateLastActive();
+      console.log(`Claimed request: ${req.sku}`);
+    } catch (err) {
+      console.error('Failed to claim request:', err);
+      alert('Failed to claim: ' + err.message);
+    }
+  };
+
+  const handleCompleteRequest = async (req) => {
+    try {
+      await updateDoc(doc(db, 'partRequests', req.id), {
+        status: 'completed',
+        completedBy: currentUser?.id || currentUser?.name || 'unknown',
+        completedByName: currentUser?.name || 'Unknown',
+        completedAt: serverTimestamp(),
+      });
+
+      await addDoc(collection(db, 'activityLog'), {
+        action: 'request_fulfilled',
+        sku: req.sku,
+        userId: currentUser?.id || 'unknown',
+        userName: currentUser?.name || 'Unknown',
+        details: {
+          requestedBy: req.requestedByName,
+          shelfLocation: req.shelfLocation,
+          priority: req.priority,
+        },
+        timestamp: serverTimestamp(),
+      });
+
+      updateLastActive();
+      console.log(`Completed request: ${req.sku}`);
+    } catch (err) {
+      console.error('Failed to complete request:', err);
+      alert('Failed to complete: ' + err.message);
+    }
+  };
+
   const getConditionColor = (condition) => {
     // First try direct lookup by condition ID (e.g., 'used_good')
     if (CONDITIONS[condition]) {
@@ -585,29 +669,44 @@ export default function WarehouseScanner() {
           </div>
 
           {/* Mode Toggle */}
-          <div className="flex gap-3 mb-6">
+          <div className="flex gap-2 mb-6">
             <button
               onClick={() => setScannerMode('scan')}
-              className={`flex-1 py-4 rounded-xl font-bold text-xl transition ${
+              className={`flex-1 py-4 rounded-xl font-bold text-lg transition ${
                 scannerMode === 'scan'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              📦 Scan Items
+              📦 Scan
             </button>
             <button
               onClick={() => setScannerMode('shelf')}
-              className={`flex-1 py-4 rounded-xl font-bold text-xl transition relative ${
+              className={`flex-1 py-4 rounded-xl font-bold text-lg transition relative ${
                 scannerMode === 'shelf'
                   ? 'bg-green-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              📍 Return to Shelf
+              📍 Shelf
               {shelfQueue.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-600 text-white text-sm font-bold rounded-full w-8 h-8 flex items-center justify-center animate-pulse">
                   {shelfQueue.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setScannerMode('requests')}
+              className={`flex-1 py-4 rounded-xl font-bold text-lg transition relative ${
+                scannerMode === 'requests'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              📋 Requests
+              {requestQueue.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-sm font-bold rounded-full w-8 h-8 flex items-center justify-center animate-pulse">
+                  {requestQueue.length}
                 </span>
               )}
             </button>
@@ -737,6 +836,114 @@ export default function WarehouseScanner() {
                           <Check size={28} />
                           ✅ Confirm Shelved
                         </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {/* REQUESTS MODE */}
+          {scannerMode === 'requests' && (
+            <>
+              <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Requested Items</h1>
+
+              {requestQueue.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-xl">
+                  <Package size={64} className="mx-auto mb-4 text-gray-300" />
+                  <p className="text-xl font-bold text-gray-900 mb-2">No pending requests</p>
+                  <p className="text-gray-600">All requests have been fulfilled!</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {requestQueue.length} request{requestQueue.length !== 1 ? 's' : ''} pending
+                  </p>
+
+                  <div className="space-y-4">
+                    {requestQueue.map((req) => (
+                      <div
+                        key={req.id}
+                        className={`bg-white rounded-xl p-5 border-4 ${
+                          req.priority === 'urgent' ? 'border-red-500' : 'border-purple-400'
+                        }`}
+                      >
+                        {/* Priority badge */}
+                        {req.priority === 'urgent' && (
+                          <div className="bg-red-100 text-red-800 text-sm font-bold px-3 py-1 rounded-lg mb-3 inline-block">
+                            🚨 URGENT
+                          </div>
+                        )}
+
+                        {/* Product info row */}
+                        <div className="flex gap-4 mb-3">
+                          {req.photoUrl ? (
+                            <img src={req.photoUrl} alt="" className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Package size={24} className="text-gray-400" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-lg text-gray-900">{req.sku || 'No SKU'}</p>
+                            <p className="text-sm font-semibold text-gray-700 truncate">
+                              {req.brand} {req.partNumber}
+                            </p>
+                            {req.productCategory && (
+                              <p className="text-xs text-gray-500 truncate">{req.productCategory}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Shelf location */}
+                        {req.shelfLocation && (
+                          <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 mb-3 text-center">
+                            <p className="text-xs font-semibold text-yellow-700">SHELF LOCATION</p>
+                            <p className="text-3xl font-black text-yellow-900">{req.shelfLocation}</p>
+                          </div>
+                        )}
+
+                        {/* Note */}
+                        {req.note && (
+                          <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                            <p className="text-xs font-semibold text-gray-500 mb-1">Note:</p>
+                            <p className="text-sm text-gray-800">{req.note}</p>
+                          </div>
+                        )}
+
+                        {/* Requested by / time */}
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
+                          <span>Requested by: {req.requestedByName || 'Unknown'}</span>
+                          <span>
+                            {req.requestedAt?.toDate ? new Date(req.requestedAt.toDate()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+
+                        {/* Claimed by info */}
+                        {req.status === 'acknowledged' && req.claimedByName && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3 text-center text-sm">
+                            <span className="text-blue-700 font-semibold">Claimed by {req.claimedByName}</span>
+                          </div>
+                        )}
+
+                        {/* Action buttons */}
+                        {req.status === 'pending' ? (
+                          <button
+                            onClick={() => handleClaimRequest(req)}
+                            className="w-full p-4 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white rounded-xl text-xl font-bold transition flex items-center justify-center gap-2"
+                          >
+                            ✋ Claim This Request
+                          </button>
+                        ) : req.status === 'acknowledged' ? (
+                          <button
+                            onClick={() => handleCompleteRequest(req)}
+                            className="w-full p-4 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-xl text-xl font-bold transition flex items-center justify-center gap-2"
+                          >
+                            <Check size={24} />
+                            ✅ Mark Complete
+                          </button>
+                        ) : null}
                       </div>
                     ))}
                   </div>

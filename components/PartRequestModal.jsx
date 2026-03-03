@@ -6,6 +6,8 @@
 
 import React, { useState } from 'react';
 import { TEAM_MEMBERS, getWarehouseWorkers } from '../lib/users';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function PartRequestModal({ item, currentUser, onClose }) {
   const [priority, setPriority] = useState('normal');
@@ -46,6 +48,29 @@ export default function PartRequestModal({ item, currentUser, onClose }) {
         const data = await response.json();
         throw new Error(data.error || 'Failed to send request');
       }
+
+      // Persist to Firestore so Scanner app can show the queue
+      await addDoc(collection(db, 'partRequests'), {
+        sku: item?.sku || '',
+        brand: item?.brand || '',
+        partNumber: item?.partNumber || '',
+        shelfLocation: item?.shelf || item?.shelfLocation || '',
+        quantity: item?.quantity || item?.stock || 1,
+        condition: item?.condition || '',
+        productCategory: item?.productCategory || item?.title || '',
+        photoUrl: item?.photos?.[0] || '',
+        note: note || '',
+        priority: priority,
+        status: 'pending',
+        requestedBy: currentUser?.id || currentUser?.name || 'unknown',
+        requestedByName: currentUser?.name || 'Unknown',
+        requestedAt: serverTimestamp(),
+        claimedBy: null,
+        claimedAt: null,
+        completedBy: null,
+        completedAt: null,
+        firebaseProductId: item?.id || null,
+      });
 
       setSent(true);
       setTimeout(() => onClose(), 2000);
