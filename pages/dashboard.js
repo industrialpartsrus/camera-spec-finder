@@ -7,7 +7,7 @@ import Head from 'next/head';
 import { db } from '../firebase';
 import app from '../firebase';
 import {
-  collection, query, where, onSnapshot, doc, getDocs, orderBy, limit, Timestamp
+  collection, query, where, onSnapshot, doc, getDoc, getDocs, orderBy, limit, Timestamp
 } from 'firebase/firestore';
 import { getCurrentUser, setCurrentUser, TEAM_MEMBERS, getTeamMemberById, isAdmin } from '../lib/users';
 import NotificationCenter from '../components/NotificationCenter';
@@ -343,9 +343,11 @@ function WorkerStatus({ workerActivity, loading }) {
 
             if (lastActive) {
               const minutesAgo = getElapsedMinutes(lastActive);
+              const tool = activity?.activeTool;
+              const toolLabel = tool ? ` · ${tool}` : '';
               if (minutesAgo <= 15) {
                 dotColor = 'bg-green-500';
-                statusText = 'Active now';
+                statusText = `Active now${toolLabel}`;
               } else if (minutesAgo <= 60) {
                 dotColor = 'bg-yellow-500';
                 statusText = formatElapsed(lastActive);
@@ -832,26 +834,19 @@ export default function Dashboard() {
     try {
       const activityMap = {};
 
-      // Try to query activityLog collection for latest activity per worker
+      // Read lastActive from users/{id} docs (written by scanner, photos, pro tools)
       for (const member of TEAM_MEMBERS) {
         try {
-          const q = query(
-            collection(db, 'activityLog'),
-            where('userId', '==', member.id),
-            orderBy('timestamp', 'desc'),
-            limit(1)
-          );
-          const snapshot = await getDocs(q);
-          if (!snapshot.empty) {
-            const data = snapshot.docs[0].data();
+          const userDoc = await getDoc(doc(db, 'users', member.id));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
             activityMap[member.id] = {
-              lastActive: data.timestamp,
-              lastAction: data.action || null,
+              lastActive: data.lastActive || null,
+              activeTool: data.activeTool || null,
             };
           }
         } catch (e) {
-          // activityLog collection may not exist — that's fine
-          // Fall through to show gray dots
+          // users doc may not exist yet — show gray dot
         }
       }
 

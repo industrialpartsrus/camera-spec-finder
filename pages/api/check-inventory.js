@@ -2,6 +2,8 @@
 // SureDone Inventory Search - Checks for existing inventory before creating new listings
 // Uses the correct SureDone Search API: GET /v1/search/items/{query}
 
+import { getSureDoneCredentials } from '../../lib/suredone-config';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
@@ -230,12 +232,7 @@ function applyBrandVerification(results, searchBrand) {
  * GET https://api.suredone.com/v1/search/items/{query}
  */
 async function searchSureDone(searchQuery) {
-  const SUREDONE_USER = process.env.SUREDONE_USER;
-  const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
-
-  if (!SUREDONE_USER || !SUREDONE_TOKEN) {
-    throw new Error('SureDone credentials not configured');
-  }
+  const { user: SUREDONE_USER, token: SUREDONE_TOKEN } = getSureDoneCredentials();
 
   // Use the correct Search API endpoint
   // The query goes in the URL path, not as a query parameter

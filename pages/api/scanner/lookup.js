@@ -5,6 +5,7 @@
 
 import { db } from '../../../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { getSureDoneCredentials } from '../../../lib/suredone-config';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -137,10 +138,12 @@ function verifyBrand(searchBrand, itemBrand) {
  */
 async function searchSureDone(brand, partNumber) {
   try {
-    const SUREDONE_USER = process.env.SUREDONE_USER;
-    const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
-
-    if (!SUREDONE_USER || !SUREDONE_TOKEN) {
+    let SUREDONE_USER, SUREDONE_TOKEN;
+    try {
+      const creds = getSureDoneCredentials();
+      SUREDONE_USER = creds.user;
+      SUREDONE_TOKEN = creds.token;
+    } catch (e) {
       console.warn('SureDone credentials not configured');
       return [];
     }

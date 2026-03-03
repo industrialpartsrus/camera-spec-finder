@@ -2,6 +2,8 @@
 // Updates a single item in SureDone using the editor API
 // MUST use form-encoded POST to /editor/items/edit (NOT JSON PUT)
 
+import { getSureDoneCredentials } from '../../../lib/suredone-config';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -13,11 +15,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'guid (SKU) is required' });
   }
 
-  const SUREDONE_USER = process.env.SUREDONE_USER;
-  const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
-  const SUREDONE_URL = process.env.SUREDONE_URL || 'https://api.suredone.com/v1';
-
-  if (!SUREDONE_USER || !SUREDONE_TOKEN) {
+  let SUREDONE_USER, SUREDONE_TOKEN, SUREDONE_URL;
+  try {
+    const creds = getSureDoneCredentials();
+    SUREDONE_USER = creds.user;
+    SUREDONE_TOKEN = creds.token;
+    SUREDONE_URL = creds.baseUrl;
+  } catch (e) {
     return res.status(500).json({ error: 'SureDone credentials not configured' });
   }
 

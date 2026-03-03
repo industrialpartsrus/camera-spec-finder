@@ -9,7 +9,7 @@ import NotificationCenter from '../components/NotificationCenter';
 import UserPicker from '../components/UserPicker';
 import app from '../firebase';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getCurrentUser, clearCurrentUser, getTeamMemberById } from '../lib/users';
 
 // Condition configuration - matches Pro Builder CONDITION_OPTIONS exactly
@@ -153,9 +153,25 @@ export default function WarehouseScanner() {
   // USER LOGIN/LOGOUT
   // ============================================
 
+  const updateLastActive = async (user) => {
+    const u = user || currentUser;
+    if (!u?.id) return;
+    try {
+      await setDoc(doc(db, 'users', u.id), {
+        lastActive: serverTimestamp(),
+        activeTool: 'scanner',
+        name: u.name,
+        role: u.role,
+      }, { merge: true });
+    } catch (err) {
+      console.warn('lastActive update failed:', err);
+    }
+  };
+
   const handleUserSelect = (user) => {
     setCurrentUser(user);
     setupShelfListener(user.id);
+    updateLastActive(user);
   };
 
   const handleSwitchUser = () => {
@@ -346,7 +362,7 @@ export default function WarehouseScanner() {
           partNumber: partNumber,
           brand: brand,
           shelf: newShelf || selectedMatch.shelf,
-          scannedBy: currentUser.username,
+          scannedBy: currentUser?.name || 'unknown',
           action: 'add_stock',
           firebaseId: selectedMatch.source === 'firebase' ? selectedMatch.id : null
         })
@@ -355,6 +371,7 @@ export default function WarehouseScanner() {
       const data = await response.json();
 
       if (data.success) {
+        updateLastActive();
         setSuccessMessage(`✅ ${selectedMatch.sku} updated!\nStock: ${oldStock} → ${newStock}\nShelf: ${newShelf || selectedMatch.shelf || 'Not Assigned'}`);
         setScreen('success');
         // Auto-return to scan after 2 seconds
@@ -423,7 +440,7 @@ export default function WarehouseScanner() {
           brand: brand,
           condition: newCondition, // Send condition from Scanner
           shelf: newItemShelf.toUpperCase(),
-          scannedBy: currentUser.username,
+          scannedBy: currentUser?.name || 'unknown',
           action: 'create_new',
           firebaseId: null
         })
@@ -432,6 +449,7 @@ export default function WarehouseScanner() {
       const data = await response.json();
 
       if (data.success) {
+        updateLastActive();
         // Trigger AI research immediately (fire-and-forget)
         if (data.firebaseId) {
           fetch('/api/auto-research', {
@@ -486,10 +504,10 @@ export default function WarehouseScanner() {
       await updateDoc(productRef, {
         returnToShelf: false,
         shelvedAt: Timestamp.now(),
-        shelvedBy: currentUser.username
+        shelvedBy: currentUser?.name || 'unknown'
       });
 
-      console.log(`${item.sku} marked as shelved by ${currentUser.username}`);
+      console.log(`${item.sku} marked as shelved by ${currentUser?.name}`);
     } catch (error) {
       console.error('Failed to mark as shelved:', error);
       alert('Failed to mark as shelved: ' + error.message);

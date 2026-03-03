@@ -36,37 +36,66 @@ export default async function handler(req, res) {
     const startTimestamp = admin.firestore.Timestamp.fromDate(startOfDayUTC);
     const endTimestamp = admin.firestore.Timestamp.fromDate(endOfDayUTC);
 
-    // ---- Query inventory collection for today's activity ----
+    // ---- Query activityLog for today's activity ----
+    // NOTE: If you see a Firestore index error, click the link Firebase provides to create the required composite index.
 
-    // Count items scanned today
-    const scannedSnapshot = await db.collection('inventory')
-      .where('scannedAt', '>=', startTimestamp)
-      .where('scannedAt', '<', endTimestamp)
-      .get();
-    const scannedCount = scannedSnapshot.size;
+    // Count items scanned today (from Scanner tool)
+    let scannedCount = 0;
+    try {
+      const scannedSnapshot = await db.collection('activityLog')
+        .where('action', 'in', ['create_new', 'add_stock', 'update_stock'])
+        .where('timestamp', '>=', startTimestamp)
+        .where('timestamp', '<', endTimestamp)
+        .get();
+      scannedCount = scannedSnapshot.size;
+    } catch (e) {
+      console.warn('Scanned query failed (may need composite index):', e.message);
+      // Fallback: count all activityLog entries from scanner tool
+      const fallback = await db.collection('activityLog')
+        .where('timestamp', '>=', startTimestamp)
+        .where('timestamp', '<', endTimestamp)
+        .get();
+      scannedCount = fallback.docs.filter(d => ['create_new', 'add_stock', 'update_stock'].includes(d.data().action)).length;
+    }
 
-    // Count items photographed today
-    const photosSnapshot = await db.collection('inventory')
-      .where('photosCompletedAt', '>=', startTimestamp)
-      .where('photosCompletedAt', '<', endTimestamp)
-      .get();
-    const photosCount = photosSnapshot.size;
+    // Count items photographed today (from Photo Station)
+    let photosCount = 0;
+    try {
+      const photosSnapshot = await db.collection('activityLog')
+        .where('action', '==', 'photos_uploaded')
+        .where('timestamp', '>=', startTimestamp)
+        .where('timestamp', '<', endTimestamp)
+        .get();
+      photosCount = photosSnapshot.size;
+    } catch (e) {
+      console.warn('Photos query failed (may need composite index):', e.message);
+    }
 
-    // Count items published today (status == 'listed' and listedAt is today)
-    const listedSnapshot = await db.collection('inventory')
-      .where('status', '==', 'listed')
-      .where('listedAt', '>=', startTimestamp)
-      .where('listedAt', '<', endTimestamp)
-      .get();
-    const listedCount = listedSnapshot.size;
+    // Count listings sent today (from Pro Builder)
+    let listedCount = 0;
+    try {
+      const listedSnapshot = await db.collection('activityLog')
+        .where('action', '==', 'listing_sent')
+        .where('timestamp', '>=', startTimestamp)
+        .where('timestamp', '<', endTimestamp)
+        .get();
+      listedCount = listedSnapshot.size;
+    } catch (e) {
+      console.warn('Listed query failed (may need composite index):', e.message);
+    }
 
-    // Count listings built today (status in ['ready_to_list', 'listed'] and updatedAt is today)
-    const listingsBuiltSnapshot = await db.collection('inventory')
-      .where('status', 'in', ['ready_to_list', 'listed'])
-      .where('updatedAt', '>=', startTimestamp)
-      .where('updatedAt', '<', endTimestamp)
-      .get();
-    const listingsBuiltCount = listingsBuiltSnapshot.size;
+    // Count research completions today
+    let listingsBuiltCount = 0;
+    try {
+      const researchSnapshot = await db.collection('activityLog')
+        .where('action', '==', 'research_complete')
+        .where('timestamp', '>=', startTimestamp)
+        .where('timestamp', '<', endTimestamp)
+        .get();
+      listingsBuiltCount = researchSnapshot.size;
+    } catch (e) {
+      console.warn('Research query failed (may need composite index):', e.message);
+    }
 
     // ---- Query alertHistory for today ----
 

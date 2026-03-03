@@ -100,7 +100,7 @@ export default async function handler(req, res) {
 
       // Log to activity_log collection (if it exists)
       try {
-        const activityLogRef = collection(db, 'activity_log');
+        const activityLogRef = collection(db, 'activityLog');
         await addDoc(activityLogRef, {
           action: 'photos_uploaded',
           sku: sku,

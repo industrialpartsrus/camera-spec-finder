@@ -2,6 +2,8 @@
 // Fetches a single item from SureDone by SKU
 // Updated: Returns ALL fields from SureDone headers
 
+import { getSureDoneCredentials } from '../../../lib/suredone-config';
+
 export default async function handler(req, res) {
   // Allow GET requests
   if (req.method !== 'GET') {
@@ -47,13 +49,7 @@ export default async function handler(req, res) {
  * Uses /search/items/{query} endpoint which returns ALL fields
  */
 async function getSureDoneItem(sku) {
-  const SUREDONE_USER = process.env.SUREDONE_USER;
-  const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
-  const SUREDONE_URL = process.env.SUREDONE_URL || 'https://api.suredone.com/v1';
-
-  if (!SUREDONE_USER || !SUREDONE_TOKEN) {
-    throw new Error('SureDone credentials not configured');
-  }
+  const { user: SUREDONE_USER, token: SUREDONE_TOKEN, baseUrl: SUREDONE_URL } = getSureDoneCredentials();
 
   // Use /search/items/{query} endpoint with guid exact match
   const searchQuery = `guid:=${sku}`;

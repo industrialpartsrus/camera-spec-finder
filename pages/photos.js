@@ -7,7 +7,7 @@ import Head from 'next/head';
 import { Camera, Check, X, RefreshCw, Package, AlertCircle, ArrowLeft, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
 import { storage, db } from '../firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { collection, doc, updateDoc, getDoc, Timestamp, addDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, getDoc, setDoc, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import NotificationCenter from '../components/NotificationCenter';
 import PartRequestModal from '../components/PartRequestModal';
 import UserPicker from '../components/UserPicker';
@@ -120,9 +120,25 @@ export default function PhotoStation() {
   // USER LOGIN/LOGOUT
   // ============================================
 
+  const updateLastActive = async (user) => {
+    const u = user || currentUser;
+    if (!u?.id) return;
+    try {
+      await setDoc(doc(db, 'users', u.id), {
+        lastActive: serverTimestamp(),
+        activeTool: 'photos',
+        name: u.name,
+        role: u.role,
+      }, { merge: true });
+    } catch (err) {
+      console.warn('lastActive update failed:', err);
+    }
+  };
+
   const handleUserSelect = (user) => {
     setCurrentUser(user);
     loadQueue();
+    updateLastActive(user);
   };
 
   const handleSwitchUser = () => {
@@ -614,7 +630,7 @@ export default function PhotoStation() {
             customMetadata: {
               sku: selectedItem.sku,
               view: view,
-              uploadedBy: currentUser.username,
+              uploadedBy: currentUser?.name || 'unknown',
               uploadedAt: new Date().toISOString()
             }
           });
@@ -639,7 +655,7 @@ export default function PhotoStation() {
                 sku: selectedItem.sku,
                 view: view,
                 type: 'background_removed',
-                uploadedBy: currentUser.username,
+                uploadedBy: currentUser?.name || 'unknown',
                 uploadedAt: new Date().toISOString()
               }
             });
@@ -672,7 +688,7 @@ export default function PhotoStation() {
         photoViews: uploadedPhotos.map(p => p.view), // View names in display order
         photoOrder: photoOrder, // Explicit order array for Pro Builder
         removeBgFlags: removeBgFlags,
-        photographedBy: currentUser.username,
+        photographedBy: currentUser?.name || 'unknown',
         photographedAt: Timestamp.now(),
         photosStatus: 'complete', // Track photo completion separately
         photosCompletedAt: Timestamp.now()
@@ -690,13 +706,13 @@ export default function PhotoStation() {
 
       // Log to activity_log collection (optional)
       try {
-        await addDoc(collection(db, 'activity_log'), {
+        await addDoc(collection(db, 'activityLog'), {
           action: 'photos_uploaded',
           sku: selectedItem.sku,
           productId: selectedItem.id,
           photoCount: uploadedPhotos.length,
           photoViews: uploadedPhotos.map(p => p.view),
-          user: currentUser.username,
+          user: currentUser?.name || 'unknown',
           timestamp: Timestamp.now()
         });
       } catch (logError) {
@@ -705,6 +721,7 @@ export default function PhotoStation() {
       }
 
       setUploadProgress(100);
+      updateLastActive();
 
       setSuccessMessage(`✅ Photos uploaded for ${selectedItem.sku}`);
       setScreen('complete');
@@ -728,10 +745,10 @@ export default function PhotoStation() {
       await updateDoc(productRef, {
         returnToShelf: true,
         returnToShelfAt: Timestamp.now(),
-        photoCompletedBy: currentUser.username
+        photoCompletedBy: currentUser?.name || 'unknown'
       });
 
-      console.log(`${selectedItem.sku} marked for shelf return by ${currentUser.username}`);
+      console.log(`${selectedItem.sku} marked for shelf return by ${currentUser?.name}`);
 
       // Return to queue
       handleReturnToQueue();

@@ -2,6 +2,8 @@
 // Keyword search across SureDone inventory
 // Searches title, brand, mpn, and guid fields
 
+import { getSureDoneCredentials } from '../../../lib/suredone-config';
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed. Use GET.' });
@@ -13,11 +15,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Query must be at least 2 characters' });
   }
 
-  const SUREDONE_USER = process.env.SUREDONE_API_USER;
-  const SUREDONE_TOKEN = process.env.SUREDONE_API_TOKEN;
-  const SUREDONE_BASE = 'https://api.suredone.com/v1';
-
-  if (!SUREDONE_USER || !SUREDONE_TOKEN) {
+  let SUREDONE_USER, SUREDONE_TOKEN, SUREDONE_BASE;
+  try {
+    const creds = getSureDoneCredentials();
+    SUREDONE_USER = creds.user;
+    SUREDONE_TOKEN = creds.token;
+    SUREDONE_BASE = creds.baseUrl;
+  } catch (e) {
     return res.status(500).json({ error: 'SureDone credentials not configured' });
   }
 

@@ -4,6 +4,7 @@
 
 import { db } from '../../../firebase';
 import { collection, doc, updateDoc, addDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { getSureDoneCredentials } from '../../../lib/suredone-config';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -130,7 +131,7 @@ export default async function handler(req, res) {
     });
 
     // Log to activity_log
-    await addDoc(collection(db, 'activity_log'), {
+    await addDoc(collection(db, 'activityLog'), {
       action: action || 'update_stock',
       user: scannedBy,
       sku: sku,
@@ -179,10 +180,12 @@ export default async function handler(req, res) {
  */
 async function updateSureDoneStock(sku, stock, shelf, isCreate = false) {
   try {
-    const SUREDONE_USER = process.env.SUREDONE_USER;
-    const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
-
-    if (!SUREDONE_USER || !SUREDONE_TOKEN) {
+    let SUREDONE_USER, SUREDONE_TOKEN;
+    try {
+      const creds = getSureDoneCredentials();
+      SUREDONE_USER = creds.user;
+      SUREDONE_TOKEN = creds.token;
+    } catch (e) {
       console.error('SureDone credentials not configured');
       return { success: false, error: 'SureDone credentials not configured' };
     }

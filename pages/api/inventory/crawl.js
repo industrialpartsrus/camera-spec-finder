@@ -6,6 +6,7 @@
 
 import admin from 'firebase-admin';
 import { scoreListingQuality, calculateRefreshPriority } from '../../../lib/listingScorer';
+import { getSureDoneCredentials } from '../../../lib/suredone-config';
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -17,9 +18,13 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-const SUREDONE_USER = process.env.SUREDONE_API_USER;
-const SUREDONE_TOKEN = process.env.SUREDONE_API_TOKEN;
-const SUREDONE_BASE = 'https://api.suredone.com/v1';
+// Credentials resolved lazily via getSureDoneCredentials()
+let _sdCreds = null;
+function getSD() {
+  if (!_sdCreds) _sdCreds = getSureDoneCredentials();
+  return _sdCreds;
+}
+const SUREDONE_BASE = (process.env.SUREDONE_URL || 'https://api.suredone.com/v1');
 
 // Configuration
 const PAGE_SIZE = 20; // SureDone always returns 20 per page, ignores limit param
@@ -44,7 +49,9 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  if (!SUREDONE_USER || !SUREDONE_TOKEN) {
+  try {
+    getSD(); // validate credentials are present
+  } catch (e) {
     return res.status(500).json({ error: 'SureDone credentials not configured' });
   }
 
@@ -316,8 +323,8 @@ async function fetchSuredonePage(page) {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'X-Auth-User': SUREDONE_USER,
-      'X-Auth-Token': SUREDONE_TOKEN,
+      'X-Auth-User': getSD().user,
+      'X-Auth-Token': getSD().token,
     },
   });
 

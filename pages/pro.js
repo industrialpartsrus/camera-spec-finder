@@ -10,7 +10,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, getDocs,
 import InventoryCheckAlert from '../components/InventoryCheckAlert';
 import NotificationCenter from '../components/NotificationCenter';
 import app from '../firebase';
-import { getCurrentUser, setCurrentUser, isAdmin } from '../lib/users';
+import { getCurrentUser, setCurrentUser, clearCurrentUser, isAdmin } from '../lib/users';
 import UserPicker from '../components/UserPicker';
 import PartRequestModal from '../components/PartRequestModal';
 import { normalizeCoilVoltage, STANDARD_COIL_VOLTAGES } from '../lib/coil-voltage-normalizer';
@@ -1582,6 +1582,7 @@ export default function ProListingBuilder() {
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [userName, setUserName] = useState('');
   const [isNameSet, setIsNameSet] = useState(false);
+  const [currentUser, setCurrentUserState] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [showPartRequest, setShowPartRequest] = useState(false);
@@ -1631,10 +1632,44 @@ export default function ProListingBuilder() {
   useEffect(() => {
     const saved = getCurrentUser();
     if (saved && saved.name) {
+      setCurrentUserState(saved);
       setUserName(saved.name);
       setIsNameSet(true);
     }
   }, []);
+
+  // Activity logger for dashboard tracking
+  const logActivity = async (action, details = {}) => {
+    try {
+      const user = currentUser || getCurrentUser();
+      await addDoc(collection(db, 'activityLog'), {
+        action,
+        userId: user?.id || userName?.toLowerCase() || 'unknown',
+        userName: user?.name || userName || 'unknown',
+        details,
+        timestamp: serverTimestamp(),
+        tool: 'pro-builder',
+      });
+    } catch (err) {
+      console.warn('Activity log error:', err);
+    }
+  };
+
+  // Update lastActive for dashboard worker status dots
+  const updateLastActive = async () => {
+    const user = currentUser || getCurrentUser();
+    if (!user?.id) return;
+    try {
+      await setDoc(doc(db, 'users', user.id), {
+        lastActive: serverTimestamp(),
+        activeTool: 'pro-builder',
+        name: user.name,
+        role: user.role,
+      }, { merge: true });
+    } catch (err) {
+      console.warn('lastActive update failed:', err);
+    }
+  };
 
   // Debounced SureDone inventory keyword search
   useEffect(() => {
@@ -1805,7 +1840,12 @@ export default function ProListingBuilder() {
     setIsUploadingPhotos(true);
 
     try {
-      const sku = getItemSku(item) || itemId;
+      const sku = getItemSku(item);
+      if (!sku || sku.length > 20) {
+        alert('Error: Could not determine SKU for this item. Please ensure the item has a valid SKU.');
+        setIsUploadingPhotos(false);
+        return;
+      }
       const existingPhotos = item.photos || [];
       const existingViews = item.photoViews || [];
       const newPhotoUrls = [];
@@ -2487,6 +2527,10 @@ export default function ProListingBuilder() {
       await updateDoc(doc(db, 'products', itemId), updateData);
       setSubmitAttempted(prev => ({ ...prev, [itemId]: true }));
 
+      // Log research completion
+      logActivity('research_complete', { sku: item.sku || itemId, brand: item.brand, partNumber: item.partNumber });
+      updateLastActive();
+
       // =================================================================
       // PASS 2 + PASS 3: Auto-fill eBay specifics, then revise title/desc
       // Uses reusable runPass2() which auto-triggers runPass3()
@@ -2781,6 +2825,7 @@ export default function ProListingBuilder() {
         if (!response.ok || !responseData.success) {
           throw new Error(responseData.error || 'Failed to update listing');
         }
+        logActivity('listing_sent', { sku: item.originalSku, title: item.title, price: item.price, action: 'update' });
         // If this was a refresh item, show before/after score comparison
         if (item.refreshSource) {
           try {
@@ -2871,6 +2916,7 @@ export default function ProListingBuilder() {
         const responseData = await response.json();
         if (!response.ok) throw new Error(responseData.error || 'Failed to create listing');
         alert(`✅ Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
+        logActivity('listing_sent', { sku: responseData.sku || item.sku, title: item.title, price: item.price });
       }
     } catch (error) {
       console.error('SureDone error:', error);
@@ -3094,8 +3140,11 @@ export default function ProListingBuilder() {
         subtitle="Select your name to get started"
         onSelect={(member) => {
           setUserName(member.name);
-          setCurrentUser(member);
+          setCurrentUser(member);  // writes to localStorage
+          setCurrentUserState(member);
           setIsNameSet(true);
+          // Update lastActive for dashboard
+          setDoc(doc(db, 'users', member.id), { lastActive: serverTimestamp(), activeTool: 'pro-builder', name: member.name, role: member.role }, { merge: true }).catch(() => {});
         }}
       />
     );
@@ -3117,7 +3166,7 @@ export default function ProListingBuilder() {
             <h1 className="text-2xl font-bold">Pro Listing Builder 🚀</h1>
             <p className="text-sm text-gray-600">
               Logged in: <span className="font-semibold">{userName}</span>
-              <button onClick={() => { setIsNameSet(false); setUserName(''); }} className="text-blue-500 hover:text-blue-700 ml-1 text-xs">(switch)</button>
+              <button onClick={() => { clearCurrentUser(); setCurrentUserState(null); setIsNameSet(false); setUserName(''); }} className="text-blue-500 hover:text-blue-700 ml-1 text-xs">(switch)</button>
               <span className="text-green-600 ml-2">● Live Sync</span>
             </p>
           </div>

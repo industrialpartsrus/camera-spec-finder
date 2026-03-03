@@ -2,6 +2,7 @@
 // Clean SureDone submission - FIXED with correct BigCommerce categories and condition notes
 
 import brandsDb from '../../../data/bigcommerce_brands.json';
+import { getSureDoneCredentials } from '../../../lib/suredone-config';
 
 // Brand ID mappings for BigCommerce
 const BRAND_IDS = {
@@ -254,11 +255,13 @@ export default async function handler(req, res) {
   console.log('Product Type:', listing.productType);
   console.log('Condition:', listing.condition);
 
-  const SUREDONE_USER = process.env.SUREDONE_USER;
-  const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
-  const SUREDONE_URL = process.env.SUREDONE_URL || 'https://api.suredone.com/v1';
-
-  if (!SUREDONE_USER || !SUREDONE_TOKEN) {
+  let SUREDONE_USER, SUREDONE_TOKEN, SUREDONE_URL;
+  try {
+    const creds = getSureDoneCredentials();
+    SUREDONE_USER = creds.user;
+    SUREDONE_TOKEN = creds.token;
+    SUREDONE_URL = creds.baseUrl;
+  } catch (e) {
     return res.status(500).json({ error: 'SureDone credentials not configured' });
   }
 

@@ -1,4 +1,6 @@
 // Check if a SKU already exists in SureDone
+import { getSureDoneCredentials } from '../../lib/suredone-config';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -6,15 +8,23 @@ export default async function handler(req, res) {
 
   const { sku } = req.body;
 
-  const SUREDONE_USER = process.env.SUREDONE_USER;
-  const SUREDONE_PASS = process.env.SUREDONE_PASS;
-  const SUREDONE_URL = process.env.SUREDONE_URL || 'https://api.suredone.com';
+  let SUREDONE_USER, SUREDONE_TOKEN, SUREDONE_URL;
+  try {
+    const creds = getSureDoneCredentials();
+    SUREDONE_USER = creds.user;
+    SUREDONE_TOKEN = creds.token;
+    SUREDONE_URL = creds.baseUrl;
+  } catch (e) {
+    return res.status(500).json({ error: 'SureDone credentials not configured' });
+  }
 
   try {
-    const response = await fetch(`${SUREDONE_URL}/products/${sku}`, {
+    const response = await fetch(`${SUREDONE_URL}/search/items/${encodeURIComponent(`guid:=${sku}`)}`, {
       method: 'GET',
       headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${SUREDONE_USER}:${SUREDONE_PASS}`).toString('base64')
+        'X-Auth-User': SUREDONE_USER,
+        'X-Auth-Token': SUREDONE_TOKEN,
+        'Content-Type': 'application/json',
       }
     });
 

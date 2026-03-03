@@ -4,7 +4,8 @@
 
 import brandsDb from '../../data/bigcommerce_brands.json';
 import { db } from '../../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { getSureDoneCredentials } from '../../lib/suredone-config';
 
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
@@ -1172,11 +1173,13 @@ export default async function handler(req, res) {
   console.log('Product productCategory:', product.productCategory);
   console.log('Product specifications keys:', product.specifications ? Object.keys(product.specifications) : 'NONE');
 
-  const SUREDONE_USER = process.env.SUREDONE_USER;
-  const SUREDONE_TOKEN = process.env.SUREDONE_TOKEN;
-  const SUREDONE_URL = process.env.SUREDONE_URL || 'https://api.suredone.com/v1';
-
-  if (!SUREDONE_USER || !SUREDONE_TOKEN) {
+  let SUREDONE_USER, SUREDONE_TOKEN, SUREDONE_URL;
+  try {
+    const creds = getSureDoneCredentials();
+    SUREDONE_USER = creds.user;
+    SUREDONE_TOKEN = creds.token;
+    SUREDONE_URL = creds.baseUrl;
+  } catch (e) {
     return res.status(500).json({ error: 'SureDone credentials not configured' });
   }
 
@@ -1662,6 +1665,30 @@ export default async function handler(req, res) {
     const itemSuccess = finalItemResult.result === 'success' || (data.result === 'success' && !finalItemResult.result);
 
     if (itemSuccess) {
+      // Update product status to 'listed' in Firebase
+      try {
+        if (product.id) {
+          await updateDoc(doc(db, 'products', product.id), {
+            status: 'listed',
+            listedAt: serverTimestamp(),
+            listedSku: data.sku || sku,
+          });
+        } else {
+          // Fallback: find by SKU
+          const q = query(collection(db, 'products'), where('sku', '==', sku));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            await updateDoc(snap.docs[0].ref, {
+              status: 'listed',
+              listedAt: serverTimestamp(),
+              listedSku: data.sku || sku,
+            });
+          }
+        }
+      } catch (statusErr) {
+        console.warn('Failed to update product status to listed:', statusErr.message);
+      }
+
       const responseObj = {
         success: true,
         message: attemptEdit ? 'Product updated in SureDone' : 'Product created in SureDone',
