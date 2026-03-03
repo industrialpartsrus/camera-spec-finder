@@ -21,6 +21,7 @@ const ReactQuill = dynamic(() => import('react-quill'), {
 });
 import PhotoEditor from '../components/PhotoEditor';
 import { scoreListingQuality } from '../lib/listingScorer';
+import { generateAltText } from '../lib/generate-alt-text-templates';
 
 const QUILL_MODULES = {
   toolbar: [
@@ -1992,31 +1993,19 @@ export default function ProListingBuilder() {
     setIsGeneratingAltText(true);
 
     try {
-      const promises = item.photos.map(async (photoUrl, index) => {
-        const viewName = item.photoViews?.[index] || `photo_${index + 1}`;
-
-        const response = await fetch('/api/photos/generate-alt-text', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageUrl: photoUrl,
-            brand: item.brand,
-            partNumber: item.partNumber,
-            category: item.productCategory || item.usertype || 'Industrial Part',
-            viewName: viewName,
-            isPrimary: index === 0
-          })
+      const newAltTexts = {};
+      item.photos.forEach((photoUrl, index) => {
+        const viewName = item.photoViews?.[index] || `extra_${index + 1}`;
+        const altText = generateAltText({
+          brand: item.brand,
+          partNumber: item.partNumber,
+          viewType: viewName,
+          condition: item.condition,
+          productType: item.productCategory || item.title || '',
+          photoIndex: index + 1,
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          return { [`media${index + 1}`]: data.altText };
-        }
-        return null;
+        newAltTexts[`media${index + 1}`] = altText;
       });
-
-      const results = await Promise.all(promises);
-      const newAltTexts = Object.assign({}, ...results.filter(Boolean));
 
       await updateDoc(doc(db, 'products', item.id), {
         mediaAltTexts: newAltTexts

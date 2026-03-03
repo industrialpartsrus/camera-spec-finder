@@ -13,6 +13,7 @@ import PartRequestModal from '../components/PartRequestModal';
 import UserPicker from '../components/UserPicker';
 import app from '../firebase';
 import { getCurrentUser, clearCurrentUser } from '../lib/users';
+import { generateAllAltTexts } from '../lib/generate-alt-text-templates';
 
 const CONDITION_OPTIONS = [
   { value: 'New', label: 'New', color: 'bg-green-100 border-green-500 text-green-900' },
@@ -680,6 +681,26 @@ export default function PhotoStation() {
       // Update Firestore product document
       const productRef = doc(db, 'products', selectedItem.id);
 
+      // Generate alt-text for all photos using templates (instant, no API call)
+      const photosForAltText = uploadedPhotos.map((p, i) => ({
+        url: p.url,
+        viewType: p.view,
+        order: i + 1,
+      }));
+      const photosWithAlt = generateAllAltTexts({
+        brand: selectedItem.brand,
+        partNumber: selectedItem.partNumber,
+        condition: selectedItem.condition,
+        productType: selectedItem.productCategory || '',
+        photos: photosForAltText,
+      });
+
+      // Build mediaAltTexts object for Firebase (keyed as media1, media2, etc.)
+      const mediaAltTexts = {};
+      photosWithAlt.forEach((p, i) => {
+        mediaAltTexts[`media${i + 1}`] = p.altText;
+      });
+
       // Build update object with photo data
       const updateData = {
         photos: uploadedPhotos.map(p => p.url), // Ordered URLs (position 1 = media1)
@@ -688,6 +709,7 @@ export default function PhotoStation() {
         photoViews: uploadedPhotos.map(p => p.view), // View names in display order
         photoOrder: photoOrder, // Explicit order array for Pro Builder
         removeBgFlags: removeBgFlags,
+        mediaAltTexts: mediaAltTexts, // Template-generated alt-text per photo
         photographedBy: currentUser?.name || 'unknown',
         photographedAt: Timestamp.now(),
         photosStatus: 'complete', // Track photo completion separately

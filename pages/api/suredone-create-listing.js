@@ -6,6 +6,7 @@ import brandsDb from '../../data/bigcommerce_brands.json';
 import { db } from '../../firebase';
 import { doc, updateDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { getSureDoneCredentials } from '../../lib/suredone-config';
+const { generateAltText } = require('../../lib/generate-alt-text-templates');
 
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
@@ -1364,50 +1365,31 @@ export default async function handler(req, res) {
       }
 
       // === GENERATE ALT TEXT FOR SEO ===
+      // Use cached alt texts from Firebase if available, otherwise generate from templates
       let altTexts = [];
 
-      // Check cache first
-      if (product.mediaAltTexts && Object.keys(product.mediaAltTexts).length === finalPhotoUrls.length) {
+      if (product.mediaAltTexts && Object.keys(product.mediaAltTexts).length >= finalPhotoUrls.length) {
         console.log('Using cached alt texts from Firebase');
         altTexts = finalPhotoUrls.map((_, index) =>
           product.mediaAltTexts[`media${index + 1}`] || ''
         );
       } else {
-        console.log('Generating alt texts with AI...');
-        const protocol = req.headers?.host?.includes('localhost') ? 'http' : 'https';
-        const host = req.headers?.host || process.env.VERCEL_URL || 'localhost:3000';
-
-        const altTextPromises = finalPhotoUrls.map(async (url, index) => {
-          try {
-            const response = await fetch(`${protocol}://${host}/api/photos/generate-alt-text`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                imageUrl: url,
-                brand: product.brand,
-                partNumber: product.partNumber,
-                category: product.productCategory || product.usertype || 'Industrial Part',
-                viewName: photoViews[index] || `photo_${index + 1}`,
-                isPrimary: index === 0
-              })
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              return data.altText || '';
-            }
-            return ''; // Fallback to empty
-          } catch (err) {
-            console.error(`Alt text generation failed for photo ${index + 1}:`, err);
-            return '';
-          }
+        console.log('Generating alt texts from templates...');
+        altTexts = finalPhotoUrls.map((url, index) => {
+          const viewName = photoViews[index] || `extra_${index + 1}`;
+          return generateAltText({
+            brand: product.brand,
+            partNumber: product.partNumber,
+            viewType: viewName,
+            condition: product.condition,
+            productType: product.productCategory || product.title || '',
+            photoIndex: index + 1,
+          });
         });
-
-        altTexts = await Promise.all(altTextPromises);
-        console.log(`Generated ${altTexts.filter(Boolean).length} alt texts`);
+        console.log(`Generated ${altTexts.filter(Boolean).length} alt texts from templates`);
 
         // Cache alt texts in Firebase for next publish
-        if (altTexts.some(Boolean) && product.id) {
+        if (product.id) {
           try {
             const mediaAltTextsObj = {};
             altTexts.forEach((text, index) => {
@@ -1415,15 +1397,12 @@ export default async function handler(req, res) {
                 mediaAltTextsObj[`media${index + 1}`] = text;
               }
             });
-
             await updateDoc(doc(db, 'products', product.id), {
               mediaAltTexts: mediaAltTextsObj
             });
-
-            console.log('Cached alt texts to Firebase');
+            console.log('Cached template alt texts to Firebase');
           } catch (cacheError) {
             console.error('Failed to cache alt texts:', cacheError);
-            // Non-fatal, continue with publish
           }
         }
       }
