@@ -1857,13 +1857,8 @@ export default function ProListingBuilder() {
         const uploadIndex = existingPhotos.length + i + 1;
         const viewName = `upload_${uploadIndex}`;
 
-        // Convert file to base64
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result.split(',')[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+        // Compress before upload — raw iPhone photos exceed Vercel's 4.5MB payload limit
+        const base64 = await compressImage(file, 2000, 0.85);
 
         // Upload via new simple upload API
         const response = await fetch('/api/photos/upload-simple', {
