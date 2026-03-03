@@ -1054,25 +1054,47 @@ export default async function handler(req, res) {
 
     // Extract the JSON from AI response
     // =====================================================================
-    // ⚠️  CRITICAL: MUST USE LAST TEXT BLOCK
+    // ⚠️  CRITICAL: Scan ALL text blocks from last to first for valid JSON.
     // When web search is enabled, the response contains multiple content
-    // blocks (search queries, results, reasoning). The final JSON answer
-    // is ALWAYS in the LAST text block. Do not use .join() or first block.
+    // blocks. The JSON answer is usually in the last text block, but
+    // sometimes the last block is a short conversational summary and the
+    // JSON is in an earlier block.
     // =====================================================================
     let text = '';
     if (response.content && Array.isArray(response.content)) {
       const textBlocks = response.content.filter(b => b.type === 'text' && b.text);
-      if (textBlocks.length > 0) {
-        text = textBlocks[textBlocks.length - 1].text;
-        console.log(`Found ${textBlocks.length} text blocks, using last one (${text.length} chars)`);
+      console.log(`Found ${textBlocks.length} text blocks`);
+
+      // Scan from last to first — find the block that contains JSON
+      for (let i = textBlocks.length - 1; i >= 0; i--) {
+        const block = textBlocks[i].text;
+        const jsonTest = block.match(/\{[\s\S]*\}/);
+        if (jsonTest) {
+          try {
+            JSON.parse(jsonTest[0]);
+            text = block;
+            console.log(`Using text block ${i + 1}/${textBlocks.length} (${block.length} chars) — valid JSON found`);
+            break;
+          } catch (e) {
+            console.log(`Text block ${i + 1} has JSON-like content but failed to parse, trying next...`);
+          }
+        } else {
+          console.log(`Text block ${i + 1}/${textBlocks.length} (${block.length} chars) — no JSON, skipping`);
+        }
+      }
+
+      // Fallback: if no block had valid JSON, join all blocks and try
+      if (!text) {
+        console.log('No individual block had valid JSON, trying joined text...');
+        text = textBlocks.map(b => b.text).join('\n');
       }
     }
     const jsonMatch = text.match(/\{[\s\S]*\}/);
-    
+
     if (!jsonMatch) {
       throw new Error('No valid JSON in AI response');
     }
-    
+
     const product = JSON.parse(jsonMatch[0]);
 
     // Post-process specifications: fix/remove bad field names
