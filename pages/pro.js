@@ -2095,6 +2095,19 @@ export default function ProListingBuilder() {
   const addToQueueWithValues = async (brand, part, ocrSeries = '', ocrFrn = '') => {
     if (!brand.trim() || !part.trim()) return alert('Enter brand and part number');
     try {
+      // Generate SKU first (same endpoint Scanner uses)
+      let sku = '';
+      try {
+        const skuResponse = await fetch('/api/generate-sku');
+        const skuData = await skuResponse.json();
+        if (skuData.success && skuData.sku) {
+          sku = skuData.sku;
+          console.log('Generated SKU for new item:', sku);
+        }
+      } catch (skuErr) {
+        console.error('SKU generation failed:', skuErr);
+      }
+
       // If OCR captured series/FRN from the label, seed them into specifications
       const initialSpecs = {};
       if (ocrSeries) initialSpecs.series = ocrSeries;
@@ -2104,6 +2117,7 @@ export default function ProListingBuilder() {
         initialSpecs.frn = ocrFrn;
       }
       const docRef = await addDoc(collection(db, 'products'), {
+        sku: sku,
         brand: brand.trim(), partNumber: part.trim(), model: part.trim(),
         status: 'pending', createdBy: userName || 'Unknown', createdAt: serverTimestamp(),
         title: '', productCategory: '', shortDescription: '', description: '', rawDescription: '',
