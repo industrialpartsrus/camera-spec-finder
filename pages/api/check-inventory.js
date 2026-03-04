@@ -35,20 +35,17 @@ export default async function handler(req, res) {
       return isActualMatch(item, cleanBrand, cleanPartNumber);
     });
 
-    // Filter to only items with stock > 0
-    const inStockMatches = verifiedMatches.filter(item => {
-      const stock = parseInt(item.stock) || 0;
-      return stock > 0;
-    });
-
-    const formattedMatches = inStockMatches.map(item => formatProductMatch(item));
+    // Return ALL matches — include zero-stock items so they can
+    // be restocked or updated. Stock level is included in the
+    // response so the UI can display it.
+    const formattedMatches = verifiedMatches.map(item => formatProductMatch(item));
 
     return res.status(200).json({
       found: formattedMatches.length > 0,
       matches: formattedMatches,
       totalMatches: formattedMatches.length,
       searchedFor: { brand: brand || '(any)', partNumber },
-      debug: { rawResults: allResults.length, verifiedMatches: verifiedMatches.length, inStockMatches: inStockMatches.length }
+      debug: { rawResults: allResults.length, verifiedMatches: verifiedMatches.length }
     });
 
   } catch (error) {

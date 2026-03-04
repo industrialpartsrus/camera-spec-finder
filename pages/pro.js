@@ -2748,6 +2748,27 @@ export default function ProListingBuilder() {
     } catch (error) { console.error('Error deleting item:', error); }
   };
 
+  const handleReturnToShelf = async (item) => {
+    try {
+      const productId = item.id;
+      if (!productId) {
+        alert('No Firebase document ID — cannot create shelf return');
+        return;
+      }
+
+      await updateDoc(doc(db, 'products', productId), {
+        returnToShelf: true,
+        returnToShelfAt: serverTimestamp(),
+        returnRequestedBy: currentUser?.name || 'Unknown',
+      });
+
+      alert('✅ Return to shelf requested! Scanner team will be notified.');
+    } catch (err) {
+      console.error('Return to shelf error:', err);
+      alert('Failed: ' + err.message);
+    }
+  };
+
   const sendToSureDone = async (itemId) => {
     const item = queue.find(q => q.id === itemId);
     if (!item) return alert('Item not found');
@@ -4663,6 +4684,16 @@ export default function ProListingBuilder() {
                   >
                     📦 Request Part from Warehouse
                   </button>
+
+                  {/* Return to Shelf — only after listing is sent to SureDone */}
+                  {selected.isEditingExisting && (
+                    <button
+                      onClick={() => handleReturnToShelf(selected)}
+                      className="w-full mt-3 px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-semibold text-base flex items-center justify-center gap-2"
+                    >
+                      📍 Return to Shelf
+                    </button>
+                  )}
 
                   {/* Listing Actions — only for existing listings */}
                   {selected.isEditingExisting && (

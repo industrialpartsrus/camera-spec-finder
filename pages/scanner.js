@@ -579,13 +579,13 @@ export default function WarehouseScanner() {
 
       await addDoc(collection(db, 'activityLog'), {
         action: 'request_fulfilled',
-        sku: req.sku,
+        sku: req.sku || '',
         userId: currentUser?.id || 'unknown',
         userName: currentUser?.name || 'Unknown',
         details: {
-          requestedBy: req.requestedByName,
-          shelfLocation: req.shelfLocation,
-          priority: req.priority,
+          requestedBy: req.requestedByName || req.requestedBy || 'Unknown',
+          shelfLocation: req.shelfLocation || '',
+          priority: req.priority || 'normal',
         },
         timestamp: serverTimestamp(),
       });

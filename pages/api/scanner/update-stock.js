@@ -197,53 +197,49 @@ async function updateSureDoneStock(sku, stock, shelf, isCreate = false) {
       return { success: true }; // Not an error - expected for new items
     }
 
-    // Build update payload
-    const updates = {
-      stock: stock
-    };
+    // Use form-encoded POST to /editor/items/edit (same working pattern as update-item.js)
+    const formData = new URLSearchParams();
+    formData.append('identifier', 'guid');
+    formData.append('guid', sku);
+    formData.append('stock', String(stock));
+    if (shelf) formData.append('shelf', shelf);
 
-    if (shelf) {
-      updates.shelf = shelf;
-    }
-
-    // PUT to /editor/items endpoint
-    const url = `https://api.suredone.com/v1/editor/items/${encodeURIComponent(sku)}`;
+    const url = 'https://api.suredone.com/v1/editor/items/edit';
 
     console.log(`Updating SureDone ${sku}: stock=${stock}, shelf=${shelf || 'unchanged'}`);
 
     const response = await fetch(url, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
         'X-Auth-User': SUREDONE_USER,
-        'X-Auth-Token': SUREDONE_TOKEN
+        'X-Auth-Token': SUREDONE_TOKEN,
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: new URLSearchParams(updates).toString()
+      body: formData.toString()
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`SureDone update failed: ${response.status} ${response.statusText}`, errorText);
+    const responseText = await response.text();
+    console.log('SureDone update response:', responseText);
 
-      // If item doesn't exist (404), that's expected for scanner-created items
-      if (response.status === 404) {
-        console.log(`SKU ${sku} not found in SureDone - will be created later via Pro Builder`);
-        return { success: true }; // Not an error
-      }
-
-      return { success: false, error: `SureDone API error: ${response.status} ${errorText}` };
+    // If item doesn't exist (404), that's expected for scanner-created items
+    if (!response.ok && response.status === 404) {
+      console.log(`SKU ${sku} not found in SureDone - will be created later via Pro Builder`);
+      return { success: true }; // Not an error
     }
 
-    const data = await response.json();
-    console.log('SureDone update response:', data);
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      return { success: false, error: `SureDone returned non-JSON: ${responseText.substring(0, 200)}` };
+    }
 
-    // Check for success in response
-    if (data.result === 'success' || data[sku]?.result === 'success') {
+    if (data.result === 'success' || data.result === 1 || data['1']) {
       return { success: true };
     }
 
     console.error('SureDone update did not return success:', data);
-    return { success: false, error: 'SureDone did not return success' };
+    return { success: false, error: data.message || data.error || 'SureDone did not return success' };
   } catch (error) {
     console.error('Error updating SureDone stock:', error);
     return { success: false, error: error.message };

@@ -19,6 +19,7 @@ export default function PartRequestModal({ item, currentUser, onClose }) {
   const warehouseWorkers = getWarehouseWorkers();
 
   const handleSend = async () => {
+    if (isSending) return;  // Prevent double-tap
     setIsSending(true);
     try {
       const payload = {
