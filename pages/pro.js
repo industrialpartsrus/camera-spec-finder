@@ -15,6 +15,7 @@ import UserPicker from '../components/UserPicker';
 import PartRequestModal from '../components/PartRequestModal';
 import { normalizeCoilVoltage, STANDARD_COIL_VOLTAGES } from '../lib/coil-voltage-normalizer';
 import { SPEC_OPTIONS, FIELD_LABELS } from '../lib/spec-field-options';
+import { normalizeSpecValue, hasNormalizer } from '../lib/spec-normalizer';
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), {
   ssr: false,
@@ -1623,9 +1624,13 @@ export default function ProListingBuilder() {
   // Close spec search dropdown when clicking outside
   useEffect(() => {
     if (!specSearchOpen) return;
-    const handleClickOutside = () => setSpecSearchOpen(false);
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    const close = (e) => {
+      if (!e.target.closest('[data-spec-search]')) {
+        setSpecSearchOpen(false);
+      }
+    };
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
   }, [specSearchOpen]);
 
   // Activity logger for dashboard tracking
@@ -3787,8 +3792,8 @@ export default function ProListingBuilder() {
                   </div>
 
                   {/* Specifications */}
-                  <div className="border rounded-lg overflow-hidden">
-                    <button onClick={() => setShowSpecs(!showSpecs)} className="w-full px-4 py-3 bg-blue-50 flex justify-between items-center hover:bg-blue-100 transition">
+                  <div className="border rounded-lg">
+                    <button onClick={() => setShowSpecs(!showSpecs)} className="w-full px-4 py-3 bg-blue-50 flex justify-between items-center hover:bg-blue-100 transition rounded-t-lg">
                       <span className="font-semibold text-blue-800">📋 Specifications ({Object.keys(selected.specifications || {}).length} fields)</span>
                       {showSpecs ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </button>
@@ -3796,28 +3801,51 @@ export default function ProListingBuilder() {
                       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         {Object.entries(selected.specifications)
                           .sort(([a], [b]) => a.localeCompare(b))
-                          .map(([key, value]) => (
-                            <div key={key} className="flex flex-col">
-                              <div className="flex justify-between items-center mb-1">
-                                <label className="text-xs font-medium text-gray-600">{FIELD_LABELS[key] || FIELD_LABELS[key.toLowerCase()] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</label>
-                                <button
-                                  onClick={() => removeSpecification(selected.id, key)}
-                                  className="text-gray-300 hover:text-red-500 transition"
-                                  title="Remove this spec"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
+                          .map(([key, value]) => {
+                            const normResult = value ? normalizeSpecValue(key, value) : null;
+                            const showSuggestion = normResult
+                              && normResult.confidence === 'high'
+                              && normResult.standardized
+                              && normResult.standardized !== value;
+
+                            return (
+                              <div key={key} className="flex flex-col">
+                                <div className="flex justify-between items-center mb-1">
+                                  <label className="text-xs font-medium text-gray-600">
+                                    {FIELD_LABELS[key] || FIELD_LABELS[key.toLowerCase()] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                  </label>
+                                  <button
+                                    onClick={() => removeSpecification(selected.id, key)}
+                                    className="text-gray-300 hover:text-red-500 transition p-0.5"
+                                    title="Remove this specification"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                <input
+                                  type="text"
+                                  value={value || ''}
+                                  onChange={e => updateSpecification(selected.id, key, e.target.value)}
+                                  className={`px-3 py-2 border rounded-lg text-sm ${showSuggestion ? 'border-blue-300' : ''}`}
+                                />
+                                {showSuggestion && (
+                                  <button
+                                    onClick={() => updateSpecification(selected.id, key, normResult.standardized)}
+                                    className="mt-1 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 rounded px-2 py-1 text-left transition hover:bg-blue-100"
+                                  >
+                                    Standardize to: <strong>{normResult.standardized}</strong>
+                                  </button>
+                                )}
                               </div>
-                              <input type="text" value={value || ''} onChange={e => updateSpecification(selected.id, key, e.target.value)} className="px-3 py-2 border rounded-lg text-sm" />
-                            </div>
-                          ))}
+                            );
+                          })}
                       </div>
                     )}
                     {showSpecs && (!selected.specifications || Object.keys(selected.specifications).length === 0) && (
                       <div className="p-4 text-gray-500 text-sm">No specifications found. Use the search below to add specs.</div>
                     )}
                     {showSpecs && (
-                      <div className="px-4 pb-4 relative" onClick={(e) => e.stopPropagation()}>
+                      <div className="px-4 pb-4 relative" data-spec-search onClick={e => e.stopPropagation()}>
                         <div className="relative">
                           <input
                             type="text"
@@ -3834,7 +3862,8 @@ export default function ProListingBuilder() {
                           />
 
                           {specSearchOpen && specSearchQuery.length >= 2 && (
-                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                              onClick={e => e.stopPropagation()}>
                               {SPEC_OPTIONS
                                 .filter(opt => {
                                   const q = specSearchQuery.toLowerCase();
@@ -3842,7 +3871,9 @@ export default function ProListingBuilder() {
                                 })
                                 .slice(0, 8)
                                 .map(opt => {
-                                  const alreadyExists = selected?.specifications?.[opt.field] !== undefined;
+                                  const alreadyExists = selected?.specifications
+                                    ? Object.prototype.hasOwnProperty.call(selected.specifications, opt.field)
+                                    : false;
                                   return (
                                     <button
                                       key={opt.field}
@@ -3855,13 +3886,18 @@ export default function ProListingBuilder() {
                                         }
                                       }}
                                       className={`w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-50 transition ${
-                                        alreadyExists ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                                        alreadyExists ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'cursor-pointer'
                                       }`}
                                     >
-                                      <div className="font-medium text-sm text-gray-900">
-                                        {opt.display}
+                                      <div className="flex justify-between items-center">
+                                        <span className="font-medium text-sm text-gray-900">
+                                          {opt.display}
+                                        </span>
                                         {alreadyExists && (
-                                          <span className="text-xs text-gray-400 ml-2">(already added)</span>
+                                          <span className="text-xs text-gray-400">already added</span>
+                                        )}
+                                        {hasNormalizer(opt.field) && !alreadyExists && (
+                                          <span className="text-xs text-blue-500">auto-format</span>
                                         )}
                                       </div>
                                       <div className="text-xs text-gray-400 font-mono">{opt.field}</div>
