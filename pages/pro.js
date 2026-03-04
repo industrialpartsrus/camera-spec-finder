@@ -14,6 +14,7 @@ import { getCurrentUser, setCurrentUser, clearCurrentUser, isAdmin } from '../li
 import UserPicker from '../components/UserPicker';
 import PartRequestModal from '../components/PartRequestModal';
 import { normalizeCoilVoltage, STANDARD_COIL_VOLTAGES } from '../lib/coil-voltage-normalizer';
+import { SPEC_OPTIONS, FIELD_LABELS } from '../lib/spec-field-options';
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), {
   ssr: false,
@@ -1096,29 +1097,7 @@ function renderStoreCategoryOptions() {
   return result;
 }
 
-// Spec field labels (proper display names - includes lowercase variants)
-const SPEC_LABELS = {
-  voltage: 'Voltage', amperage: 'Amperage', horsepower: 'Horsepower', rpm: 'RPM',
-  frame_size: 'Frame Size', framesize: 'Frame Size',
-  nema_frame_suffix: 'NEMA Frame Suffix', nema_design: 'NEMA Design',
-  service_factor: 'Service Factor', servicefactor: 'Service Factor',
-  phase: 'Phase', frequency: 'Frequency',
-  enclosure: 'Enclosure Type', enclosure_type: 'Enclosure Type',
-  insulation_class: 'Insulation Class', insulationclass: 'Insulation Class',
-  motor_type: 'Motor Type',
-  sensing_range: 'Sensing Range', output_type: 'Output Type',
-  bore_diameter: 'Bore Diameter', stroke_length: 'Stroke Length',
-  port_size: 'Port Size', max_pressure: 'Max Pressure',
-  coil_voltage: 'Coil Voltage', contact_rating: 'Contact Rating',
-  number_of_poles: 'Number of Poles',
-  communication_protocol: 'Communication Protocol', communication: 'Communication Protocol',
-  input_voltage: 'Input Voltage', output_voltage: 'Output Voltage',
-  kw_rating: 'kW Rating', kw: 'kW Rating',
-  ip_rating: 'IP Rating', mounting_type: 'Mounting Type', weight: 'Weight',
-  current: 'Current', hp: 'Horsepower',
-  shaft_type: 'Shaft Type', shaft_diameter: 'Shaft Diameter',
-  efficiency: 'Efficiency', duty_cycle: 'Duty Cycle'
-};
+// SPEC_LABELS replaced by FIELD_LABELS from lib/spec-field-options.js (744 entries vs old 40)
 
 // ============================================
 // SKU LOOKUP COMPONENT (INLINE)
@@ -1600,6 +1579,8 @@ export default function ProListingBuilder() {
   const [isPullingSuredonePhotos, setIsPullingSuredonePhotos] = useState(false);
   const [isGeneratingAltText, setIsGeneratingAltText] = useState(false);
   const [showSpecs, setShowSpecs] = useState(true);
+  const [specSearchQuery, setSpecSearchQuery] = useState('');
+  const [specSearchOpen, setSpecSearchOpen] = useState(false);
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -1638,6 +1619,14 @@ export default function ProListingBuilder() {
       setIsNameSet(true);
     }
   }, []);
+
+  // Close spec search dropdown when clicking outside
+  useEffect(() => {
+    if (!specSearchOpen) return;
+    const handleClickOutside = () => setSpecSearchOpen(false);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [specSearchOpen]);
 
   // Activity logger for dashboard tracking
   const logActivity = async (action, details = {}) => {
@@ -2603,6 +2592,14 @@ export default function ProListingBuilder() {
     const item = queue.find(q => q.id === itemId);
     if (!item) return;
     const newSpecs = { ...item.specifications, [specKey]: value };
+    await updateDoc(doc(db, 'products', itemId), { specifications: newSpecs });
+  };
+
+  const removeSpecification = async (itemId, specKey) => {
+    const item = queue.find(q => q.id === itemId);
+    if (!item) return;
+    const newSpecs = { ...item.specifications };
+    delete newSpecs[specKey];
     await updateDoc(doc(db, 'products', itemId), { specifications: newSpecs });
   };
 
@@ -3801,14 +3798,89 @@ export default function ProListingBuilder() {
                           .sort(([a], [b]) => a.localeCompare(b))
                           .map(([key, value]) => (
                             <div key={key} className="flex flex-col">
-                              <label className="text-xs font-medium text-gray-600 mb-1">{SPEC_LABELS[key] || SPEC_LABELS[key.toLowerCase()] || SPEC_LABELS[key.replace(/([A-Z])/g, '_$1').toLowerCase()] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</label>
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="text-xs font-medium text-gray-600">{FIELD_LABELS[key] || FIELD_LABELS[key.toLowerCase()] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</label>
+                                <button
+                                  onClick={() => removeSpecification(selected.id, key)}
+                                  className="text-gray-300 hover:text-red-500 transition"
+                                  title="Remove this spec"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
                               <input type="text" value={value || ''} onChange={e => updateSpecification(selected.id, key, e.target.value)} className="px-3 py-2 border rounded-lg text-sm" />
                             </div>
                           ))}
                       </div>
                     )}
                     {showSpecs && (!selected.specifications || Object.keys(selected.specifications).length === 0) && (
-                      <div className="p-4 text-gray-500 text-sm">No specifications found</div>
+                      <div className="p-4 text-gray-500 text-sm">No specifications found. Use the search below to add specs.</div>
+                    )}
+                    {showSpecs && (
+                      <div className="px-4 pb-4 relative" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={specSearchQuery}
+                            onChange={(e) => {
+                              setSpecSearchQuery(e.target.value);
+                              setSpecSearchOpen(e.target.value.length >= 2);
+                            }}
+                            onFocus={() => {
+                              if (specSearchQuery.length >= 2) setSpecSearchOpen(true);
+                            }}
+                            placeholder="Search specifications to add..."
+                            className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm focus:border-blue-400 focus:outline-none hover:border-gray-400 transition"
+                          />
+
+                          {specSearchOpen && specSearchQuery.length >= 2 && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                              {SPEC_OPTIONS
+                                .filter(opt => {
+                                  const q = specSearchQuery.toLowerCase();
+                                  return opt.display.toLowerCase().includes(q) || opt.field.toLowerCase().includes(q);
+                                })
+                                .slice(0, 8)
+                                .map(opt => {
+                                  const alreadyExists = selected?.specifications?.[opt.field] !== undefined;
+                                  return (
+                                    <button
+                                      key={opt.field}
+                                      disabled={alreadyExists}
+                                      onClick={() => {
+                                        if (!alreadyExists && selected) {
+                                          updateSpecification(selected.id, opt.field, '');
+                                          setSpecSearchQuery('');
+                                          setSpecSearchOpen(false);
+                                        }
+                                      }}
+                                      className={`w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-50 transition ${
+                                        alreadyExists ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                                      }`}
+                                    >
+                                      <div className="font-medium text-sm text-gray-900">
+                                        {opt.display}
+                                        {alreadyExists && (
+                                          <span className="text-xs text-gray-400 ml-2">(already added)</span>
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-gray-400 font-mono">{opt.field}</div>
+                                    </button>
+                                  );
+                                })
+                              }
+                              {SPEC_OPTIONS.filter(opt => {
+                                const q = specSearchQuery.toLowerCase();
+                                return opt.display.toLowerCase().includes(q) || opt.field.toLowerCase().includes(q);
+                              }).length === 0 && (
+                                <div className="px-3 py-3 text-sm text-gray-500 text-center">
+                                  No matching specifications found
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
 
