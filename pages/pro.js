@@ -1577,6 +1577,7 @@ export default function ProListingBuilder() {
   const categorySearchTimers = useRef({});  // Debounce timers
   const [photoOrderOverrides, setPhotoOrderOverrides] = useState({}); // { itemId: [0, 1, 2, 3, ...] }
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [isPullingSuredonePhotos, setIsPullingSuredonePhotos] = useState(false);
   const [isGeneratingAltText, setIsGeneratingAltText] = useState(false);
   const [showSpecs, setShowSpecs] = useState(true);
@@ -1847,6 +1848,8 @@ export default function ProListingBuilder() {
       const newViewNames = [];
 
       for (let i = 0; i < files.length; i++) {
+        setUploadProgress({ current: i + 1, total: files.length, fileName: files[i].name });
+
         const file = files[i];
         const uploadIndex = existingPhotos.length + i + 1;
         const viewName = `upload_${uploadIndex}`;
@@ -1888,6 +1891,14 @@ export default function ProListingBuilder() {
         });
 
         console.log(`Added ${newPhotoUrls.length} photos to ${sku}`);
+
+        // Brief success feedback
+        setUploadProgress({
+          current: newPhotoUrls.length,
+          total: files.length,
+          complete: true
+        });
+        setTimeout(() => setUploadProgress(null), 2000);
       }
     } catch (err) {
       console.error('Photo upload error:', err);
@@ -4587,13 +4598,30 @@ export default function ProListingBuilder() {
                       <label
                         className="flex items-center justify-center gap-2 w-full py-3 px-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
                       >
-                        {isUploadingPhotos ? (
-                          <>
-                            <Loader size={18} className="animate-spin text-blue-600" />
-                            <span className="text-sm font-semibold text-blue-600">
-                              Uploading...
-                            </span>
-                          </>
+                        {uploadProgress?.complete ? (
+                          <span className="text-sm font-semibold text-green-600">
+                            ✅ {uploadProgress.current} photo{uploadProgress.current !== 1 ? 's' : ''} uploaded!
+                          </span>
+                        ) : isUploadingPhotos ? (
+                          <div className="flex flex-col items-center w-full gap-1">
+                            <div className="flex items-center gap-2">
+                              <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent" />
+                              <span className="text-sm font-semibold text-blue-600">
+                                {uploadProgress
+                                  ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}...`
+                                  : 'Uploading...'
+                                }
+                              </span>
+                            </div>
+                            {uploadProgress && (
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div
+                                  className="bg-blue-500 h-1.5 rounded-full transition-all"
+                                  style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <>
                             <Upload size={18} className="text-gray-500" />
