@@ -1256,7 +1256,27 @@ export default async function handler(req, res) {
     formData.append('identifier', 'guid');
     formData.append('guid', sku);
     formData.append('sku', sku);
-    formData.append('title', product.title);
+    // === TITLE — append included component part numbers (max 80 chars for eBay) ===
+    let finalTitle = product.title || '';
+    const components = product.includedComponents || [];
+    if (components.length > 0) {
+      const componentParts = components.map(c => c.partNumber).filter(Boolean);
+      if (componentParts.length > 0) {
+        const suffix = ' w/ ' + componentParts.join(' ');
+        if ((finalTitle + suffix).length <= 80) {
+          finalTitle = finalTitle + suffix;
+        } else {
+          // Trim title to fit components within 80 chars
+          const maxBase = 80 - suffix.length;
+          if (maxBase > 20) {
+            finalTitle = finalTitle.substring(0, maxBase).trim() + suffix;
+          }
+          // else: title already too long, skip appending components
+        }
+      }
+      console.log('Title with components:', finalTitle);
+    }
+    formData.append('title', finalTitle);
 
     // === SKIP AUTO-PUSH TO CHANNELS (create as draft for manual review/images) ===
     formData.append('ebayskip', '1');
@@ -1552,6 +1572,22 @@ export default async function handler(req, res) {
         formData.append('countryoforigin', countryValue);
         console.log(`Country of Origin: ${countryValue}`);
       }
+    }
+
+    // === BUNDLE FIELDS (for multi-part listings with included components) ===
+    if (components.length > 0) {
+      formData.append('ebayitemspecificscustombundle', 'Yes');
+
+      const bundleParts = components.map(c => {
+        const parts = [c.brand, c.partNumber, c.description].filter(Boolean);
+        return parts.join(' ');
+      });
+      const bundleDescription = bundleParts.join(', ');
+      const itemsIncluded = bundleParts.join(', ');
+
+      formData.append('ebayitemspecificsbundledescription', bundleDescription);
+      formData.append('ebayitemspecificsitemsincluded', itemsIncluded);
+      console.log('Bundle fields set:', { custombundle: 'Yes', bundledescription: bundleDescription, itemsincluded: itemsIncluded });
     }
 
     // === RAW SPECS AS CUSTOM FIELDS ===

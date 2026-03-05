@@ -1584,6 +1584,8 @@ export default function ProListingBuilder() {
   const [specSearchQuery, setSpecSearchQuery] = useState('');
   const [specSearchOpen, setSpecSearchOpen] = useState(false);
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
+  const [showComponents, setShowComponents] = useState(true);
+  const [componentForm, setComponentForm] = useState({ brand: '', partNumber: '', description: '' });
   const fileInputRef = useRef(null);
 
   // Inventory keyword search state
@@ -2619,6 +2621,21 @@ export default function ProListingBuilder() {
     await updateDoc(doc(db, 'products', itemId), { specifications: newSpecs });
   };
 
+  const addComponent = async (itemId, component) => {
+    const item = queue.find(q => q.id === itemId);
+    if (!item) return;
+    const current = item.includedComponents || [];
+    const updated = [...current, { ...component, addedAt: new Date().toISOString() }];
+    await updateDoc(doc(db, 'products', itemId), { includedComponents: updated });
+  };
+
+  const removeComponent = async (itemId, index) => {
+    const item = queue.find(q => q.id === itemId);
+    if (!item) return;
+    const updated = (item.includedComponents || []).filter((_, i) => i !== index);
+    await updateDoc(doc(db, 'products', itemId), { includedComponents: updated });
+  };
+
   const updateCondition = async (itemId, conditionValue) => {
     try {
       await updateDoc(doc(db, 'products', itemId), {
@@ -2934,7 +2951,8 @@ export default function ProListingBuilder() {
           photos: item.photos || [],
           photosNobg: item.photosNobg || {},
           photoViews: item.photoViews || [],
-          removeBgFlags: item.removeBgFlags || {}
+          removeBgFlags: item.removeBgFlags || {},
+          includedComponents: item.includedComponents || []
         };
         
         console.log('Creating new listing:', productData);
@@ -3511,6 +3529,9 @@ export default function ProListingBuilder() {
                     {item.pass2Status === 'filling' && (
                       <p className="text-[10px] text-purple-500 mt-0.5 animate-pulse">⏳ Filling eBay specs...</p>
                     )}
+                    {item.includedComponents?.length > 0 && (
+                      <p className="text-[10px] text-blue-600 mt-0.5">📦 +{item.includedComponents.length} included</p>
+                    )}
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-1 rounded ml-2">
                     <X className="w-4 h-4" />
@@ -3964,6 +3985,90 @@ export default function ProListingBuilder() {
                       Pass 3 revision failed
                     </div>
                   )}
+
+                  {/* Included Components — for multi-part bundle listings */}
+                  <div className="border rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setShowComponents(!showComponents)}
+                      className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition rounded-t-lg"
+                    >
+                      <span className="text-sm font-bold text-gray-700">
+                        Included Components {selected.includedComponents?.length > 0 && (
+                          <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">{selected.includedComponents.length}</span>
+                        )}
+                      </span>
+                      {showComponents ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                    {showComponents && (
+                      <div className="p-3 space-y-3">
+                        {/* Current components list */}
+                        {selected.includedComponents?.length > 0 ? (
+                          <div className="space-y-2">
+                            {selected.includedComponents.map((comp, idx) => (
+                              <div key={idx} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-sm font-semibold text-gray-800">{comp.brand} {comp.partNumber}</span>
+                                  {comp.description && <span className="text-xs text-gray-500 ml-2">— {comp.description}</span>}
+                                </div>
+                                <button
+                                  onClick={() => removeComponent(selected.id, idx)}
+                                  className="text-red-500 hover:text-red-700 ml-2 flex-shrink-0"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-400 text-center py-2">No components added yet. Use this for multi-part listings (e.g., motor + encoder).</p>
+                        )}
+
+                        {/* Add component form */}
+                        <div className="border-t pt-3">
+                          <div className="grid grid-cols-3 gap-2">
+                            <input
+                              type="text"
+                              placeholder="Brand"
+                              value={componentForm.brand}
+                              onChange={e => setComponentForm(prev => ({ ...prev, brand: e.target.value }))}
+                              className="px-2 py-1.5 border rounded text-sm"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Part Number *"
+                              value={componentForm.partNumber}
+                              onChange={e => setComponentForm(prev => ({ ...prev, partNumber: e.target.value }))}
+                              className="px-2 py-1.5 border rounded text-sm"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Description (optional)"
+                              value={componentForm.description}
+                              onChange={e => setComponentForm(prev => ({ ...prev, description: e.target.value }))}
+                              className="px-2 py-1.5 border rounded text-sm"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!componentForm.partNumber.trim()) return;
+                              addComponent(selected.id, {
+                                brand: componentForm.brand.trim(),
+                                partNumber: componentForm.partNumber.trim(),
+                                description: componentForm.description.trim()
+                              });
+                              setComponentForm({ brand: '', partNumber: '', description: '' });
+                            }}
+                            disabled={!componentForm.partNumber.trim()}
+                            className="mt-2 w-full py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            + Add Component
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Coil Voltage Enforcement — for relays, contactors, starters, solenoid valves */}
                   {needsCoilVoltage(selected.productCategory) && (
