@@ -1586,6 +1586,8 @@ export default function ProListingBuilder() {
   const [showEbaySpecifics, setShowEbaySpecifics] = useState(false);
   const [showComponents, setShowComponents] = useState(true);
   const [componentForm, setComponentForm] = useState({ brand: '', partNumber: '', description: '' });
+  const [localSpecEdits, setLocalSpecEdits] = useState({});
+  const specDebounceTimers = useRef({});
   const fileInputRef = useRef(null);
 
   // Inventory keyword search state
@@ -1734,6 +1736,13 @@ export default function ProListingBuilder() {
 
     return () => Object.values(timeouts).forEach(clearTimeout);
   }, [localFields]);
+
+  // Clean up spec debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(specDebounceTimers.current).forEach(clearTimeout);
+    };
+  }, []);
 
   // Helper: Get field value (local state if exists, otherwise from item)
   const getFieldValue = (item, fieldName) => {
@@ -2606,16 +2615,88 @@ export default function ProListingBuilder() {
     catch (error) { console.error('Error applying ER status to listing:', error); }
   };
 
-  const updateSpecification = async (itemId, specKey, value) => {
+  const updateSpecification = (itemId, specKey, value) => {
+    // 1. Update local buffer immediately (no cursor jump)
+    setLocalSpecEdits(prev => ({
+      ...prev,
+      [`${itemId}.${specKey}`]: value
+    }));
+
+    // 2. Debounce the Firestore write (500ms)
+    const timerKey = `${itemId}.${specKey}`;
+    if (specDebounceTimers.current[timerKey]) {
+      clearTimeout(specDebounceTimers.current[timerKey]);
+    }
+
+    specDebounceTimers.current[timerKey] = setTimeout(async () => {
+      try {
+        const item = queue.find(q => q.id === itemId);
+        if (!item) return;
+        const currentSpecs = item.specifications || {};
+        // Apply ALL pending local edits for this item
+        const pendingEdits = {};
+        for (const [k, v] of Object.entries(localSpecEdits)) {
+          if (k.startsWith(`${itemId}.`)) {
+            pendingEdits[k.replace(`${itemId}.`, '')] = v;
+          }
+        }
+        pendingEdits[specKey] = value;
+
+        const newSpecs = { ...currentSpecs, ...pendingEdits };
+        await updateDoc(doc(db, 'products', itemId), { specifications: newSpecs });
+
+        // Clear saved edits from buffer
+        setLocalSpecEdits(prev => {
+          const next = { ...prev };
+          for (const k of Object.keys(next)) {
+            if (k.startsWith(`${itemId}.`)) delete next[k];
+          }
+          return next;
+        });
+      } catch (err) {
+        console.error('Spec update error:', err);
+      }
+      delete specDebounceTimers.current[timerKey];
+    }, 500);
+  };
+
+  // Immediate spec write — for dropdowns, programmatic updates, normalizer buttons
+  const updateSpecImmediate = async (itemId, specKey, value) => {
+    // Clear any pending debounce for this field
+    const timerKey = `${itemId}.${specKey}`;
+    if (specDebounceTimers.current[timerKey]) {
+      clearTimeout(specDebounceTimers.current[timerKey]);
+      delete specDebounceTimers.current[timerKey];
+    }
+    // Update local buffer so UI reflects it
+    setLocalSpecEdits(prev => ({ ...prev, [timerKey]: value }));
+    // Write to Firestore immediately
     const item = queue.find(q => q.id === itemId);
     if (!item) return;
     const newSpecs = { ...item.specifications, [specKey]: value };
     await updateDoc(doc(db, 'products', itemId), { specifications: newSpecs });
+    // Clear from local buffer since Firestore now has the value
+    setLocalSpecEdits(prev => {
+      const next = { ...prev };
+      delete next[timerKey];
+      return next;
+    });
   };
 
   const removeSpecification = async (itemId, specKey) => {
     const item = queue.find(q => q.id === itemId);
     if (!item) return;
+    // Clear any pending debounce for this field
+    const timerKey = `${itemId}.${specKey}`;
+    if (specDebounceTimers.current[timerKey]) {
+      clearTimeout(specDebounceTimers.current[timerKey]);
+      delete specDebounceTimers.current[timerKey];
+    }
+    setLocalSpecEdits(prev => {
+      const next = { ...prev };
+      delete next[timerKey];
+      return next;
+    });
     const newSpecs = { ...item.specifications };
     delete newSpecs[specKey];
     await updateDoc(doc(db, 'products', itemId), { specifications: newSpecs });
@@ -3834,11 +3915,14 @@ export default function ProListingBuilder() {
                         {Object.entries(selected.specifications)
                           .sort(([a], [b]) => a.localeCompare(b))
                           .map(([key, value]) => {
-                            const normResult = value ? normalizeSpecValue(key, value) : null;
+                            const displayValue = localSpecEdits[`${selected.id}.${key}`] !== undefined
+                              ? localSpecEdits[`${selected.id}.${key}`]
+                              : (value || '');
+                            const normResult = displayValue ? normalizeSpecValue(key, displayValue) : null;
                             const showSuggestion = normResult
                               && normResult.confidence === 'high'
                               && normResult.standardized
-                              && normResult.standardized !== value;
+                              && normResult.standardized !== displayValue;
 
                             return (
                               <div key={key} className="flex flex-col">
@@ -3856,13 +3940,13 @@ export default function ProListingBuilder() {
                                 </div>
                                 <input
                                   type="text"
-                                  value={value || ''}
+                                  value={displayValue}
                                   onChange={e => updateSpecification(selected.id, key, e.target.value)}
                                   className={`px-3 py-2 border rounded-lg text-sm ${showSuggestion ? 'border-blue-300' : ''}`}
                                 />
                                 {showSuggestion && (
                                   <button
-                                    onClick={() => updateSpecification(selected.id, key, normResult.standardized)}
+                                    onClick={() => updateSpecImmediate(selected.id, key, normResult.standardized)}
                                     className="mt-1 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 rounded px-2 py-1 text-left transition hover:bg-blue-100"
                                   >
                                     Standardize to: <strong>{normResult.standardized}</strong>
@@ -3912,7 +3996,7 @@ export default function ProListingBuilder() {
                                       disabled={alreadyExists}
                                       onClick={() => {
                                         if (!alreadyExists && selected) {
-                                          updateSpecification(selected.id, opt.field, '');
+                                          updateSpecImmediate(selected.id, opt.field, '');
                                           setSpecSearchQuery('');
                                           setSpecSearchOpen(false);
                                         }
@@ -4086,7 +4170,7 @@ export default function ProListingBuilder() {
                             updateField(selected.id, 'coilVoltageRaw', raw);
                             const result = normalizeCoilVoltage(raw);
                             if (result.confidence === 'high') {
-                              updateSpecification(selected.id, 'coilvoltage', result.standardized);
+                              updateSpecImmediate(selected.id, 'coilvoltage', result.standardized);
                             }
                           }}
                           className="w-full mt-1 px-3 py-2 border-2 border-yellow-400 rounded-lg bg-white font-semibold text-lg"
@@ -4106,7 +4190,7 @@ export default function ProListingBuilder() {
                         <label className="text-sm font-bold text-yellow-900">Standard Value (used in listing):</label>
                         <select
                           value={selected.specifications?.coilvoltage || ''}
-                          onChange={e => updateSpecification(selected.id, 'coilvoltage', e.target.value)}
+                          onChange={e => updateSpecImmediate(selected.id, 'coilvoltage', e.target.value)}
                           className="w-full mt-1 px-3 py-2 border-2 border-yellow-400 rounded-lg bg-white font-semibold"
                         >
                           <option value="">-- Select Standard Value --</option>
@@ -4804,7 +4888,7 @@ export default function ProListingBuilder() {
                       value={selected.countryOfOrigin || selected.specifications?.countryoforigin || ''} 
                       onChange={(value) => {
                         updateField(selected.id, 'countryOfOrigin', value);
-                        updateSpecification(selected.id, 'countryoforigin', value);
+                        updateSpecImmediate(selected.id, 'countryoforigin', value);
                       }}
                     />
                   </div>
