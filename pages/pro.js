@@ -4637,8 +4637,9 @@ export default function ProListingBuilder() {
                           className="hidden"
                           disabled={isUploadingPhotos}
                           onChange={(e) => {
-                            handlePhotoUpload(e.target.files, selected.id);
+                            const files = Array.from(e.target.files);
                             e.target.value = ''; // Reset so same file can be selected again
+                            handlePhotoUpload(files, selected.id);
                           }}
                         />
                       </label>
