@@ -3,7 +3,7 @@
 // Centralized endpoint for SureDone listing actions:
 // start, add, edit, relist, end, delete — across eBay and BigCommerce
 //
-// SureDone requires: PUT /editor/items, form-urlencoded, guid identifier
+// SureDone requires: POST /v1/editor/items/edit, form-urlencoded, identifier=guid
 // ============================================================
 
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
@@ -40,116 +40,116 @@ export default async function handler(req, res) {
     'Content-Type': 'application/x-www-form-urlencoded',
   };
 
+  const editUrl = `${SUREDONE_URL}/v1/editor/items/edit`;
+  const deleteUrl = `${SUREDONE_URL}/v1/editor/items/delete`;
+
   try {
     let result;
 
     if (action === 'relist') {
-      // RELIST = end first, wait, then relist
-      const endParams = new URLSearchParams();
-      endParams.append('guid', sku);
-      if (channel === 'all' || channel === 'ebay') {
-        endParams.append('ebayaction', 'end');
-      }
-      if (channel === 'all' || channel === 'bigcommerce') {
-        endParams.append('bigcommerceaction', 'end');
-      }
+      // RELIST = end first, wait 2s, then re-start
+      // Step 1: End the current listing
+      const endForm = new URLSearchParams();
+      endForm.append('identifier', 'guid');
+      endForm.append('guid', sku);
+      endForm.append('ebayend', '1');
 
-      const endRes = await fetch(`${SUREDONE_URL}/editor/items`, {
-        method: 'PUT',
-        headers,
-        body: endParams.toString(),
+      console.log(`[listing-action] Relist step 1 — ending ${sku}`);
+      const endRes = await fetch(editUrl, {
+        method: 'POST', headers, body: endForm.toString(),
       });
       const endResult = await endRes.json();
       console.log(`[listing-action] End result for ${sku}:`, JSON.stringify(endResult));
 
-      await new Promise(r => setTimeout(r, 3000));
+      // Step 2: Wait for eBay to process the end
+      await new Promise(r => setTimeout(r, 2000));
 
-      const relistParams = new URLSearchParams();
-      relistParams.append('guid', sku);
-      if (channel === 'all' || channel === 'ebay') {
-        relistParams.append('ebayaction', 'relist');
-      }
-      if (channel === 'all' || channel === 'bigcommerce') {
-        relistParams.append('bigcommerceaction', 'relist');
-      }
+      // Step 3: Re-start the listing
+      const startForm = new URLSearchParams();
+      startForm.append('identifier', 'guid');
+      startForm.append('guid', sku);
+      startForm.append('ebayskip', '0');
 
-      const relistRes = await fetch(`${SUREDONE_URL}/editor/items`, {
-        method: 'PUT',
-        headers,
-        body: relistParams.toString(),
+      console.log(`[listing-action] Relist step 2 — re-starting ${sku}`);
+      const startRes = await fetch(editUrl, {
+        method: 'POST', headers, body: startForm.toString(),
       });
-      result = await relistRes.json();
+      result = await startRes.json();
       result.endResult = endResult;
+      console.log(`[listing-action] Relist result for ${sku}:`, JSON.stringify(result));
 
     } else if (action === 'delete') {
-      // DELETE removes from SureDone AND ends all channel listings
+      // DELETE removes from SureDone entirely
       const params = new URLSearchParams();
-      params.append('action', 'delete');
+      params.append('identifier', 'guid');
       params.append('guid', sku);
 
-      const delRes = await fetch(`${SUREDONE_URL}/editor/items`, {
-        method: 'PUT',
-        headers,
-        body: params.toString(),
+      console.log(`[listing-action] Deleting ${sku}`);
+      const delRes = await fetch(deleteUrl, {
+        method: 'POST', headers, body: params.toString(),
       });
       result = await delRes.json();
+      console.log(`[listing-action] Delete result for ${sku}:`, JSON.stringify(result));
 
     } else if (action === 'end') {
       // END removes from channels but keeps in SureDone
       const params = new URLSearchParams();
+      params.append('identifier', 'guid');
       params.append('guid', sku);
-      if (channel === 'all' || channel === 'ebay') {
-        params.append('ebayaction', 'end');
+      if (channel === 'ebay' || channel === 'all') {
+        params.append('ebayend', '1');
       }
-      if (channel === 'all' || channel === 'bigcommerce') {
-        params.append('bigcommerceaction', 'end');
+      if (channel === 'bigcommerce' || channel === 'all') {
+        params.append('bigcommercedisabled', '1');
       }
 
-      const endRes = await fetch(`${SUREDONE_URL}/editor/items`, {
-        method: 'PUT',
-        headers,
-        body: params.toString(),
+      console.log(`[listing-action] Ending ${sku} on ${channel}`);
+      const endRes = await fetch(editUrl, {
+        method: 'POST', headers, body: params.toString(),
       });
       result = await endRes.json();
+      console.log(`[listing-action] End result for ${sku}:`, JSON.stringify(result));
 
     } else if (action === 'start' || action === 'add') {
-      // START/ADD publishes to channels
+      // START/ADD publishes to channels (removes skip flags)
       const params = new URLSearchParams();
+      params.append('identifier', 'guid');
       params.append('guid', sku);
-      if (channel === 'all' || channel === 'ebay') {
-        params.append('ebayaction', action);
+      if (channel === 'ebay' || channel === 'all') {
+        params.append('ebayskip', '0');
       }
-      if (channel === 'all' || channel === 'bigcommerce') {
-        params.append('bigcommerceaction', action);
+      if (channel === 'bigcommerce' || channel === 'all') {
+        params.append('bigcommerceskip', '0');
       }
 
-      const startRes = await fetch(`${SUREDONE_URL}/editor/items`, {
-        method: 'PUT',
-        headers,
-        body: params.toString(),
+      console.log(`[listing-action] Starting ${sku} on ${channel}`);
+      const startRes = await fetch(editUrl, {
+        method: 'POST', headers, body: params.toString(),
       });
       result = await startRes.json();
+      console.log(`[listing-action] Start result for ${sku}:`, JSON.stringify(result));
 
     } else if (action === 'revise' || action === 'edit') {
-      // REVISE/EDIT pushes current data to channels
+      // REVISE/EDIT pushes current data to live listing
       const params = new URLSearchParams();
+      params.append('identifier', 'guid');
       params.append('guid', sku);
-      if (channel === 'all' || channel === 'ebay') {
-        params.append('ebayaction', 'edit');
+      if (channel === 'ebay' || channel === 'all') {
+        params.append('ebayskip', '0');
       }
-      if (channel === 'all' || channel === 'bigcommerce') {
-        params.append('bigcommerceaction', 'edit');
+      if (channel === 'bigcommerce' || channel === 'all') {
+        params.append('bigcommerceskip', '0');
       }
 
-      const editRes = await fetch(`${SUREDONE_URL}/editor/items`, {
-        method: 'PUT',
-        headers,
-        body: params.toString(),
+      console.log(`[listing-action] Revising ${sku} on ${channel}`);
+      const editRes = await fetch(editUrl, {
+        method: 'POST', headers, body: params.toString(),
       });
       result = await editRes.json();
+      console.log(`[listing-action] Revise result for ${sku}:`, JSON.stringify(result));
     }
 
-    // Check if SureDone reported success
+    // Check if SureDone reported success (two patterns)
     const isSuccess = result?.result === 'success' ||
                       result?.result === 1 ||
                       !!result?.['1'];
