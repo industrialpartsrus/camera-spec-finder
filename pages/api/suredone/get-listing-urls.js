@@ -2,6 +2,7 @@
 // /pages/api/suredone/get-listing-urls.js
 // Returns marketplace listing URLs for a given SKU
 // Uses /search/items/guid:={sku} to fetch item (confirmed working)
+// Always returns suredoneUrl even if API call fails
 // ============================================================
 
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
@@ -14,108 +15,76 @@ export default async function handler(req, res) {
   const { sku } = req.query;
 
   if (!sku) {
-    return res.status(400).json({ error: 'sku required' });
+    return res.status(400).json({ error: 'SKU required' });
   }
 
-  let SUREDONE_USER, SUREDONE_TOKEN, SUREDONE_URL;
-  try {
-    const creds = getSureDoneCredentials();
-    SUREDONE_USER = creds.user;
-    SUREDONE_TOKEN = creds.token;
-    SUREDONE_URL = creds.baseUrl;
-  } catch (e) {
-    return res.status(500).json({ error: 'SureDone credentials not configured' });
-  }
+  const { user, token } = getSureDoneCredentials();
+
+  // Always return a SureDone editor link (doesn't depend on API call)
+  const suredoneUrl = `https://app.suredone.com/#!/editor/item/${encodeURIComponent(sku)}`;
+
+  let ebayUrl = null;
+  let bigcommerceUrl = null;
 
   try {
-    // Use search endpoint with exact guid match (confirmed working)
-    const searchUrl = `${SUREDONE_URL}/search/items/${encodeURIComponent(`guid:=${sku}`)}`;
-    const itemRes = await fetch(searchUrl, {
+    // Fetch item data from SureDone using search API (confirmed working)
+    const searchUrl = `https://api.suredone.com/v1/search/items/${encodeURIComponent('guid:=' + sku)}`;
+
+    const response = await fetch(searchUrl, {
       headers: {
-        'X-Auth-User': SUREDONE_USER,
-        'X-Auth-Token': SUREDONE_TOKEN,
+        'X-Auth-User': user,
+        'X-Auth-Token': token,
         'Content-Type': 'application/json',
       },
     });
 
-    if (!itemRes.ok) {
-      return res.status(itemRes.status).json({ error: `SureDone API error: ${itemRes.status}` });
-    }
+    if (response.ok) {
+      const data = await response.json();
 
-    const data = await itemRes.json();
-
-    // Find the matching item in search results (numeric keys)
-    let item = null;
-    for (const key of Object.keys(data)) {
-      if (!isNaN(key) && data[key]?.guid) {
-        if (data[key].guid.toLowerCase() === sku.toLowerCase()) {
-          item = data[key];
-          break;
+      // Find the matching item in results (numeric keys)
+      let item = null;
+      for (const key of Object.keys(data)) {
+        if (!isNaN(key) && data[key]?.guid) {
+          if (data[key].guid.toUpperCase() === sku.toUpperCase()) {
+            item = data[key];
+            break;
+          }
         }
       }
-    }
 
-    if (!item) {
-      return res.status(200).json({
-        sku,
-        ebayItemId: null,
-        ebayUrl: null,
-        bigcommerceId: null,
-        bigcommerceUrl: null,
-        suredoneUrl: `https://app.suredone.com/#!/editor/item/${encodeURIComponent(sku)}`,
-      });
-    }
-
-    // Find eBay item ID — check known field names
-    let ebayItemId = null;
-    const ebayFields = ['ebayid', 'ebayitemid', 'ebaynewid', 'ebaylistingid'];
-    for (const field of ebayFields) {
-      if (item[field] && item[field].toString().length > 5) {
-        ebayItemId = item[field].toString();
-        break;
-      }
-    }
-    // Fallback: any key containing 'ebay' and 'id'
-    if (!ebayItemId) {
-      for (const key of Object.keys(item)) {
-        if (key.toLowerCase().includes('ebay') &&
-            key.toLowerCase().includes('id') &&
-            item[key] && item[key].toString().length > 5) {
-          ebayItemId = item[key].toString();
-          break;
+      if (item) {
+        // Build eBay URL from ebayid — must be numeric and at least 6 digits
+        const ebayId = item.ebayid || item.ebayitemid || '';
+        if (ebayId && ebayId.toString().length >= 6 && /^\d+$/.test(ebayId.toString())) {
+          ebayUrl = `https://www.ebay.com/itm/${ebayId}`;
         }
+
+        // Build BigCommerce URL from slug or product ID
+        // SureDone stores BC custom URL in bigcommercecustomurl, customurl, or slug
+        const slug = item.bigcommercecustomurl || item.customurl || item.slug || '';
+        const bcId = item.bigcommerceid || item.bigcommerceproductid || '';
+        if (slug) {
+          // Remove leading/trailing slashes
+          const cleanSlug = slug.replace(/^\/|\/$/g, '');
+          bigcommerceUrl = `https://www.industrialpartsrus.com/${cleanSlug}/`;
+        } else if (bcId && bcId.toString().length > 0) {
+          bigcommerceUrl = `https://www.industrialpartsrus.com/?id=${bcId}`;
+        }
+
+        console.log(`URLs for ${sku}: ebay=${ebayId || 'none'}, bc=${bcId || 'none'}, slug=${slug || 'none'}, bcCustomUrl=${item.bigcommercecustomurl || 'none'}`);
+      } else {
+        console.log(`No SureDone item found for SKU: ${sku}`);
       }
     }
-
-    // Find BigCommerce ID
-    let bigcommerceId = null;
-    const bcIdFields = ['bigcommerceid', 'bigcommerceproductid', 'bcid'];
-    for (const field of bcIdFields) {
-      if (item[field] && item[field].toString().length > 0) {
-        bigcommerceId = item[field].toString();
-        break;
-      }
-    }
-
-    // Build BigCommerce URL from slug or ID
-    const bcSlug = item.slug || item.customurl;
-    let bigcommerceUrl = null;
-    if (bcSlug) {
-      bigcommerceUrl = `https://www.industrialpartsrus.com/${bcSlug}`;
-    } else if (bigcommerceId) {
-      bigcommerceUrl = `https://www.industrialpartsrus.com/?id=${bigcommerceId}`;
-    }
-
-    return res.status(200).json({
-      sku,
-      ebayItemId,
-      ebayUrl: ebayItemId ? `https://www.ebay.com/itm/${ebayItemId}` : null,
-      bigcommerceId,
-      bigcommerceUrl,
-      suredoneUrl: `https://app.suredone.com/#!/editor/item/${encodeURIComponent(sku)}`,
-    });
   } catch (err) {
-    console.error('Get listing URLs error:', err);
-    return res.status(500).json({ error: err.message });
+    console.warn('Error fetching listing URLs:', err.message);
+    // Don't fail — still return the SureDone URL
   }
+
+  return res.status(200).json({
+    sku,
+    suredoneUrl,
+    ebayUrl,
+    bigcommerceUrl,
+  });
 }

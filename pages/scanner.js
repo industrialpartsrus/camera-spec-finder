@@ -65,6 +65,85 @@ function getConditionOptions() {
   }));
 }
 
+// ============================================
+// LISTING HEALTH CHECK
+// ============================================
+// Analyzes a SureDone match and returns health status
+// GREEN = listing is complete, just add stock
+// YELLOW = listing works but has issues worth reviewing
+// RED = listing has critical problems, needs rework
+
+function checkListingHealth(match) {
+  const issues = [];
+
+  // Only health-check SureDone matches (Firebase-only items are new/in-progress)
+  if (match.source !== 'suredone') {
+    return { status: 'green', issues: [], routing: 'normal' };
+  }
+
+  // --- CRITICAL issues (RED) ---
+  const hasPhotos = match.imageCount > 0 || !!match.thumbnail;
+  if (!hasPhotos) {
+    issues.push({ severity: 'red', message: 'No photos — needs new photos before relisting' });
+  }
+
+  if (!match.title || match.title === 'No Title' || match.title.trim().length < 10) {
+    issues.push({ severity: 'red', message: 'Missing or incomplete title' });
+  }
+
+  if (!match.price || parseFloat(match.price) <= 0) {
+    issues.push({ severity: 'red', message: 'No price set' });
+  }
+
+  if (!match.ebaycatid) {
+    issues.push({ severity: 'red', message: 'No eBay category — cannot list on eBay' });
+  }
+
+  // --- WARNING issues (YELLOW) ---
+  if (match.imageCount > 0 && match.imageCount < 3) {
+    issues.push({ severity: 'yellow', message: `Only ${match.imageCount} photo${match.imageCount === 1 ? '' : 's'} — consider adding more` });
+  }
+
+  if (!match.hasDescription) {
+    issues.push({ severity: 'yellow', message: 'No description — add one for better SEO' });
+  }
+
+  if (!match.ebayid) {
+    issues.push({ severity: 'yellow', message: 'Not currently listed on eBay' });
+  }
+
+  if (!match.condition || match.condition === 'Unknown') {
+    issues.push({ severity: 'yellow', message: 'Condition not set' });
+  }
+
+  // Check listing age (over 180 days = stale)
+  if (match.datecreated) {
+    const created = new Date(match.datecreated);
+    const daysSinceCreated = Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysSinceCreated > 180) {
+      issues.push({ severity: 'yellow', message: `Listing is ${daysSinceCreated} days old — may need refresh` });
+    }
+  }
+
+  // Determine overall status
+  const hasRed = issues.some(i => i.severity === 'red');
+  const hasYellow = issues.some(i => i.severity === 'yellow');
+
+  let status, routing;
+  if (hasRed) {
+    status = 'red';
+    routing = 'rework';
+  } else if (hasYellow) {
+    status = 'yellow';
+    routing = 'review';
+  } else {
+    status = 'green';
+    routing = 'normal';
+  }
+
+  return { status, issues, routing };
+}
+
 export default function WarehouseScanner() {
   // Auth state
   const [screen, setScreen] = useState('scan'); // scan, results, add-stock, new-item, success
@@ -92,6 +171,8 @@ export default function WarehouseScanner() {
   // Add stock state
   const [quantityToAdd, setQuantityToAdd] = useState(1);
   const [newShelf, setNewShelf] = useState('');
+  const [stockMode, setStockMode] = useState('add'); // 'add' or 'set'
+  const [absoluteStock, setAbsoluteStock] = useState(0);
 
   // New item state
   const [newSku, setNewSku] = useState('');
@@ -334,6 +415,12 @@ export default function WarehouseScanner() {
 
       const allMatches = [...(lookupData.firebaseMatches || []), ...(lookupData.suredoneMatches || [])];
 
+      // Run health checks on all matches
+      const matchesWithHealth = allMatches.map(match => ({
+        ...match,
+        health: checkListingHealth(match),
+      }));
+
       // Check for duplicates
       const dupRes = await fetch('/api/scanner/check-duplicate', {
         method: 'POST',
@@ -343,7 +430,7 @@ export default function WarehouseScanner() {
 
       const dupData = await dupRes.json();
 
-      setMatches(allMatches);
+      setMatches(matchesWithHealth);
       setDuplicateWarning(dupData.isDuplicate ? dupData : null);
 
       if (allMatches.length === 0) {
@@ -367,6 +454,8 @@ export default function WarehouseScanner() {
     setSelectedMatch(match);
     setNewShelf(match.shelf || '');
     setQuantityToAdd(1);
+    setStockMode('add');
+    setAbsoluteStock(match.stock || 0);
     setScreen('add-stock');
   };
 
@@ -388,7 +477,12 @@ export default function WarehouseScanner() {
     setIsProcessing(true);
     try {
       const oldStock = selectedMatch.stock || 0;
-      const newStock = oldStock + quantityToAdd;
+      const newStock = stockMode === 'set' ? absoluteStock : oldStock + quantityToAdd;
+      const isRestock = oldStock === 0 && newStock > 0;
+
+      const healthRouting = selectedMatch.health?.routing || 'normal';
+      const healthStatus = selectedMatch.health?.status || 'green';
+      const healthIssues = selectedMatch.health?.issues || [];
 
       const response = await fetch('/api/scanner/update-stock', {
         method: 'POST',
@@ -402,7 +496,11 @@ export default function WarehouseScanner() {
           shelf: newShelf || selectedMatch.shelf,
           scannedBy: currentUser?.name || 'unknown',
           action: 'add_stock',
-          firebaseId: selectedMatch.source === 'firebase' ? selectedMatch.id : null
+          firebaseId: selectedMatch.source === 'firebase' ? selectedMatch.id : null,
+          healthRouting: healthRouting,
+          healthStatus: healthStatus,
+          healthIssues: healthIssues.map(i => i.message),
+          isRestock: isRestock,
         })
       });
 
@@ -410,12 +508,72 @@ export default function WarehouseScanner() {
 
       if (data.success) {
         updateLastActive();
-        setSuccessMessage(`✅ ${selectedMatch.sku} updated!\nStock: ${oldStock} → ${newStock}\nShelf: ${newShelf || selectedMatch.shelf || 'Not Assigned'}`);
+
+        // Build base success message
+        let msg = `✅ ${selectedMatch.sku} updated!\nStock: ${oldStock} → ${newStock}\nShelf: ${newShelf || selectedMatch.shelf || 'Not Assigned'}`;
+
+        // Restock notification
+        if (isRestock && data.autoRelisted) {
+          msg += '\n\n🔄 AUTO-RELISTED\neBay & BigCommerce skip flags cleared — item will push to channels';
+        } else if (isRestock) {
+          msg += '\n\n📦 RESTOCKED from zero';
+        }
+
+        // Show verification results if available
+        const v = data.verification;
+        if (v) {
+          let verifyMsg = '';
+
+          // Stock verification
+          if (v.stockVerified) {
+            verifyMsg += '✅ Stock verified in SureDone\n';
+          } else {
+            verifyMsg += `⚠️ Stock mismatch: expected ${v.expectedStock}, got ${v.actualStock}\n`;
+          }
+
+          // eBay status
+          if (v.ebay.listed) {
+            verifyMsg += `✅ eBay: Active (${v.ebay.itemId})\n`;
+          } else {
+            verifyMsg += '❌ eBay: NOT LISTED\n';
+          }
+
+          // BigCommerce status
+          if (v.bigcommerce.listed) {
+            verifyMsg += '✅ BigCommerce: Active\n';
+          } else {
+            verifyMsg += '❌ BigCommerce: NOT LISTED\n';
+          }
+
+          // Channel issues
+          if (v.channelIssues.length > 0) {
+            verifyMsg += '\n⚠️ Issues Found:\n';
+            v.channelIssues.forEach(issue => {
+              verifyMsg += `• ${issue}\n`;
+            });
+          }
+
+          msg += '\n\n── Channel Status ──\n' + verifyMsg;
+        }
+
+        // Health routing message
+        if (healthRouting === 'rework') {
+          msg += '\n🔴 FLAGGED FOR REWORK\nPlace in PHOTO STAGING AREA';
+        } else if (healthRouting === 'review') {
+          msg += '\n🟡 FLAGGED FOR REVIEW\nPlace on shelf — office will update';
+        }
+
+        setSuccessMessage(msg);
         setScreen('success');
-        // Auto-return to scan after 2 seconds
+
+        // Auto-return timing — longer for items with issues
+        const hasIssues = data.verification?.channelIssues?.length > 0
+          || healthRouting === 'rework'
+          || healthRouting === 'review';
+
         setTimeout(() => {
           resetToScan();
-        }, 2000);
+        }, hasIssues ? 6000 : 2000);
       } else {
         alert('Update failed: ' + (data.error || 'Unknown error'));
       }
@@ -999,7 +1157,11 @@ export default function WarehouseScanner() {
               <button
                 key={idx}
                 onClick={() => handleSelectMatch(match)}
-                className="w-full bg-white border-2 border-gray-300 rounded-xl p-4 hover:border-blue-500 hover:bg-blue-50 active:bg-blue-100 transition text-left"
+                className={`w-full border-2 rounded-xl p-4 hover:bg-blue-50 active:bg-blue-100 transition text-left ${
+                  match.health?.status === 'red' ? 'bg-red-50 border-red-300' :
+                  match.health?.status === 'yellow' ? 'bg-yellow-50 border-yellow-300' :
+                  'bg-white border-gray-300 hover:border-blue-500'
+                }`}
               >
                 <div className="flex items-start gap-4">
                   {match.thumbnail ? (
@@ -1015,6 +1177,13 @@ export default function WarehouseScanner() {
                       <span className={`px-2 py-0.5 rounded text-xs font-bold ${getConditionColor(match.condition)}`}>
                         {match.condition}
                       </span>
+                      {match.health && match.health.status !== 'green' && (
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                          match.health.status === 'red' ? 'bg-red-600 text-white' : 'bg-yellow-500 text-white'
+                        }`}>
+                          {match.health.status === 'red' ? 'NEEDS REWORK' : 'NEEDS REVIEW'}
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm font-semibold text-gray-700 mb-1">{match.brand} {match.partNumber}</p>
                     <p className="text-xs text-gray-600 truncate mb-2">{match.title}</p>
@@ -1071,43 +1240,183 @@ export default function WarehouseScanner() {
               </div>
             </div>
 
+            {/* Health Check Banner */}
+            {selectedMatch.health && selectedMatch.health.status === 'red' && (
+              <div className="border-2 border-red-500 bg-red-50 rounded-xl p-4 mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-2xl">🔴</span>
+                  <span className="font-bold text-red-900 text-lg">LISTING NEEDS REWORK</span>
+                </div>
+                <div className="space-y-2 mb-4">
+                  {selectedMatch.health.issues.map((issue, i) => (
+                    <div key={i} className={`flex items-start gap-2 text-sm font-semibold ${
+                      issue.severity === 'red' ? 'text-red-800' : 'text-yellow-800'
+                    }`}>
+                      <span>{issue.severity === 'red' ? '❌' : '⚠️'}</span>
+                      <span>{issue.message}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-red-100 border border-red-300 rounded-lg p-3">
+                  <p className="font-bold text-red-900 text-sm mb-2">WORKER INSTRUCTIONS:</p>
+                  <ul className="text-sm text-red-800 space-y-1">
+                    {!selectedMatch.thumbnail && !selectedMatch.imageCount && (
+                      <li>📷 Place item on PHOTO SHELF for new photos</li>
+                    )}
+                    {(!selectedMatch.title || selectedMatch.title === 'No Title') && (
+                      <li>📝 Item needs title — route to Pro Builder</li>
+                    )}
+                    {(!selectedMatch.price || parseFloat(selectedMatch.price) <= 0) && (
+                      <li>💰 Item needs pricing — route to Pro Builder</li>
+                    )}
+                    {!selectedMatch.ebaycatid && (
+                      <li>📁 No eBay category — route to Pro Builder</li>
+                    )}
+                    <li>⬆️ Stock will be updated, item flagged for rework in Pro Builder</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {selectedMatch.health && selectedMatch.health.status === 'yellow' && (
+              <div className="border-2 border-yellow-400 bg-yellow-50 rounded-xl p-4 mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-2xl">🟡</span>
+                  <span className="font-bold text-yellow-900 text-lg">LISTING NEEDS REVIEW</span>
+                </div>
+                <div className="space-y-2">
+                  {selectedMatch.health.issues.map((issue, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm font-semibold text-yellow-800">
+                      <span>⚠️</span>
+                      <span>{issue.message}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-yellow-700 mt-3">Stock will be updated. Item flagged for review in Pro Builder.</p>
+              </div>
+            )}
+
+            {selectedMatch.health && selectedMatch.health.status === 'green' && (
+              <div className="border border-green-300 bg-green-50 rounded-xl p-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🟢</span>
+                  <span className="font-bold text-green-800">Listing looks good — just update stock</span>
+                </div>
+              </div>
+            )}
+
             <div className="border-t pt-4">
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Current Stock</label>
                 <div className="text-3xl font-bold text-gray-900">{selectedMatch.stock || 0}</div>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">How many adding?</label>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', maxWidth: '250px', margin: '0 auto' }}>
+              {/* Stock Mode Toggle */}
+              <div className="mb-4">
+                <div className="flex border-2 border-gray-300 rounded-lg overflow-hidden">
                   <button
-                    onClick={() => setQuantityToAdd(Math.max(1, quantityToAdd - 1))}
-                    className="w-16 h-16 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg flex items-center justify-center transition"
+                    onClick={() => setStockMode('add')}
+                    className={`flex-1 py-3 text-center font-bold text-lg transition ${
+                      stockMode === 'add'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
                   >
-                    <Minus size={24} className="text-gray-900" />
+                    + Add to Stock
                   </button>
-                  <input
-                    type="number"
-                    value={quantityToAdd}
-                    onChange={(e) => setQuantityToAdd(Math.max(1, parseInt(e.target.value) || 1))}
-                    style={{ width: '80px', textAlign: 'center' }}
-                    className="text-3xl font-bold border-2 border-gray-300 rounded-lg py-3 focus:border-blue-500 focus:outline-none"
-                    min="1"
-                  />
                   <button
-                    onClick={() => setQuantityToAdd(quantityToAdd + 1)}
-                    className="w-16 h-16 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg flex items-center justify-center transition"
+                    onClick={() => {
+                      setStockMode('set');
+                      setAbsoluteStock(selectedMatch.stock || 0);
+                    }}
+                    className={`flex-1 py-3 text-center font-bold text-lg transition ${
+                      stockMode === 'set'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
                   >
-                    <Plus size={24} className="text-gray-900" />
+                    = Set Stock
                   </button>
                 </div>
               </div>
 
-              <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-6">
-                <div className="text-center text-2xl font-bold text-gray-900">
-                  {selectedMatch.stock || 0} + {quantityToAdd} = <span className="text-blue-600">{(selectedMatch.stock || 0) + quantityToAdd}</span>
-                </div>
-              </div>
+              {stockMode === 'add' ? (
+                <>
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">How many adding?</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', maxWidth: '250px', margin: '0 auto' }}>
+                      <button
+                        onClick={() => setQuantityToAdd(Math.max(0, quantityToAdd - 1))}
+                        className="w-16 h-16 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg flex items-center justify-center transition"
+                      >
+                        <Minus size={24} className="text-gray-900" />
+                      </button>
+                      <input
+                        type="number"
+                        value={quantityToAdd}
+                        onChange={(e) => setQuantityToAdd(Math.max(0, parseInt(e.target.value) || 0))}
+                        style={{ width: '80px', textAlign: 'center' }}
+                        className="text-3xl font-bold border-2 border-gray-300 rounded-lg py-3 focus:border-blue-500 focus:outline-none"
+                        min="0"
+                      />
+                      <button
+                        onClick={() => setQuantityToAdd(quantityToAdd + 1)}
+                        className="w-16 h-16 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg flex items-center justify-center transition"
+                      >
+                        <Plus size={24} className="text-gray-900" />
+                      </button>
+                    </div>
+                    {quantityToAdd === 0 && (
+                      <p className="text-center text-sm text-gray-500 mt-2">+0 = shelf/location update only</p>
+                    )}
+                  </div>
+
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-6">
+                    <div className="text-center text-2xl font-bold text-gray-900">
+                      {selectedMatch.stock || 0} + {quantityToAdd} = <span className="text-blue-600">{(selectedMatch.stock || 0) + quantityToAdd}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Set stock to exactly:</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', maxWidth: '250px', margin: '0 auto' }}>
+                      <button
+                        onClick={() => setAbsoluteStock(Math.max(0, absoluteStock - 1))}
+                        className="w-16 h-16 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg flex items-center justify-center transition"
+                      >
+                        <Minus size={24} className="text-gray-900" />
+                      </button>
+                      <input
+                        type="number"
+                        value={absoluteStock}
+                        onChange={(e) => setAbsoluteStock(Math.max(0, parseInt(e.target.value) || 0))}
+                        style={{ width: '80px', textAlign: 'center' }}
+                        className="text-3xl font-bold border-2 border-orange-400 rounded-lg py-3 focus:border-orange-500 focus:outline-none"
+                        min="0"
+                      />
+                      <button
+                        onClick={() => setAbsoluteStock(absoluteStock + 1)}
+                        className="w-16 h-16 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg flex items-center justify-center transition"
+                      >
+                        <Plus size={24} className="text-gray-900" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 mb-6">
+                    <div className="text-center text-2xl font-bold text-gray-900">
+                      {selectedMatch.stock || 0} → <span className="text-orange-600">{absoluteStock}</span>
+                    </div>
+                    {absoluteStock < (selectedMatch.stock || 0) && (
+                      <p className="text-center text-sm text-orange-700 mt-1 font-semibold">
+                        ⚠️ Reducing stock by {(selectedMatch.stock || 0) - absoluteStock}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
 
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Shelf Location</label>

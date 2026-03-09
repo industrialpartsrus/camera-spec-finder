@@ -309,8 +309,20 @@ function formatProductMatch(item) {
     channels: channels,
     ebayCategory: item.ebaycatid || null,
     ebayStoreCategory: item.ebaystoreid || null,
+    // Channel status fields (for health check)
+    ebayid: item.ebayid || '',
+    bigcommerceid: item.bigcommerceid || '',
+    datecreated: item.datecreated || item.dateutc || '',
+    ebayprofile: item.ebaypaymentprofileid || item.ebayprofile || '',
+    ebayskip: item.ebayskip || '',
+    bigcommerceskip: item.bigcommerceskip || '',
+    media1: item.media1 || '',
+    ebaycatid: item.ebaycatid || '',
+    bigcommercecustomurl: item.bigcommercecustomurl || '',
+    bigcommercempn: item.bigcommercempn || '',
+    bigcommercebinpickingnumber: item.bigcommercebinpickingnumber || '',
     lastModified: item.dateutc || item.date || null,
-    descriptionPreview: item.longdescription 
+    descriptionPreview: item.longdescription
       ? item.longdescription.substring(0, 200) + '...'
       : 'No description'
   };

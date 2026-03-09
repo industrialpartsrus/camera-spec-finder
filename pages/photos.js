@@ -84,6 +84,12 @@ export default function PhotoStation() {
   const [currentStep, setCurrentStep] = useState(1);
   const [previewPhoto, setPreviewPhoto] = useState(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [activeViews, setActiveViews] = useState({
+    left: true,
+    right: true,
+    center: true,
+    nameplate: true,
+  });
   const fileInputRef = useRef(null);
   const uploadInputRef = useRef(null); // For single slot upload
   const bulkUploadInputRef = useRef(null); // For bulk upload
@@ -180,7 +186,72 @@ export default function PhotoStation() {
       nameplate: null,
       extra: []
     });
+    // Reset to all views active for each new item
+    setActiveViews({
+      left: true,
+      right: true,
+      center: true,
+      nameplate: true,
+    });
     setScreen('capture');
+  };
+
+  // Skip item — move to bottom of queue by setting a flag
+  const handleSkipItem = async (item) => {
+    try {
+      await updateDoc(doc(db, 'products', item.id), {
+        photoQueueSkipped: true,
+        photoQueueSkippedAt: serverTimestamp(),
+        photoQueueSkippedBy: currentUser?.name || 'Unknown',
+      });
+      loadQueue();
+    } catch (err) {
+      console.error('Skip error:', err);
+      alert('Failed to skip: ' + err.message);
+    }
+  };
+
+  // Remove from photo queue — set status so it won't appear
+  const handleRemoveFromQueue = async (item) => {
+    const reason = prompt(
+      `Remove ${item.sku} (${item.brand} ${item.partNumber}) from photo queue?\n\n` +
+      `Enter reason (or cancel):\n` +
+      `• "error" — scanning error, item doesn't exist\n` +
+      `• "duplicate" — duplicate of another SKU\n` +
+      `• "not needed" — photos not required\n` +
+      `• Or type your own reason`
+    );
+
+    if (!reason) return; // Cancelled
+
+    try {
+      await updateDoc(doc(db, 'products', item.id), {
+        status: 'photo_queue_removed',
+        photoQueueRemovedAt: serverTimestamp(),
+        photoQueueRemovedBy: currentUser?.name || 'Unknown',
+        photoQueueRemoveReason: reason.trim(),
+      });
+
+      // Log the action
+      await addDoc(collection(db, 'activityLog'), {
+        action: 'photo_queue_remove',
+        sku: item.sku,
+        userId: currentUser?.id || 'unknown',
+        userName: currentUser?.name || 'Unknown',
+        details: {
+          reason: reason.trim(),
+          brand: item.brand,
+          partNumber: item.partNumber,
+        },
+        timestamp: serverTimestamp(),
+      });
+
+      loadQueue();
+      console.log(`Removed ${item.sku} from photo queue: ${reason}`);
+    } catch (err) {
+      console.error('Remove from queue error:', err);
+      alert('Failed to remove: ' + err.message);
+    }
   };
 
   // ============================================
@@ -267,9 +338,16 @@ export default function PhotoStation() {
 
     setPreviewPhoto(null);
 
-    // Auto-advance to next step if not on extra photos
+    // Auto-advance to next active step if not on extra photos
     if (step.id !== 'extra' && currentStep < PHOTO_STEPS.length) {
-      setCurrentStep(currentStep + 1);
+      // Find the next active step
+      let nextStep = currentStep + 1;
+      while (nextStep < PHOTO_STEPS.length) {
+        const nextStepId = PHOTO_STEPS[nextStep - 1].id;
+        if (nextStepId === 'extra' || activeViews[nextStepId]) break;
+        nextStep++;
+      }
+      setCurrentStep(nextStep);
     }
   };
 
@@ -317,13 +395,11 @@ export default function PhotoStation() {
     setIsCapturing(true);
 
     try {
-      // Find empty slots
+      // Find empty slots (only active views)
       const emptySlots = [];
       for (const step of PHOTO_STEPS) {
-        if (step.id === 'extra') {
-          // Can always add more extra photos
-          continue;
-        } else if (!capturedPhotos[step.id]) {
+        if (step.id === 'extra') continue;
+        if (activeViews[step.id] && !capturedPhotos[step.id]) {
           emptySlots.push(step.id);
         }
       }
@@ -397,27 +473,32 @@ export default function PhotoStation() {
     }
   };
 
-  const getRequiredPhotosCount = () => {
+  const getActiveViewCount = () => {
+    return Object.values(activeViews).filter(Boolean).length;
+  };
+
+  const getCapturedActiveCount = () => {
     let count = 0;
-    if (capturedPhotos.left) count++;
-    if (capturedPhotos.right) count++;
-    if (capturedPhotos.center) count++;
-    if (capturedPhotos.nameplate) count++;
+    for (const [view, isActive] of Object.entries(activeViews)) {
+      if (isActive && capturedPhotos[view]) count++;
+    }
     return count;
   };
 
   const canProceedToReview = () => {
-    return getRequiredPhotosCount() === 4;
+    // All active views must have photos
+    return getCapturedActiveCount() >= getActiveViewCount();
   };
 
   const handleProceedToReview = () => {
     if (canProceedToReview()) {
-      // Initialize photo order
       const order = [];
-      if (capturedPhotos.left) order.push('left');
-      if (capturedPhotos.right) order.push('right');
-      if (capturedPhotos.center) order.push('center');
-      if (capturedPhotos.nameplate) order.push('nameplate');
+      // Only include active views that have photos
+      ['left', 'right', 'center', 'nameplate'].forEach(view => {
+        if (activeViews[view] && capturedPhotos[view]) {
+          order.push(view);
+        }
+      });
       capturedPhotos.extra.forEach((_, idx) => order.push(`extra_${idx + 1}`));
       setPhotoOrder(order);
 
@@ -713,7 +794,11 @@ export default function PhotoStation() {
         photographedBy: currentUser?.name || 'unknown',
         photographedAt: Timestamp.now(),
         photosStatus: 'complete', // Track photo completion separately
-        photosCompletedAt: Timestamp.now()
+        photosCompletedAt: Timestamp.now(),
+        // Clear skip flag if item was skipped previously
+        photoQueueSkipped: false,
+        photoQueueSkippedAt: null,
+        photoQueueSkippedBy: null,
       };
 
       // Only update main status if research hasn't completed yet
@@ -812,6 +897,12 @@ export default function PhotoStation() {
     setPhotoOrder([]);
     setUploadProgress(0);
     setSuccessMessage('');
+    setActiveViews({
+      left: true,
+      right: true,
+      center: true,
+      nameplate: true,
+    });
   };
 
   const getConditionColor = (condition) => {
@@ -935,31 +1026,75 @@ export default function PhotoStation() {
 
               <div className="space-y-4">
                 {queueItems.map((item) => (
-                  <button
+                  <div
                     key={item.id}
-                    onClick={() => handleSelectItem(item)}
-                    className="w-full bg-white border-2 border-gray-300 rounded-xl p-4 hover:border-blue-500 hover:bg-blue-50 active:bg-blue-100 transition text-left"
+                    className="bg-white border-2 border-gray-300 rounded-xl p-4 hover:border-blue-500 transition"
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-bold text-xl text-gray-900">{item.sku}</span>
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getConditionColor(item.condition)}`}>
-                        {item.condition}
-                      </span>
-                      {item.priority !== 'normal' && (
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getPriorityColor(item.priority)}`}>
-                          {item.priority.toUpperCase()}
+                    {/* Main card content — clickable to start photos */}
+                    <button
+                      onClick={() => handleSelectItem(item)}
+                      className="w-full text-left mb-3"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-bold text-xl text-gray-900">{item.sku}</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getConditionColor(item.condition)}`}>
+                          {item.condition}
                         </span>
+                        {item.priority !== 'normal' && (
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getPriorityColor(item.priority)}`}>
+                            {item.priority.toUpperCase()}
+                          </span>
+                        )}
+                        {item.needsRework && (
+                          <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-300">
+                            Rework
+                          </span>
+                        )}
+                        {item.needsReview && (
+                          <span className="px-2 py-0.5 rounded text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-300">
+                            Review
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-gray-700 mb-1">
+                        {item.brand} {item.partNumber}
+                      </p>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span>📍 {item.shelf || 'No shelf'}</span>
+                        <span>👤 {item.scannedBy}</span>
+                        <span>🕐 {item.timeSince}</span>
+                      </div>
+                      {item.photoQueueSkipped && (
+                        <div className="text-xs text-amber-600 mt-1 font-medium">
+                          Skipped by {item.photoQueueSkippedBy || 'someone'} — tap to photograph anyway
+                        </div>
                       )}
+                    </button>
+
+                    {/* Action buttons row */}
+                    <div className="flex gap-2 border-t pt-2">
+                      <button
+                        onClick={() => handleSelectItem(item)}
+                        className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition"
+                      >
+                        📷 Take Photos
+                      </button>
+                      <button
+                        onClick={() => handleSkipItem(item)}
+                        className="px-3 py-2 bg-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-300 transition"
+                        title="Move to bottom of queue"
+                      >
+                        Skip
+                      </button>
+                      <button
+                        onClick={() => handleRemoveFromQueue(item)}
+                        className="px-3 py-2 bg-red-100 text-red-600 rounded-lg text-sm font-medium hover:bg-red-200 transition"
+                        title="Remove from photo queue"
+                      >
+                        ✕
+                      </button>
                     </div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">
-                      {item.brand} {item.partNumber}
-                    </p>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span>📍 Shelf: {item.shelf}</span>
-                      <span>👤 {item.scannedBy}</span>
-                      <span>🕐 {item.timeSince}</span>
-                    </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             </>
@@ -997,18 +1132,62 @@ export default function PhotoStation() {
             </button>
           </div>
 
+          {/* Photo View Selector */}
+          <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+            <p className="text-xs font-semibold text-gray-500 mb-2">
+              SELECT VIEWS NEEDED:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {PHOTO_STEPS.filter(s => s.id !== 'extra').map(step => (
+                <label
+                  key={step.id}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border-2 cursor-pointer transition text-sm font-medium ${
+                    activeViews[step.id]
+                      ? 'bg-blue-50 border-blue-400 text-blue-800'
+                      : 'bg-white border-gray-200 text-gray-400 line-through'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={activeViews[step.id]}
+                    onChange={(e) => {
+                      const newViews = { ...activeViews, [step.id]: e.target.checked };
+                      // Must keep at least 1 view active
+                      if (Object.values(newViews).filter(Boolean).length === 0) {
+                        return;
+                      }
+                      setActiveViews(newViews);
+                      // Clear photo if view is unchecked
+                      if (!e.target.checked && capturedPhotos[step.id]) {
+                        setCapturedPhotos(prev => ({
+                          ...prev,
+                          [step.id]: null
+                        }));
+                      }
+                    }}
+                    className="w-4 h-4 accent-blue-600"
+                  />
+                  {step.title.replace('📷 ', '').replace('🏷️ ', '')}
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Uncheck views not needed for this item. Extras can always be added.
+            </p>
+          </div>
+
           {/* Progress bar */}
           <div className="bg-white border-b border-gray-200 p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-semibold text-gray-700">Progress</span>
               <span className="text-sm font-bold text-blue-600">
-                {getRequiredPhotosCount()}/4 required photos
+                {getCapturedActiveCount()}/{getActiveViewCount()} photos
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div
                 className="bg-blue-600 h-3 rounded-full transition-all"
-                style={{ width: `${(getRequiredPhotosCount() / 4) * 100}%` }}
+                style={{ width: `${(getCapturedActiveCount() / getActiveViewCount()) * 100}%` }}
               />
             </div>
           </div>
@@ -1032,9 +1211,9 @@ export default function PhotoStation() {
                   </p>
                 </div>
 
-                {/* Step indicator */}
+                {/* Step indicator — only show active views + extra */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                  {PHOTO_STEPS.map((step) => (
+                  {PHOTO_STEPS.filter(s => s.id === 'extra' || activeViews[s.id]).map((step) => (
                     <button
                       key={step.id}
                       onClick={() => setCurrentStep(step.number)}

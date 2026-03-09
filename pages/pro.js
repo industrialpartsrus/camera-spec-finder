@@ -1613,6 +1613,28 @@ export default function ProListingBuilder() {
   const [suredoneUrl, setSuredoneUrl] = useState(null);
   const [actionChannel, setActionChannel] = useState('all');
 
+  // Fetch listing URLs whenever a different item is selected
+  useEffect(() => {
+    if (!selectedItem) {
+      setEbayUrl(null);
+      setBigcommerceUrl(null);
+      setSuredoneUrl(null);
+      return;
+    }
+
+    const item = queue.find(q => q.id === selectedItem);
+    if (!item) return;
+
+    const sku = item.originalSku || item.guid || item.sku || item.listedSku || '';
+    if (sku) {
+      fetchListingUrls(sku);
+    } else {
+      setEbayUrl(null);
+      setBigcommerceUrl(null);
+      setSuredoneUrl(null);
+    }
+  }, [selectedItem]);
+
   // Debounced local state for text inputs (prevents cursor jumping from Firestore writes)
   const [localFields, setLocalFields] = useState({});
 
@@ -2997,6 +3019,9 @@ export default function ProListingBuilder() {
           alert(`✅ Successfully updated in SureDone!\n\nSKU: ${item.originalSku}\n\n${item.title}`);
         }
 
+        // Refresh listing URLs after successful update
+        fetchListingUrls(item.originalSku);
+
       } else {
         // CREATE new listing
         const productData = {
@@ -3048,6 +3073,11 @@ export default function ProListingBuilder() {
         if (!response.ok) throw new Error(responseData.error || 'Failed to create listing');
         alert(`✅ Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
         logActivity('listing_sent', { sku: responseData.sku || item.sku, title: item.title, price: item.price });
+
+        // Refresh listing URLs after successful creation
+        if (responseData.sku) {
+          fetchListingUrls(responseData.sku);
+        }
       }
     } catch (error) {
       console.error('SureDone error:', error);
@@ -3169,6 +3199,9 @@ export default function ProListingBuilder() {
         alert(successMsg);
         if (data.ebayUrl) setEbayUrl(data.ebayUrl);
 
+        // Refresh listing URLs after action
+        fetchListingUrls(currentSku);
+
         // If deleted, remove from queue
         if (action === 'delete' && selected) {
           try { await deleteDoc(doc(db, 'products', selected.id)); } catch (e) { /* ignore */ }
@@ -3285,6 +3318,7 @@ export default function ProListingBuilder() {
     ).length,
     refresh: queue.filter(q => q.status === 'refresh').length,
     errors: queue.filter(q => q.status === 'error').length,
+    flagged: queue.filter(q => q.needsRework || q.needsReview).length,
   };
 
   // Filter queue based on active tab
@@ -3307,6 +3341,8 @@ export default function ProListingBuilder() {
         return item.status === 'refresh';
       case 'errors':
         return item.status === 'error';
+      case 'flagged':
+        return item.needsRework || item.needsReview;
       default:
         return true; // 'all' tab
     }
@@ -3546,6 +3582,7 @@ export default function ProListingBuilder() {
                 { key: 'publishReady', label: '✅ Publish', color: 'green' },
                 { key: 'refresh', label: '🔄 Refresh', color: 'purple' },
                 { key: 'errors', label: '❌ Error', color: 'red' },
+                { key: 'flagged', label: '🏥 Flagged', color: 'amber' },
               ].map(tab => (
                 <button
                   key={tab.key}
@@ -3557,6 +3594,7 @@ export default function ProListingBuilder() {
                         tab.color === 'orange' ? 'bg-orange-500 text-white' :
                         tab.color === 'green' ? 'bg-green-600 text-white' :
                         tab.color === 'purple' ? 'bg-purple-600 text-white' :
+                        tab.color === 'amber' ? 'bg-amber-500 text-white' :
                         'bg-red-600 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
@@ -3662,6 +3700,12 @@ export default function ProListingBuilder() {
                     {item.includedComponents?.length > 0 && (
                       <p className="text-[10px] text-blue-600 mt-0.5">📦 +{item.includedComponents.length} included</p>
                     )}
+                    {item.needsRework && (
+                      <p className="text-[10px] font-bold text-red-700 mt-0.5">🔴 Needs rework{item.healthIssues?.length ? ` (${item.healthIssues.length} issues)` : ''}</p>
+                    )}
+                    {item.needsReview && !item.needsRework && (
+                      <p className="text-[10px] font-bold text-yellow-700 mt-0.5">🟡 Needs review{item.healthIssues?.length ? ` (${item.healthIssues.length} issues)` : ''}</p>
+                    )}
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-1 rounded ml-2">
                     <X className="w-4 h-4" />
@@ -3724,6 +3768,45 @@ export default function ProListingBuilder() {
                   <RefreshCw className="w-4 h-4" /> Re-search
                 </button>
               </div>
+
+              {/* Health Check Banner */}
+              {(selected.needsRework || selected.needsReview) && (
+                <div className={`p-4 rounded-lg mb-4 border-2 ${
+                  selected.needsRework ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-300'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`font-bold ${selected.needsRework ? 'text-red-800' : 'text-yellow-800'}`}>
+                      {selected.needsRework ? '🔴 FLAGGED FOR REWORK' : '🟡 FLAGGED FOR REVIEW'}
+                    </span>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await updateDoc(doc(db, 'products', selected.id), {
+                            needsRework: false,
+                            needsReview: false,
+                            healthStatus: 'green',
+                            healthIssues: [],
+                          });
+                        } catch (err) {
+                          console.error('Failed to clear health flags:', err);
+                        }
+                      }}
+                      className={`text-xs px-3 py-1 rounded font-semibold ${
+                        selected.needsRework ? 'bg-red-200 text-red-800 hover:bg-red-300' : 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300'
+                      }`}
+                    >
+                      Clear Flag
+                    </button>
+                  </div>
+                  {selected.healthIssues && selected.healthIssues.length > 0 && (
+                    <ul className={`text-sm space-y-1 ${selected.needsRework ? 'text-red-700' : 'text-yellow-700'}`}>
+                      {selected.healthIssues.map((issue, i) => (
+                        <li key={i}>• {issue}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
 
               {['complete', 'photos_complete', 'searching'].includes(selected.status) && (
                 <div className="space-y-6">

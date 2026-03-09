@@ -53,8 +53,18 @@ export default async function handler(req, res) {
       }
     }
 
-    // Sort by priority (urgent > high > normal), then by date (oldest first)
-    const sortedItems = queueItems.sort((a, b) => {
+    // Exclude removed items
+    const filtered = queueItems.filter(item =>
+      item.status !== 'photo_queue_removed' &&
+      item.status !== 'listed'
+    );
+
+    // Sort: non-skipped first, then skipped; within each group sort by priority then date
+    const sortedItems = filtered.sort((a, b) => {
+      // Skipped items go to the bottom
+      if (a.photoQueueSkipped && !b.photoQueueSkipped) return 1;
+      if (!a.photoQueueSkipped && b.photoQueueSkipped) return -1;
+
       // Priority sort
       const priorityOrder = { urgent: 3, high: 2, normal: 1 };
       const aPriority = priorityOrder[a.priority] || 1;
@@ -107,7 +117,12 @@ function formatQueueItem(id, data) {
     timeSince: timeSince,
     priority: data.priority || 'normal', // urgent | high | normal
     status: data.status || 'needs_photos',
-    photoCount: data.photoCount || 0
+    photoCount: data.photoCount || 0,
+    // Queue management fields
+    needsRework: data.needsRework || false,
+    needsReview: data.needsReview || false,
+    photoQueueSkipped: data.photoQueueSkipped || false,
+    photoQueueSkippedBy: data.photoQueueSkippedBy || null,
   };
 }
 

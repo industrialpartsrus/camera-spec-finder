@@ -315,6 +315,14 @@ function formatFirebaseMatch(id, data) {
  * Format SureDone match
  */
 function formatSureDoneMatch(item) {
+  // Count how many media slots have images
+  let imageCount = 0;
+  for (let i = 1; i <= 12; i++) {
+    if (item[`media${i}`] && item[`media${i}`].trim() !== '') {
+      imageCount++;
+    }
+  }
+
   return {
     source: 'suredone',
     sku: item.sku || item.guid || 'N/A',
@@ -327,6 +335,16 @@ function formatSureDoneMatch(item) {
     stock: parseInt(item.stock) || 0,
     price: item.price || '0.00',
     thumbnail: item.media1 || null,
-    lastModified: item.dateutc || item.date || null
+    lastModified: item.dateutc || item.date || null,
+    // Health check fields
+    ebayid: item.ebayid || null,
+    ebaycatid: item.ebaycatid || null,
+    imageCount: imageCount,
+    hasDescription: !!(item.longdescription && item.longdescription.trim().length > 10),
+    datecreated: item.datecreated || item.dateutc || null,
+    // BigCommerce fields
+    bigcommercecustomurl: item.bigcommercecustomurl || null,
+    bigcommercempn: item.bigcommercempn || null,
+    bigcommercebinpickingnumber: item.bigcommercebinpickingnumber || null,
   };
 }

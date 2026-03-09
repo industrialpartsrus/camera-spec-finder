@@ -6,15 +6,13 @@
 // SureDone API: POST /v1/editor/items/{action}
 // Valid actions: add, edit, delete
 // Channel control via edit: ebayskip, ebayend, bigcommerceskip, bigcommercedisabled
-// Base URL: https://app.suredone.com
+// Base URL: from getSureDoneCredentials().baseUrl (includes /v1)
 // ============================================================
 
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
 
-const SUREDONE_URL = 'https://app.suredone.com';
-
 // Helper: send edit request to SureDone
-async function suredoneEdit(headers, fields) {
+async function suredoneEdit(baseUrl, headers, fields) {
   const formData = new URLSearchParams();
   formData.append('identifier', 'guid');
   for (const [key, value] of Object.entries(fields)) {
@@ -24,7 +22,7 @@ async function suredoneEdit(headers, fields) {
   console.log('SureDone edit:', Object.keys(fields).join(', '));
 
   const response = await fetch(
-    `${SUREDONE_URL}/v1/editor/items/edit`,
+    `${baseUrl}/editor/items/edit`,
     { method: 'POST', headers, body: formData.toString() }
   );
 
@@ -121,6 +119,10 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: 'SureDone credentials not configured' });
   }
 
+  // Use baseUrl from config (already includes /v1)
+  // Safety: strip trailing /v1 if present, we add it via the endpoint paths
+  const SUREDONE_URL = creds.baseUrl.replace(/\/v1\/?$/, '') + '/v1';
+
   const headers = {
     'X-Auth-User': creds.user,
     'X-Auth-Token': creds.token,
@@ -142,7 +144,7 @@ export default async function handler(req, res) {
         if (channel === 'bigcommerce' || channel === 'all') {
           fields.bigcommerceskip = '0';
         }
-        result = await suredoneEdit(headers, fields);
+        result = await suredoneEdit(SUREDONE_URL, headers, fields);
 
         // Auto-fix: if payment profile error, retry with no profile
         if (!isSuccess(result)) {
@@ -152,7 +154,7 @@ export default async function handler(req, res) {
             console.log('Payment profile error detected, retrying with no profile...');
             fields.ebayprofile = '';
             fields.ebaypaymentprofile = '';
-            result = await suredoneEdit(headers, fields);
+            result = await suredoneEdit(SUREDONE_URL, headers, fields);
             retried = true;
           }
         }
@@ -167,14 +169,14 @@ export default async function handler(req, res) {
         if (channel === 'bigcommerce' || channel === 'all') {
           fields.bigcommercedisabled = '1';
         }
-        result = await suredoneEdit(headers, fields);
+        result = await suredoneEdit(SUREDONE_URL, headers, fields);
         break;
       }
 
       case 'relist': {
         // Step 1: End on eBay
         const endFields = { guid: sku, ebayend: '1' };
-        const endResult = await suredoneEdit(headers, endFields);
+        const endResult = await suredoneEdit(SUREDONE_URL, headers, endFields);
         console.log('Relist step 1 (end):', isSuccess(endResult) ? 'success' : 'failed');
 
         // Step 2: Wait for eBay to process the end
@@ -189,7 +191,7 @@ export default async function handler(req, res) {
         if (channel === 'all') {
           startFields.bigcommerceskip = '0';
         }
-        result = await suredoneEdit(headers, startFields);
+        result = await suredoneEdit(SUREDONE_URL, headers, startFields);
 
         // Auto-fix payment profile on relist too
         if (!isSuccess(result)) {
@@ -199,7 +201,7 @@ export default async function handler(req, res) {
             console.log('Payment profile error on relist, retrying...');
             startFields.ebayprofile = '';
             startFields.ebaypaymentprofile = '';
-            result = await suredoneEdit(headers, startFields);
+            result = await suredoneEdit(SUREDONE_URL, headers, startFields);
             retried = true;
           }
         }
@@ -215,7 +217,7 @@ export default async function handler(req, res) {
         if (channel === 'bigcommerce' || channel === 'all') {
           fields.bigcommerceskip = '0';
         }
-        result = await suredoneEdit(headers, fields);
+        result = await suredoneEdit(SUREDONE_URL, headers, fields);
 
         // Auto-fix payment profile
         if (!isSuccess(result)) {
@@ -225,7 +227,7 @@ export default async function handler(req, res) {
             console.log('Payment profile error on revise, retrying...');
             fields.ebayprofile = '';
             fields.ebaypaymentprofile = '';
-            result = await suredoneEdit(headers, fields);
+            result = await suredoneEdit(SUREDONE_URL, headers, fields);
             retried = true;
           }
         }
@@ -238,7 +240,7 @@ export default async function handler(req, res) {
         formData.append('guid', sku);
 
         const response = await fetch(
-          `${SUREDONE_URL}/v1/editor/items/delete`,
+          `${SUREDONE_URL}/editor/items/delete`,
           { method: 'POST', headers, body: formData.toString() }
         );
 
