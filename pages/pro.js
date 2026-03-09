@@ -582,17 +582,31 @@ const COIL_VOLTAGE_PRODUCT_TYPES = new Set([
   'Motor Starter', 'Soft Starter', 'DOL Starter', 'Magnetic Starter',
   'Control Relay', 'Relay', 'Ice Cube Relay', 'Plug-in Relay',
   'Safety Relay', 'Safety Controller',
-  'Overload Relay',
   'Solid State Relay', 'SSR',
   'Time Delay Relay', 'Latching Relay',
   'Solenoid Valve', 'Pneumatic Valve', 'Air Valve', 'Directional Valve'
 ]);
 const COIL_VOLTAGE_KEYWORDS = ['relay', 'contactor', 'starter', 'solenoid'];
 
+const COIL_VOLTAGE_EXCLUSIONS = [
+  'overload relay', 'overload', 'thermal overload',
+  'electronic overload', 'motor protection',
+  'manual motor starter', 'manual starter',
+  'motor protector', 'motor protection relay',
+  'current relay', 'current sensing',
+];
+
 const needsCoilVoltage = (productCategory) => {
   if (!productCategory) return false;
-  if (COIL_VOLTAGE_PRODUCT_TYPES.has(productCategory)) return true;
   const lower = productCategory.toLowerCase();
+
+  // Check exclusions FIRST — these never need coil voltage
+  if (COIL_VOLTAGE_EXCLUSIONS.some(ex => lower.includes(ex))) {
+    return false;
+  }
+
+  // Then check explicit product types and keywords
+  if (COIL_VOLTAGE_PRODUCT_TYPES.has(productCategory)) return true;
   return COIL_VOLTAGE_KEYWORDS.some(kw => lower.includes(kw));
 };
 
