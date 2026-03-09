@@ -1,12 +1,107 @@
 // ============================================================
 // /pages/api/suredone/listing-action.js
 // Centralized endpoint for SureDone listing actions:
-// start, add, edit, relist, end, delete — across eBay and BigCommerce
+// start, relist, end, revise, delete — across eBay and BigCommerce
 //
-// SureDone requires: POST /v1/editor/items/edit, form-urlencoded, identifier=guid
+// SureDone API: POST /v1/editor/items/{action}
+// Valid actions: add, edit, delete
+// Channel control via edit: ebayskip, ebayend, bigcommerceskip, bigcommercedisabled
+// Base URL: https://app.suredone.com
 // ============================================================
 
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
+
+const SUREDONE_URL = 'https://app.suredone.com';
+
+// Helper: send edit request to SureDone
+async function suredoneEdit(headers, fields) {
+  const formData = new URLSearchParams();
+  formData.append('identifier', 'guid');
+  for (const [key, value] of Object.entries(fields)) {
+    formData.append(key, String(value));
+  }
+
+  console.log('SureDone edit:', Object.keys(fields).join(', '));
+
+  const response = await fetch(
+    `${SUREDONE_URL}/v1/editor/items/edit`,
+    { method: 'POST', headers, body: formData.toString() }
+  );
+
+  const text = await response.text();
+  console.log('SureDone response:', text.substring(0, 500));
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { result: 'failure', message: text.substring(0, 200) };
+  }
+}
+
+// Helper: check if SureDone response indicates success
+function isSuccess(data) {
+  if (data.result === 'success') return true;
+  const itemResult = data['1'] || data[1];
+  if (itemResult?.result === 'success') return true;
+  return false;
+}
+
+// Helper: extract error details from SureDone response
+function extractError(data) {
+  const itemResult = data['1'] || data[1] || {};
+  const messages = itemResult.messages || data.message || '';
+  const errors = [];
+
+  if (typeof messages === 'string' && messages.includes('image')) {
+    errors.push({
+      type: 'image_error',
+      message: 'One or more images are too small for eBay (minimum 500x500px). Please upload new photos.',
+      field: 'media'
+    });
+  }
+
+  if (typeof messages === 'string' && (
+    messages.includes('payment') ||
+    messages.includes('profile') ||
+    messages.includes('PaymentPolicy')
+  )) {
+    errors.push({
+      type: 'payment_profile',
+      message: 'Payment profile error. Will attempt to set "Don\'t Use Profile" and retry.',
+      field: 'ebayprofile',
+      autoFix: true
+    });
+  }
+
+  if (typeof messages === 'string' && (
+    messages.includes('category') ||
+    messages.includes('CategoryID')
+  )) {
+    errors.push({
+      type: 'category_error',
+      message: 'eBay category is invalid or missing. Please update the category.',
+      field: 'ebaycatid'
+    });
+  }
+
+  if (typeof messages === 'string' && messages.includes('specific')) {
+    errors.push({
+      type: 'specifics_error',
+      message: 'Missing required eBay item specifics for this category.',
+      field: 'ebayitemspecifics'
+    });
+  }
+
+  if (errors.length === 0) {
+    errors.push({
+      type: 'unknown',
+      message: itemResult.messages || itemResult.codes || data.message || 'Unknown SureDone error',
+      raw: data
+    });
+  }
+
+  return errors;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,236 +110,219 @@ export default async function handler(req, res) {
 
   const { sku, action, channel = 'all' } = req.body;
 
-  if (!sku || !action) {
-    return res.status(400).json({ error: 'sku and action required' });
+  if (!sku) {
+    return res.status(400).json({ success: false, error: 'SKU required' });
   }
 
-  const validActions = ['start', 'add', 'edit', 'relist', 'end', 'delete'];
-  if (!validActions.includes(action)) {
-    return res.status(400).json({ error: `Invalid action. Valid: ${validActions.join(', ')}` });
-  }
-
-  let SUREDONE_USER, SUREDONE_TOKEN, SUREDONE_URL;
+  let creds;
   try {
-    const creds = getSureDoneCredentials();
-    SUREDONE_USER = creds.user;
-    SUREDONE_TOKEN = creds.token;
-    SUREDONE_URL = creds.baseUrl;
+    creds = getSureDoneCredentials();
   } catch (e) {
-    return res.status(500).json({ error: 'SureDone credentials not configured' });
+    return res.status(500).json({ success: false, error: 'SureDone credentials not configured' });
   }
 
   const headers = {
-    'X-Auth-User': SUREDONE_USER,
-    'X-Auth-Token': SUREDONE_TOKEN,
+    'X-Auth-User': creds.user,
+    'X-Auth-Token': creds.token,
     'Content-Type': 'application/x-www-form-urlencoded',
   };
 
-  const editUrl = `${SUREDONE_URL}/v1/editor/items/edit`;
-  const deleteUrl = `${SUREDONE_URL}/v1/editor/items/delete`;
+  console.log(`Listing action: ${action} on ${sku} (channel: ${channel})`);
 
   try {
     let result;
+    let retried = false;
 
-    if (action === 'relist') {
-      // RELIST = end first, wait 2s, then re-start
-      // Step 1: End the current listing
-      const endForm = new URLSearchParams();
-      endForm.append('identifier', 'guid');
-      endForm.append('guid', sku);
-      endForm.append('ebayend', '1');
-
-      console.log(`[listing-action] Relist step 1 — ending ${sku}`);
-      const endRes = await fetch(editUrl, {
-        method: 'POST', headers, body: endForm.toString(),
-      });
-      const endResult = await endRes.json();
-      console.log(`[listing-action] End result for ${sku}:`, JSON.stringify(endResult));
-
-      // Step 2: Wait for eBay to process the end
-      await new Promise(r => setTimeout(r, 2000));
-
-      // Step 3: Re-start the listing
-      const startForm = new URLSearchParams();
-      startForm.append('identifier', 'guid');
-      startForm.append('guid', sku);
-      startForm.append('ebayskip', '0');
-
-      console.log(`[listing-action] Relist step 2 — re-starting ${sku}`);
-      const startRes = await fetch(editUrl, {
-        method: 'POST', headers, body: startForm.toString(),
-      });
-      result = await startRes.json();
-      result.endResult = endResult;
-      console.log(`[listing-action] Relist result for ${sku}:`, JSON.stringify(result));
-
-    } else if (action === 'delete') {
-      // DELETE removes from SureDone entirely
-      const params = new URLSearchParams();
-      params.append('identifier', 'guid');
-      params.append('guid', sku);
-
-      console.log(`[listing-action] Deleting ${sku}`);
-      const delRes = await fetch(deleteUrl, {
-        method: 'POST', headers, body: params.toString(),
-      });
-      result = await delRes.json();
-      console.log(`[listing-action] Delete result for ${sku}:`, JSON.stringify(result));
-
-    } else if (action === 'end') {
-      // END removes from channels but keeps in SureDone
-      const params = new URLSearchParams();
-      params.append('identifier', 'guid');
-      params.append('guid', sku);
-      if (channel === 'ebay' || channel === 'all') {
-        params.append('ebayend', '1');
-      }
-      if (channel === 'bigcommerce' || channel === 'all') {
-        params.append('bigcommercedisabled', '1');
-      }
-
-      console.log(`[listing-action] Ending ${sku} on ${channel}`);
-      const endRes = await fetch(editUrl, {
-        method: 'POST', headers, body: params.toString(),
-      });
-      result = await endRes.json();
-      console.log(`[listing-action] End result for ${sku}:`, JSON.stringify(result));
-
-    } else if (action === 'start' || action === 'add') {
-      // START/ADD publishes to channels (removes skip flags)
-      const params = new URLSearchParams();
-      params.append('identifier', 'guid');
-      params.append('guid', sku);
-      if (channel === 'ebay' || channel === 'all') {
-        params.append('ebayskip', '0');
-      }
-      if (channel === 'bigcommerce' || channel === 'all') {
-        params.append('bigcommerceskip', '0');
-      }
-
-      console.log(`[listing-action] Starting ${sku} on ${channel}`);
-      const startRes = await fetch(editUrl, {
-        method: 'POST', headers, body: params.toString(),
-      });
-      result = await startRes.json();
-      console.log(`[listing-action] Start result for ${sku}:`, JSON.stringify(result));
-
-    } else if (action === 'revise' || action === 'edit') {
-      // REVISE/EDIT pushes current data to live listing
-      const params = new URLSearchParams();
-      params.append('identifier', 'guid');
-      params.append('guid', sku);
-      if (channel === 'ebay' || channel === 'all') {
-        params.append('ebayskip', '0');
-      }
-      if (channel === 'bigcommerce' || channel === 'all') {
-        params.append('bigcommerceskip', '0');
-      }
-
-      console.log(`[listing-action] Revising ${sku} on ${channel}`);
-      const editRes = await fetch(editUrl, {
-        method: 'POST', headers, body: params.toString(),
-      });
-      result = await editRes.json();
-      console.log(`[listing-action] Revise result for ${sku}:`, JSON.stringify(result));
-    }
-
-    // Check if SureDone reported success (two patterns)
-    const isSuccess = result?.result === 'success' ||
-                      result?.result === 1 ||
-                      !!result?.['1'];
-
-    // Try to get listing URLs from the item
-    let ebayUrl = null;
-    let bigcommerceUrl = null;
-    const suredoneUrl = `https://app.suredone.com/#!/editor/item/${sku}`;
-
-    if (action !== 'delete') {
-      try {
-        const item = await fetchItem(SUREDONE_URL, SUREDONE_USER, SUREDONE_TOKEN, sku);
-        if (item) {
-          ebayUrl = findEbayUrl(item);
-          bigcommerceUrl = findBigcommerceUrl(item);
+    switch (action) {
+      case 'start': {
+        const fields = { guid: sku };
+        if (channel === 'ebay' || channel === 'all') {
+          fields.ebayskip = '0';
         }
-      } catch (e) {
-        console.warn('[listing-action] Could not fetch listing URLs:', e.message);
+        if (channel === 'bigcommerce' || channel === 'all') {
+          fields.bigcommerceskip = '0';
+        }
+        result = await suredoneEdit(headers, fields);
+
+        // Auto-fix: if payment profile error, retry with no profile
+        if (!isSuccess(result)) {
+          const errors = extractError(result);
+          const profileError = errors.find(e => e.type === 'payment_profile');
+          if (profileError) {
+            console.log('Payment profile error detected, retrying with no profile...');
+            fields.ebayprofile = '';
+            fields.ebaypaymentprofile = '';
+            result = await suredoneEdit(headers, fields);
+            retried = true;
+          }
+        }
+        break;
       }
+
+      case 'end': {
+        const fields = { guid: sku };
+        if (channel === 'ebay' || channel === 'all') {
+          fields.ebayend = '1';
+        }
+        if (channel === 'bigcommerce' || channel === 'all') {
+          fields.bigcommercedisabled = '1';
+        }
+        result = await suredoneEdit(headers, fields);
+        break;
+      }
+
+      case 'relist': {
+        // Step 1: End on eBay
+        const endFields = { guid: sku, ebayend: '1' };
+        const endResult = await suredoneEdit(headers, endFields);
+        console.log('Relist step 1 (end):', isSuccess(endResult) ? 'success' : 'failed');
+
+        // Step 2: Wait for eBay to process the end
+        await new Promise(r => setTimeout(r, 3000));
+
+        // Step 3: Re-start on eBay
+        const startFields = {
+          guid: sku,
+          ebayend: '0',
+          ebayskip: '0'
+        };
+        if (channel === 'all') {
+          startFields.bigcommerceskip = '0';
+        }
+        result = await suredoneEdit(headers, startFields);
+
+        // Auto-fix payment profile on relist too
+        if (!isSuccess(result)) {
+          const errors = extractError(result);
+          const profileError = errors.find(e => e.type === 'payment_profile');
+          if (profileError) {
+            console.log('Payment profile error on relist, retrying...');
+            startFields.ebayprofile = '';
+            startFields.ebaypaymentprofile = '';
+            result = await suredoneEdit(headers, startFields);
+            retried = true;
+          }
+        }
+        break;
+      }
+
+      case 'revise':
+      case 'edit': {
+        const fields = { guid: sku };
+        if (channel === 'ebay' || channel === 'all') {
+          fields.ebayskip = '0';
+        }
+        if (channel === 'bigcommerce' || channel === 'all') {
+          fields.bigcommerceskip = '0';
+        }
+        result = await suredoneEdit(headers, fields);
+
+        // Auto-fix payment profile
+        if (!isSuccess(result)) {
+          const errors = extractError(result);
+          const profileError = errors.find(e => e.type === 'payment_profile');
+          if (profileError) {
+            console.log('Payment profile error on revise, retrying...');
+            fields.ebayprofile = '';
+            fields.ebaypaymentprofile = '';
+            result = await suredoneEdit(headers, fields);
+            retried = true;
+          }
+        }
+        break;
+      }
+
+      case 'delete': {
+        const formData = new URLSearchParams();
+        formData.append('identifier', 'guid');
+        formData.append('guid', sku);
+
+        const response = await fetch(
+          `${SUREDONE_URL}/v1/editor/items/delete`,
+          { method: 'POST', headers, body: formData.toString() }
+        );
+
+        const text = await response.text();
+        try {
+          result = JSON.parse(text);
+        } catch {
+          result = { result: 'failure', message: text.substring(0, 200) };
+        }
+        break;
+      }
+
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown action: ${action}`
+        });
     }
 
-    return res.status(200).json({
-      success: isSuccess,
-      action,
-      channel,
-      sku,
-      result,
-      ebayUrl,
-      bigcommerceUrl,
-      suredoneUrl,
-    });
+    // Determine success and build response
+    const success = isSuccess(result);
 
-  } catch (err) {
-    console.error('[listing-action] Error:', err);
+    if (success) {
+      const itemResult = result['1'] || result[1] || {};
+      const ebayItemId = itemResult.ebayid || itemResult.ebay_id || null;
+      const ebayUrl = ebayItemId
+        ? `https://www.ebay.com/itm/${ebayItemId}`
+        : null;
+
+      const response = {
+        success: true,
+        action,
+        channel,
+        sku,
+        ebayUrl,
+        ebayItemId,
+        retried,
+      };
+
+      if (retried) {
+        response.note = 'Payment profile was cleared automatically to resolve an error.';
+      }
+
+      console.log(`${action} succeeded for ${sku}`);
+      return res.status(200).json(response);
+    } else {
+      const errors = extractError(result);
+
+      const instructions = errors.map(err => {
+        switch (err.type) {
+          case 'image_error':
+            return '📷 IMAGES TOO SMALL: One or more photos are below eBay\'s 500x500px minimum. Open this item in Photo Station and retake the photos.';
+          case 'payment_profile':
+            return '💳 PAYMENT PROFILE: Auto-fix attempted but failed. Go to SureDone → Edit this item → set Payment Profile to "Don\'t Use Profile" → Save.';
+          case 'category_error':
+            return '📁 CATEGORY MISSING: This item needs a valid eBay category. Use the category search in Pro Builder to set one.';
+          case 'specifics_error':
+            return '📋 MISSING ITEM SPECIFICS: eBay requires certain item specifics for this category. Check the Specifications section.';
+          default:
+            return `⚠️ ${err.message}`;
+        }
+      });
+
+      console.error(`${action} failed for ${sku}:`, JSON.stringify(errors));
+
+      return res.status(200).json({
+        success: false,
+        action,
+        channel,
+        sku,
+        errors,
+        instructions,
+        result,
+        retried,
+      });
+    }
+
+  } catch (error) {
+    console.error('Listing action error:', error);
     return res.status(500).json({
       success: false,
-      error: err.message,
       action,
       sku,
+      error: error.message
     });
   }
-}
-
-// ============================================================
-// Helpers: fetch item via search endpoint, extract URLs
-// ============================================================
-
-async function fetchItem(baseUrl, user, token, sku) {
-  const searchUrl = `${baseUrl}/search/items/${encodeURIComponent(`guid:=${sku}`)}`;
-  const res = await fetch(searchUrl, {
-    headers: {
-      'X-Auth-User': user,
-      'X-Auth-Token': token,
-      'Content-Type': 'application/json',
-    },
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  for (const key of Object.keys(data)) {
-    if (!isNaN(key) && data[key]?.guid) {
-      if (data[key].guid.toLowerCase() === sku.toLowerCase()) {
-        return data[key];
-      }
-    }
-  }
-  return null;
-}
-
-function findEbayUrl(item) {
-  // Check known field names first
-  const knownFields = ['ebayid', 'ebayitemid', 'ebaynewid', 'ebaylistingid'];
-  for (const field of knownFields) {
-    if (item[field] && item[field].toString().length > 5) {
-      return `https://www.ebay.com/itm/${item[field]}`;
-    }
-  }
-  // Fallback: any key containing 'ebay' and 'id'
-  for (const key of Object.keys(item)) {
-    if (key.toLowerCase().includes('ebay') &&
-        key.toLowerCase().includes('id') &&
-        item[key] && item[key].toString().length > 5) {
-      return `https://www.ebay.com/itm/${item[key]}`;
-    }
-  }
-  return null;
-}
-
-function findBigcommerceUrl(item) {
-  const slug = item.slug || item.customurl;
-  if (slug) {
-    return `https://www.industrialpartsrus.com/${slug}`;
-  }
-  const bcId = item.bigcommerceid || item.bigcommerceproductid;
-  if (bcId) {
-    return `https://www.industrialpartsrus.com/?id=${bcId}`;
-  }
-  return null;
 }

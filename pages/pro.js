@@ -3159,7 +3159,14 @@ export default function ProListingBuilder() {
       const data = await res.json();
 
       if (data.success) {
-        alert(`${action} completed for ${currentSku}`);
+        let successMsg = `✅ ${action} completed for ${currentSku}`;
+        if (data.ebayItemId) {
+          successMsg += `\n\neBay Item ID: ${data.ebayItemId}`;
+        }
+        if (data.retried && data.note) {
+          successMsg += `\n\n⚠️ ${data.note}`;
+        }
+        alert(successMsg);
         if (data.ebayUrl) setEbayUrl(data.ebayUrl);
 
         // If deleted, remove from queue
@@ -3170,8 +3177,50 @@ export default function ProListingBuilder() {
           setBigcommerceUrl(null);
           setSuredoneUrl(null);
         }
+
+        // Verify listing actually published to eBay (delayed check)
+        if ((action === 'start' || action === 'relist') && data.success) {
+          setTimeout(async () => {
+            try {
+              const verifyRes = await fetch(
+                `/api/suredone/get-item?sku=${encodeURIComponent(currentSku)}`
+              );
+              const verifyData = await verifyRes.json();
+
+              if (verifyData.success && verifyData.item) {
+                const ebayId = verifyData.item.ebayid ||
+                               verifyData.item.ebayitemid || '';
+                const ebayUrlFound = verifyData.item.ebayurl || '';
+
+                if (!ebayId && !ebayUrlFound) {
+                  alert(
+                    `⚠️ Verification Check for ${currentSku}:\n\n` +
+                    `No eBay Item ID was found after ${action}. ` +
+                    `This could mean:\n` +
+                    `• eBay is still processing (check again in a minute)\n` +
+                    `• Images may be too small (under 500x500px)\n` +
+                    `• Payment profile may need to be set to "Don't Use Profile"\n` +
+                    `• Required item specifics may be missing\n\n` +
+                    `Check the item in SureDone for details.`
+                  );
+                } else {
+                  if (ebayUrlFound) setEbayUrl(ebayUrlFound);
+                  else if (ebayId) setEbayUrl(`https://www.ebay.com/itm/${ebayId}`);
+                }
+              }
+            } catch (err) {
+              console.warn('Post-listing verification failed:', err.message);
+            }
+          }, 10000);
+        }
       } else {
-        alert(`${action} failed: ${data.error || JSON.stringify(data)}`);
+        if (data.instructions && data.instructions.length > 0) {
+          alert(`${action} for ${currentSku} had issues:\n\n${data.instructions.join('\n\n')}`);
+        } else if (data.errors && data.errors.length > 0) {
+          alert(`${action} failed for ${currentSku}:\n\n${data.errors.map(e => e.message).join('\n')}`);
+        } else {
+          alert(`${action} failed: ${data.error || JSON.stringify(data)}`);
+        }
       }
     } catch (err) {
       alert(`Error: ${err.message}`);
