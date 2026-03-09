@@ -341,6 +341,8 @@ const styles = {
     border: '1px solid #e5e7eb',
     borderRadius: '8px',
     alignItems: 'flex-start',
+    overflow: 'hidden',
+    flexWrap: 'wrap',
   },
   
   thumbnailContainer: {
@@ -425,6 +427,8 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '5px',
+    flexShrink: 0,
+    minWidth: '0',
   },
   
   selectButton: {
@@ -435,7 +439,7 @@ const styles = {
     borderRadius: '4px',
     cursor: 'pointer',
     fontSize: '13px',
-    whiteSpace: 'nowrap',
+    textAlign: 'center',
   },
   
   actionButtons: {

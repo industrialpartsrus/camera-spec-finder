@@ -1,49 +1,82 @@
 // pages/api/suredone/search.js
 // Keyword search across SureDone inventory
-// Searches title, brand, mpn, and guid fields
+// Uses SureDone Search API: GET /v1/search/items/{query}
 
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
+
+const SUREDONE_URL = 'https://api.suredone.com';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed. Use GET.' });
   }
 
-  const { query, brand, inStock, limit = '20' } = req.query;
+  const { query, inStock, limit = 25 } = req.query;
 
-  if (!query || query.length < 2) {
-    return res.status(400).json({ error: 'Query must be at least 2 characters' });
+  if (!query || query.trim().length < 2) {
+    return res.status(400).json({ success: false, error: 'Query too short' });
   }
 
-  let SUREDONE_USER, SUREDONE_TOKEN, SUREDONE_BASE;
   try {
     const creds = getSureDoneCredentials();
-    SUREDONE_USER = creds.user;
-    SUREDONE_TOKEN = creds.token;
-    SUREDONE_BASE = creds.baseUrl;
-  } catch (e) {
-    return res.status(500).json({ error: 'SureDone credentials not configured' });
-  }
 
-  try {
-    // Use /editor/items/search/all/{keyword} — confirmed working via debug endpoint
-    const searchUrl = `${SUREDONE_BASE}/editor/items/search/all/${encodeURIComponent(query)}`;
+    // SureDone Search API: GET /v1/search/items/{searchTerms}
+    const searchTerms = encodeURIComponent(query.trim());
+    const url = `${SUREDONE_URL}/v1/search/items/${searchTerms}`;
 
-    const response = await fetch(searchUrl, {
-      method: 'GET',
+    console.log('SureDone search:', query, '→', url);
+
+    const response = await fetch(url, {
       headers: {
+        'X-Auth-User': creds.user,
+        'X-Auth-Token': creds.token,
         'Content-Type': 'application/json',
-        'X-Auth-User': SUREDONE_USER,
-        'X-Auth-Token': SUREDONE_TOKEN,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`SureDone API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('SureDone search error:', response.status, errorText);
+      return res.status(500).json({
+        success: false,
+        error: `SureDone API error: ${response.status}`,
+      });
     }
 
     const data = await response.json();
-    const results = parseResults(data, parseInt(limit));
+
+    // SureDone returns results with numeric keys ("0", "1", "2", etc.)
+    // Plus metadata keys like "total_results", "current_page", etc.
+    const results = [];
+    for (const key in data) {
+      if (!isNaN(key) && data[key] && data[key].guid) {
+        const item = data[key];
+
+        // Optional: filter by stock
+        if (inStock === 'true') {
+          const stock = parseInt(item.stock) || 0;
+          if (stock <= 0) continue;
+        }
+
+        results.push({
+          sku: item.guid,
+          title: item.title || '',
+          brand: item.brand || '',
+          mpn: item.mpn || '',
+          price: item.price || '',
+          stock: item.stock || '0',
+          condition: item.condition || '',
+          media1: item.media1 || '',
+          ebaycatid: item.ebaycatid || '',
+          usertype: item.usertype || '',
+          shelf: item.shelf || '',
+        });
+
+        if (results.length >= parseInt(limit)) break;
+      }
+    }
+
+    console.log(`Search "${query}": ${results.length} results`);
 
     return res.status(200).json({
       success: true,
@@ -51,50 +84,10 @@ export default async function handler(req, res) {
       results,
     });
   } catch (error) {
-    console.error('SureDone search error:', error);
+    console.error('Search error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Search failed',
-      details: error.message,
+      error: error.message,
     });
   }
-}
-
-function parseResults(data, maxResults) {
-  const results = [];
-
-  if (!data || typeof data !== 'object') return results;
-
-  // SureDone returns results with numeric keys or as an array
-  const entries = Array.isArray(data)
-    ? data
-    : Object.values(data).filter(v => typeof v === 'object' && v !== null && v.guid);
-
-  for (const item of entries) {
-    if (!item.guid) continue;
-    if (results.length >= maxResults) break;
-
-    // Count images
-    let imageCount = 0;
-    for (let i = 1; i <= 12; i++) {
-      if (item[`media${i}`]) imageCount++;
-    }
-
-    results.push({
-      sku: item.guid || '',
-      title: item.title || '',
-      brand: item.brand || '',
-      mpn: item.mpn || '',
-      price: item.price || '',
-      stock: item.stock || '0',
-      condition: item.condition || '',
-      media1: item.media1 || '',
-      imageCount,
-      ebaycatid: item.ebaycatid || '',
-      usertype: item.usertype || '',
-      shelf: item.shelf || '',
-    });
-  }
-
-  return results;
 }
