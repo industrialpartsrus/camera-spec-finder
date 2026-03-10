@@ -161,18 +161,22 @@ export default async function handler(req, res) {
       });
     }
 
-    // === SINGLE COMBINED SUREDONE UPDATE ===
-    // One request with stock + shelf + channel flags + condition
+    // === SUREDONE UPDATE ===
     let autoRelisted = false;
     let suredoneUpdated = false;
+    let SUREDONE_USER, SUREDONE_TOKEN;
+    const suredoneUrl = 'https://api.suredone.com/v1/editor/items/edit';
+    const suredoneHeaders = {};
 
     if (action !== 'create_new') {
       try {
-        let SUREDONE_USER, SUREDONE_TOKEN;
         try {
           const creds = getSureDoneCredentials();
           SUREDONE_USER = creds.user;
           SUREDONE_TOKEN = creds.token;
+          suredoneHeaders['X-Auth-User'] = SUREDONE_USER;
+          suredoneHeaders['X-Auth-Token'] = SUREDONE_TOKEN;
+          suredoneHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
         } catch (e) {
           return res.status(500).json({
             error: 'SureDone credentials not configured',
@@ -181,6 +185,7 @@ export default async function handler(req, res) {
           });
         }
 
+        // Step 1: Update stock, shelf, condition (no channel flags here)
         const formData = new URLSearchParams();
         formData.append('identifier', 'guid');
         formData.append('guid', sku);
@@ -207,30 +212,14 @@ export default async function handler(req, res) {
           formData.append('bigcommercempn', partNumber.toUpperCase());
         }
 
-        // Channel push flags — always include for restock, shelf changes, or stock changes
-        const restockDetected = isRestock || (newStock > 0 && oldStock === 0);
-        const shelfChanged = shelf && shelf !== '';
-
-        if (restockDetected || shelfChanged || newStock !== oldStock) {
-          formData.append('ebayskip', '0');
-          formData.append('ebayend', '0');
-          formData.append('bigcommerceskip', '0');
-          if (restockDetected) autoRelisted = true;
-        }
-
         // CRITICAL: Skip Google Shopping — it's broken and blocks edits
         formData.append('googleskip', '1');
 
-        console.log(`Updating SureDone ${sku}: stock=${newStock}, shelf=${shelf || 'unchanged'}, restock=${restockDetected}, condition=${condition || 'unchanged'}`);
+        console.log(`Updating SureDone ${sku}: stock=${newStock}, shelf=${shelf || 'unchanged'}, condition=${condition || 'unchanged'}`);
 
-        const suredoneUrl = 'https://api.suredone.com/v1/editor/items/edit';
         const response = await fetch(suredoneUrl, {
           method: 'POST',
-          headers: {
-            'X-Auth-User': SUREDONE_USER,
-            'X-Auth-Token': SUREDONE_TOKEN,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
+          headers: suredoneHeaders,
           body: formData.toString()
         });
 
@@ -286,6 +275,64 @@ export default async function handler(req, res) {
       }
     } else {
       console.log(`Skipping SureDone update for new item ${sku} - will be created via Pro Builder`);
+    }
+
+    // === AUTO-RELIST: Toggle ebayskip 1→0 to trigger channel push ===
+    // SureDone only pushes when a value CHANGES. If ebayskip is already 0,
+    // setting it to 0 again does nothing. So we toggle: skip first, then unskip.
+    let relistResult = null;
+
+    if (suredoneUpdated && (isRestock || (newStock > 0 && oldStock === 0))) {
+      console.log(`Restock for ${sku}: toggling ebayskip 1→0 to trigger relist...`);
+
+      try {
+        // Step 1: Skip eBay (sets ebayskip=1)
+        const skipForm = new URLSearchParams();
+        skipForm.append('identifier', 'guid');
+        skipForm.append('guid', sku);
+        skipForm.append('ebayskip', '1');
+        skipForm.append('bigcommerceskip', '1');
+
+        console.log(`Relist step 1: setting ebayskip=1 for ${sku}`);
+        const skipRes = await fetch(suredoneUrl, {
+          method: 'POST', headers: suredoneHeaders, body: skipForm.toString()
+        });
+        const skipData = await skipRes.json();
+        console.log(`Skip result:`, JSON.stringify(skipData).substring(0, 200));
+
+        // Step 2: Wait for SureDone to process
+        await new Promise(r => setTimeout(r, 2000));
+
+        // Step 3: Unskip eBay (sets ebayskip=0) — this CHANGE triggers the push
+        const startForm = new URLSearchParams();
+        startForm.append('identifier', 'guid');
+        startForm.append('guid', sku);
+        startForm.append('ebayskip', '0');
+        startForm.append('ebayend', '0');
+        startForm.append('bigcommerceskip', '0');
+
+        console.log(`Relist step 2: setting ebayskip=0 for ${sku}`);
+        const startRes = await fetch(suredoneUrl, {
+          method: 'POST', headers: suredoneHeaders, body: startForm.toString()
+        });
+        const startData = await startRes.json();
+        const startOk = startData.result === 'success' ||
+                         startData['1']?.result === 'success';
+
+        console.log(`Relist result for ${sku}: ${startOk ? 'SUCCESS' : 'FAILED'}`,
+          JSON.stringify(startData).substring(0, 300));
+
+        relistResult = {
+          success: startOk,
+          error: startOk ? null : (startData.message || 'Relist failed'),
+        };
+
+        if (startOk) autoRelisted = true;
+
+      } catch (relistErr) {
+        console.error('Auto-relist error:', relistErr.message);
+        relistResult = { success: false, error: relistErr.message };
+      }
     }
 
     // === POST-UPDATE VERIFICATION ===
@@ -405,6 +452,7 @@ export default async function handler(req, res) {
       firebaseUpdated: !!(firebaseId || createdFirebaseId),
       suredoneUpdated: suredoneUpdated,
       autoRelisted: autoRelisted,
+      relistResult: relistResult,
       message: action === 'create_new' ? `New item ${sku} created` : `Stock updated to ${newStock}`,
       verification: verification,
     });
