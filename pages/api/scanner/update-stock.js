@@ -381,8 +381,9 @@ async function updateSureDoneStock(sku, stock, shelf, isCreate = false, isRestoc
 
     if (data.result === 'success' || data.result === 1 || data['1']) {
       // === Push changes to eBay and BigCommerce ===
-      // SureDone doesn't always auto-push on field updates — explicitly
-      // set skip=0 to trigger the channel push (unless already done for restock)
+      // SureDone doesn't auto-push custom fields (like shelf) unless we
+      // explicitly trigger a revision by setting skip=0. Always push so
+      // shelf-only updates reach eBay/BigCommerce too.
       if (!autoRelisted) {
         try {
           const pushForm = new URLSearchParams();
@@ -390,6 +391,12 @@ async function updateSureDoneStock(sku, stock, shelf, isCreate = false, isRestoc
           pushForm.append('guid', sku);
           pushForm.append('ebayskip', '0');
           pushForm.append('bigcommerceskip', '0');
+
+          // Include shelf in the push so eBay item specifics update
+          if (shelf) {
+            pushForm.append('shelf', shelf);
+            pushForm.append('bigcommercebinpickingnumber', shelf);
+          }
 
           const pushResponse = await fetch(url, {
             method: 'POST',
