@@ -162,7 +162,7 @@ export default async function handler(req, res) {
     }
 
     // Update SureDone (always done to keep inventory in sync)
-    const suredoneResult = await updateSureDoneStock(sku, newStock, shelf, action === 'create_new', isRestock);
+    const suredoneResult = await updateSureDoneStock(sku, newStock, shelf, action === 'create_new', isRestock, condition);
 
     if (!suredoneResult.success) {
       return res.status(500).json({
@@ -318,7 +318,7 @@ export default async function handler(req, res) {
  * @param {boolean} isRestock - If true, stock went 0→positive (clear skip flags to auto-relist)
  * @returns {Promise<{success: boolean, autoRelisted?: boolean, error?: string}>}
  */
-async function updateSureDoneStock(sku, stock, shelf, isCreate = false, isRestock = false) {
+async function updateSureDoneStock(sku, stock, shelf, isCreate = false, isRestock = false, condition = null) {
   try {
     let SUREDONE_USER, SUREDONE_TOKEN;
     try {
