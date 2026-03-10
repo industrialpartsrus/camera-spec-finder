@@ -175,6 +175,52 @@ export default async function handler(req, res) {
       });
     }
 
+    // === AUTO-RELIST VIA LISTING-ACTION API ===
+    // Uses the listing-action endpoint which handles both:
+    // - "revise" for items with an existing eBay ID
+    // - "start" for items where the eBay listing ended/expired
+    let relistResult = null;
+
+    if (isRestock || (newStock > 0 && oldStock === 0)) {
+      console.log(`Restock detected for ${sku}: ${oldStock} → ${newStock}`);
+
+      try {
+        const host = process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : `https://${req.headers.host}`;
+
+        const actionRes = await fetch(`${host}/api/suredone/listing-action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sku: sku,
+            action: 'start',
+            channel: 'all'
+          })
+        });
+
+        const actionData = await actionRes.json();
+
+        relistResult = {
+          success: actionData.success,
+          error: actionData.success ? null : (actionData.error || 'Push failed'),
+          ebayUrl: actionData.ebayUrl || null,
+        };
+
+        if (actionData.success) {
+          suredoneResult.autoRelisted = true;
+        }
+
+        console.log(`Auto-relist for ${sku}: ${actionData.success ? 'SUCCESS' : 'FAILED'}`);
+        if (!actionData.success) {
+          console.warn('Relist response:', JSON.stringify(actionData).substring(0, 500));
+        }
+      } catch (relistErr) {
+        console.error('Auto-relist error:', relistErr.message);
+        relistResult = { success: false, error: relistErr.message };
+      }
+    }
+
     // === POST-UPDATE VERIFICATION ===
     // Wait 3 seconds for SureDone to process, then read back
     let verification = null;
@@ -292,6 +338,7 @@ export default async function handler(req, res) {
       firebaseUpdated: !!(firebaseId || createdFirebaseId),
       suredoneUpdated: true,
       autoRelisted: suredoneResult.autoRelisted || false,
+      relistResult: relistResult,
       message: action === 'create_new' ? `New item ${sku} created` : `Stock updated to ${newStock}`,
       verification: verification,
     });
@@ -347,14 +394,9 @@ async function updateSureDoneStock(sku, stock, shelf, isCreate = false, isRestoc
       formData.append('bigcommercebinpickingnumber', shelf); // Sync shelf to BigCommerce bin picking
     }
 
-    // Auto-relist: when stock goes 0→positive, clear skip flags so channels pick it up
+    // Note: auto-relist for restocks is now handled by the handler
+    // via the listing-action API, which handles both revise and start cases
     let autoRelisted = false;
-    if (isRestock && stock > 0) {
-      formData.append('ebayskip', '0');
-      formData.append('bigcommerceskip', '0');
-      autoRelisted = true;
-      console.log(`Auto-relist triggered for ${sku}: clearing ebayskip + bigcommerceskip`);
-    }
 
     // Condition override: map internal IDs to SureDone/eBay condition values
     if (condition) {
