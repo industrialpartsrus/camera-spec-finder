@@ -70,6 +70,13 @@ export default async function handler(req, res) {
       updates.scannerNoteAt = serverTimestamp();
     }
 
+    // Save condition override if provided
+    if (condition) {
+      updates.condition = condition;
+      updates.conditionChangedBy = scannedBy;
+      updates.conditionChangedAt = serverTimestamp();
+    }
+
     // Add health routing flags if provided
     if (healthRouting && healthRouting !== 'normal') {
       updates.needsRework = healthRouting === 'rework';
@@ -349,9 +356,24 @@ async function updateSureDoneStock(sku, stock, shelf, isCreate = false, isRestoc
       console.log(`Auto-relist triggered for ${sku}: clearing ebayskip + bigcommerceskip`);
     }
 
+    // Condition override: map internal IDs to SureDone/eBay condition values
+    if (condition) {
+      const conditionMap = {
+        'new_in_box': 'New',
+        'new_open_box': 'New Other',
+        'refurbished': 'Seller refurbished',
+        'used_good': 'Used',
+        'used_fair': 'Used',
+        'for_parts': 'For Parts or Not Working',
+      };
+      const suredoneCondition = conditionMap[condition] || condition;
+      formData.append('condition', suredoneCondition);
+      console.log(`Condition updated: ${condition} → ${suredoneCondition}`);
+    }
+
     const url = 'https://api.suredone.com/v1/editor/items/edit';
 
-    console.log(`Updating SureDone ${sku}: stock=${stock}, shelf=${shelf || 'unchanged'}, restock=${isRestock}`);
+    console.log(`Updating SureDone ${sku}: stock=${stock}, shelf=${shelf || 'unchanged'}, restock=${isRestock}${condition ? ', condition=' + condition : ''}`);
 
     const response = await fetch(url, {
       method: 'POST',

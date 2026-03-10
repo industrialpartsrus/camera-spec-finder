@@ -1649,6 +1649,126 @@ export default function ProListingBuilder() {
     }
   }, [selectedItem]);
 
+  // Auto-load SureDone data for flagged items missing details
+  useEffect(() => {
+    if (!selectedItem) return;
+
+    const item = queue.find(q => q.id === selectedItem);
+    if (!item) return;
+
+    // Check if item needs data loaded from SureDone
+    const hasSku = item.sku || item.originalSku || item.guid;
+    const missingData = !item.title || item.title.length < 5 ||
+                        !item.description || !item.ebayCategoryId;
+    const isFlagged = item.needsReview || item.needsRework ||
+                       item.status === 'needs_review';
+
+    if (hasSku && (missingData || isFlagged) && !item._suredoneLoaded) {
+      const loadFromSureDone = async () => {
+        try {
+          const sku = item.sku || item.originalSku || item.guid;
+          console.log(`Auto-loading SureDone data for flagged item ${sku}...`);
+
+          const res = await fetch(
+            `/api/suredone/get-item?sku=${encodeURIComponent(sku)}`
+          );
+          const data = await res.json();
+
+          if (data.success && data.item) {
+            const sd = data.item;
+
+            // Build specs from SureDone data
+            const specs = {};
+            const specFields = [
+              'voltage', 'inputvoltage', 'outputvoltage', 'coilvoltage',
+              'amperage', 'currentrating', 'fullloadamps', 'phase',
+              'frequency', 'horsepower', 'rpm', 'baserpm', 'framesize',
+              'enclosuretype', 'motortype', 'insulationclass', 'watts',
+              'kw', 'kva', 'powerrating', 'sensingrange', 'outputtype',
+              'communicationstandard', 'controllerplatform', 'series',
+              'firmwarerevision', 'fwrevision', 'connectiontype',
+              'mountingtype', 'material', 'portsize', 'borediameter',
+              'strokelength', 'maxpressure', 'flowrate', 'application',
+              'numberOfPoles', 'numberofpoles', 'sensortype',
+            ];
+            specFields.forEach(key => {
+              if (sd[key] && sd[key].toString().trim()) {
+                specs[key] = sd[key].toString().trim();
+              }
+            });
+
+            // Extract eBay item specifics
+            const ebaySpecs = {};
+            for (const key in sd) {
+              if (key.startsWith('ebayitemspecifics') && sd[key]) {
+                const val = sd[key].toString().trim();
+                if (val) ebaySpecs[key] = val;
+              }
+            }
+
+            // Extract photos
+            const photos = [];
+            const photoViews = [];
+            for (let i = 1; i <= 12; i++) {
+              const url = sd[`media${i}`];
+              if (url && url.trim() && !url.includes('no-image')) {
+                photos.push(url);
+                photoViews.push(`suredone_${i}`);
+              }
+            }
+
+            // Merge into Firebase — only update fields that are empty
+            const updateData = {
+              _suredoneLoaded: true,
+            };
+
+            if (!item.title && sd.title) updateData.title = sd.title;
+            if (!item.description && sd.longdescription) {
+              updateData.description = sd.longdescription;
+              updateData.rawDescription = sd.longdescription;
+            }
+            if (Object.keys(specs).length > 0 &&
+                (!item.specifications || Object.keys(item.specifications).length === 0)) {
+              updateData.specifications = specs;
+            }
+            if (Object.keys(ebaySpecs).length > 0 &&
+                (!item.ebayItemSpecificsForSuredone ||
+                 Object.keys(item.ebayItemSpecificsForSuredone).length === 0)) {
+              updateData.ebayItemSpecificsForSuredone = ebaySpecs;
+            }
+            if (photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+              updateData.photos = photos;
+              updateData.photoViews = photoViews;
+              updateData.photosSource = 'suredone';
+            }
+            if (!item.price && sd.price) updateData.price = sd.price;
+            if (!item.ebayCategoryId && sd.ebaycatid) {
+              updateData.ebayCategoryId = sd.ebaycatid;
+            }
+            if (!item.ebayStoreCategoryId && sd.ebaystoreid) {
+              updateData.ebayStoreCategoryId = sd.ebaystoreid;
+            }
+            if (!item.originalSku) {
+              updateData.originalSku = sku;
+              updateData.isEditingExisting = true;
+            }
+
+            await updateDoc(doc(db, 'products', item.id), updateData);
+
+            console.log(`Loaded SureDone data for ${sku}: ` +
+              `${Object.keys(specs).length} specs, ` +
+              `${Object.keys(ebaySpecs).length} eBay specifics, ` +
+              `${photos.length} photos`);
+          }
+        } catch (err) {
+          console.warn('Auto-load from SureDone failed:', err.message);
+        }
+      };
+
+      loadFromSureDone();
+    }
+  }, [selectedItem]);
+
   // Debounced local state for text inputs (prevents cursor jumping from Firestore writes)
   const [localFields, setLocalFields] = useState({});
 

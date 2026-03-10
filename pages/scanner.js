@@ -174,6 +174,7 @@ export default function WarehouseScanner() {
   const [stockMode, setStockMode] = useState('add'); // 'add' or 'set'
   const [absoluteStock, setAbsoluteStock] = useState(0);
   const [scannerNote, setScannerNote] = useState('');
+  const [overrideCondition, setOverrideCondition] = useState(null);
 
   // New item state
   const [newSku, setNewSku] = useState('');
@@ -458,6 +459,7 @@ export default function WarehouseScanner() {
     setScannerNote('');
     setStockMode('add');
     setAbsoluteStock(match.stock || 0);
+    setOverrideCondition(null);
     setScreen('add-stock');
   };
 
@@ -504,6 +506,9 @@ export default function WarehouseScanner() {
           partNumber: partNumber,
           brand: brand,
           shelf: newShelf || selectedMatch.shelf,
+          condition: overrideCondition !== null && overrideCondition !== selectedMatch.condition
+            ? overrideCondition
+            : null,
           note: scannerNote.trim() || null,
           scannedBy: currentUser?.name || 'unknown',
           action: 'add_stock',
@@ -565,6 +570,11 @@ export default function WarehouseScanner() {
           }
 
           msg += '\n\n── Channel Status ──\n' + verifyMsg;
+        }
+
+        // Condition change message
+        if (overrideCondition && overrideCondition !== selectedMatch.condition) {
+          msg += `\nCondition: ${CONDITIONS[selectedMatch.condition]?.label || selectedMatch.condition} → ${CONDITIONS[overrideCondition]?.label || overrideCondition}`;
         }
 
         // Health routing message
@@ -705,6 +715,7 @@ export default function WarehouseScanner() {
     setNewQuantity(1);
     setNewItemShelf('');
     setScannerNote('');
+    setOverrideCondition(null);
     setScreen('scan');
   };
 
@@ -1318,6 +1329,55 @@ export default function WarehouseScanner() {
                 </div>
               </div>
             )}
+
+            {/* Condition Check */}
+            <div className="border-t pt-4 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Condition
+                </label>
+                <button
+                  onClick={() => setOverrideCondition(
+                    overrideCondition !== null ? null : selectedMatch.condition
+                  )}
+                  className="text-xs text-blue-600 font-medium"
+                >
+                  {overrideCondition !== null ? 'Cancel Change' : 'Change'}
+                </button>
+              </div>
+
+              {overrideCondition === null ? (
+                <div className={`text-center py-2 px-4 rounded-lg text-lg font-bold ${getConditionColor(selectedMatch.condition)}`}>
+                  {CONDITIONS[selectedMatch.condition]?.label || selectedMatch.condition}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(CONDITIONS).map(([id, config]) => (
+                    <button
+                      key={id}
+                      onClick={() => setOverrideCondition(id)}
+                      className={`py-3 px-2 rounded-lg text-sm font-bold transition border-2 ${
+                        overrideCondition === id
+                          ? `${config.bgClass} text-white border-transparent`
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      {config.label || config.shortLabel}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {overrideCondition !== null && overrideCondition !== selectedMatch.condition && (
+                <div className="mt-2 bg-amber-50 border border-amber-300 rounded-lg p-2 text-sm text-amber-800">
+                  Condition will change from <strong>
+                    {CONDITIONS[selectedMatch.condition]?.label || selectedMatch.condition}
+                  </strong> to <strong>
+                    {CONDITIONS[overrideCondition]?.label || overrideCondition}
+                  </strong>
+                </div>
+              )}
+            </div>
 
             <div className="border-t pt-4">
               <div className="mb-6">
