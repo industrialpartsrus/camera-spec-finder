@@ -161,83 +161,131 @@ export default async function handler(req, res) {
       });
     }
 
-    // Update SureDone (always done to keep inventory in sync)
-    const suredoneResult = await updateSureDoneStock(sku, newStock, shelf, action === 'create_new', isRestock, condition);
+    // === SINGLE COMBINED SUREDONE UPDATE ===
+    // One request with stock + shelf + channel flags + condition
+    let autoRelisted = false;
+    let suredoneUpdated = false;
 
-    if (!suredoneResult.success) {
-      return res.status(500).json({
-        error: 'Failed to update SureDone stock',
-        details: suredoneResult.error || 'Unknown error',
-        step: 'suredone_update',
-        success: false,
-        firebaseUpdated: !!(firebaseId || createdFirebaseId),
-        suredoneUpdated: false
-      });
-    }
-
-    // === AUTO-RELIST: Direct SureDone call ===
-    // Clears skip/end flags so eBay and BigCommerce listings are created/restarted
-    let relistResult = null;
-
-    if (isRestock || (newStock > 0 && oldStock === 0)) {
-      console.log(`Restock detected for ${sku}: ${oldStock} → ${newStock}, sending start to SureDone...`);
-
+    if (action !== 'create_new') {
       try {
-        const relistCreds = getSureDoneCredentials();
+        let SUREDONE_USER, SUREDONE_TOKEN;
+        try {
+          const creds = getSureDoneCredentials();
+          SUREDONE_USER = creds.user;
+          SUREDONE_TOKEN = creds.token;
+        } catch (e) {
+          return res.status(500).json({
+            error: 'SureDone credentials not configured',
+            step: 'suredone_update',
+            success: false
+          });
+        }
 
-        const startForm = new URLSearchParams();
-        startForm.append('identifier', 'guid');
-        startForm.append('guid', sku);
-        startForm.append('ebayskip', '0');
-        startForm.append('ebayend', '0');
-        startForm.append('bigcommerceskip', '0');
+        const formData = new URLSearchParams();
+        formData.append('identifier', 'guid');
+        formData.append('guid', sku);
+        formData.append('stock', String(newStock));
 
-        const startUrl = 'https://api.suredone.com/v1/editor/items/edit';
-        console.log(`Auto-relist: POST ${startUrl} for ${sku}`);
+        if (shelf) {
+          formData.append('shelf', shelf);
+          formData.append('bigcommercebinpickingnumber', shelf);
+        }
 
-        const startRes = await fetch(startUrl, {
+        if (condition) {
+          const conditionMap = {
+            'new_in_box': 'New',
+            'new_open_box': 'New Other',
+            'refurbished': 'Seller refurbished',
+            'used_good': 'Used',
+            'used_fair': 'Used',
+            'for_parts': 'For Parts or Not Working',
+          };
+          formData.append('condition', conditionMap[condition] || condition);
+        }
+
+        if (partNumber) {
+          formData.append('bigcommercempn', partNumber.toUpperCase());
+        }
+
+        // Channel push flags — always include for restock, shelf changes, or stock changes
+        const restockDetected = isRestock || (newStock > 0 && oldStock === 0);
+        const shelfChanged = shelf && shelf !== '';
+
+        if (restockDetected || shelfChanged || newStock !== oldStock) {
+          formData.append('ebayskip', '0');
+          formData.append('ebayend', '0');
+          formData.append('bigcommerceskip', '0');
+          if (restockDetected) autoRelisted = true;
+        }
+
+        // CRITICAL: Skip Google Shopping — it's broken and blocks edits
+        formData.append('googleskip', '1');
+
+        console.log(`Updating SureDone ${sku}: stock=${newStock}, shelf=${shelf || 'unchanged'}, restock=${restockDetected}, condition=${condition || 'unchanged'}`);
+
+        const suredoneUrl = 'https://api.suredone.com/v1/editor/items/edit';
+        const response = await fetch(suredoneUrl, {
           method: 'POST',
           headers: {
-            'X-Auth-User': relistCreds.user,
-            'X-Auth-Token': relistCreds.token,
+            'X-Auth-User': SUREDONE_USER,
+            'X-Auth-Token': SUREDONE_TOKEN,
             'Content-Type': 'application/x-www-form-urlencoded'
           },
-          body: startForm.toString()
+          body: formData.toString()
         });
 
-        const startData = await startRes.json();
-        const startOk = startData.result === 'success' ||
-                         startData['1']?.result === 'success';
+        const responseText = await response.text();
+        console.log(`SureDone response for ${sku}:`, responseText.substring(0, 500));
 
-        // Check for eBay-specific errors in the response
-        const responseStr = JSON.stringify(startData);
-        const hasEbayError = responseStr.includes('ebay') &&
-                             responseStr.includes('error');
-        const hasGoogleError = responseStr.includes('google') &&
-                               responseStr.includes('error');
+        // If item doesn't exist (404), that's expected for scanner-created items
+        if (!response.ok && response.status === 404) {
+          console.log(`SKU ${sku} not found in SureDone - will be created later via Pro Builder`);
+          suredoneUpdated = true; // Not an error
+        } else {
+          let data;
+          try {
+            data = JSON.parse(responseText);
+          } catch (e) {
+            return res.status(500).json({
+              error: 'SureDone returned non-JSON',
+              details: responseText.substring(0, 200),
+              step: 'suredone_update',
+              success: false,
+              firebaseUpdated: !!(firebaseId || createdFirebaseId),
+              suredoneUpdated: false
+            });
+          }
 
-        // Google errors are OK — they don't affect eBay
-        if (hasGoogleError && !hasEbayError) {
-          console.log(`Auto-relist ${sku}: Google error (ignored), eBay push sent`);
+          const itemResult = data['1'] || data;
+          const isSuccess = itemResult.result === 'success' || data.result === 'success';
+
+          if (isSuccess) {
+            suredoneUpdated = true;
+          } else {
+            console.error('SureDone update did not return success:', data);
+            return res.status(500).json({
+              error: 'Failed to update SureDone stock',
+              details: data.message || data.error || 'SureDone did not return success',
+              step: 'suredone_update',
+              success: false,
+              firebaseUpdated: !!(firebaseId || createdFirebaseId),
+              suredoneUpdated: false
+            });
+          }
         }
-
-        relistResult = {
-          success: startOk && !hasEbayError,
-          error: startOk ? null : (startData.message || 'Relist failed'),
-          googleError: hasGoogleError,
-        };
-
-        if (relistResult.success) {
-          suredoneResult.autoRelisted = true;
-        }
-
-        console.log(`Auto-relist for ${sku}: ${relistResult.success ? 'SUCCESS' : 'FAILED'}`,
-          JSON.stringify(startData).substring(0, 300));
-
-      } catch (relistErr) {
-        console.error('Auto-relist error:', relistErr.message);
-        relistResult = { success: false, error: relistErr.message };
+      } catch (sdError) {
+        console.error('SureDone update error:', sdError);
+        return res.status(500).json({
+          error: 'Failed to update SureDone stock',
+          details: sdError.message,
+          step: 'suredone_update',
+          success: false,
+          firebaseUpdated: !!(firebaseId || createdFirebaseId),
+          suredoneUpdated: false
+        });
       }
+    } else {
+      console.log(`Skipping SureDone update for new item ${sku} - will be created via Pro Builder`);
     }
 
     // === POST-UPDATE VERIFICATION ===
@@ -355,9 +403,8 @@ export default async function handler(req, res) {
       newStock: newStock,
       firebaseId: createdFirebaseId || firebaseId,
       firebaseUpdated: !!(firebaseId || createdFirebaseId),
-      suredoneUpdated: true,
-      autoRelisted: suredoneResult.autoRelisted || false,
-      relistResult: relistResult,
+      suredoneUpdated: suredoneUpdated,
+      autoRelisted: autoRelisted,
       message: action === 'create_new' ? `New item ${sku} created` : `Stock updated to ${newStock}`,
       verification: verification,
     });
@@ -373,146 +420,3 @@ export default async function handler(req, res) {
   }
 }
 
-/**
- * Update stock in SureDone using the POST /editor/items/edit API
- * SureDone automatically syncs to eBay and BigCommerce
- *
- * @param {string} sku - SKU to update
- * @param {number} stock - New stock quantity
- * @param {string} shelf - Shelf location
- * @param {boolean} isCreate - If true, SKU may not exist in SureDone yet (skip update)
- * @param {boolean} isRestock - If true, stock went 0→positive (clear skip flags to auto-relist)
- * @returns {Promise<{success: boolean, autoRelisted?: boolean, error?: string}>}
- */
-async function updateSureDoneStock(sku, stock, shelf, isCreate = false, isRestock = false, condition = null) {
-  try {
-    let SUREDONE_USER, SUREDONE_TOKEN;
-    try {
-      const creds = getSureDoneCredentials();
-      SUREDONE_USER = creds.user;
-      SUREDONE_TOKEN = creds.token;
-    } catch (e) {
-      console.error('SureDone credentials not configured');
-      return { success: false, error: 'SureDone credentials not configured' };
-    }
-
-    // For new items, the SKU won't exist in SureDone yet
-    // The full listing will be created later via Pro Listing Builder
-    if (isCreate) {
-      console.log(`Skipping SureDone update for new item ${sku} - will be created via Pro Builder`);
-      return { success: true }; // Not an error - expected for new items
-    }
-
-    // Use form-encoded POST to /editor/items/edit (same working pattern as update-item.js)
-    const formData = new URLSearchParams();
-    formData.append('identifier', 'guid');
-    formData.append('guid', sku);
-    formData.append('stock', String(stock));
-    if (shelf) {
-      formData.append('shelf', shelf);
-      formData.append('bigcommercebinpickingnumber', shelf); // Sync shelf to BigCommerce bin picking
-    }
-
-    // Note: auto-relist for restocks is now handled by the handler
-    // via the listing-action API, which handles both revise and start cases
-    let autoRelisted = false;
-
-    // Condition override: map internal IDs to SureDone/eBay condition values
-    if (condition) {
-      const conditionMap = {
-        'new_in_box': 'New',
-        'new_open_box': 'New Other',
-        'refurbished': 'Seller refurbished',
-        'used_good': 'Used',
-        'used_fair': 'Used',
-        'for_parts': 'For Parts or Not Working',
-      };
-      const suredoneCondition = conditionMap[condition] || condition;
-      formData.append('condition', suredoneCondition);
-      console.log(`Condition updated: ${condition} → ${suredoneCondition}`);
-    }
-
-    const url = 'https://api.suredone.com/v1/editor/items/edit';
-
-    console.log(`Updating SureDone ${sku}: stock=${stock}, shelf=${shelf || 'unchanged'}, restock=${isRestock}${condition ? ', condition=' + condition : ''}`);
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'X-Auth-User': SUREDONE_USER,
-        'X-Auth-Token': SUREDONE_TOKEN,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: formData.toString()
-    });
-
-    const responseText = await response.text();
-    console.log('SureDone update response:', responseText);
-
-    // If item doesn't exist (404), that's expected for scanner-created items
-    if (!response.ok && response.status === 404) {
-      console.log(`SKU ${sku} not found in SureDone - will be created later via Pro Builder`);
-      return { success: true }; // Not an error
-    }
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      return { success: false, error: `SureDone returned non-JSON: ${responseText.substring(0, 200)}` };
-    }
-
-    if (data.result === 'success' || data.result === 1 || data['1']) {
-      // === Push changes to eBay and BigCommerce ===
-      // SureDone doesn't auto-push custom fields (like shelf) unless we
-      // explicitly trigger a revision by setting skip=0. Always push so
-      // shelf-only updates reach eBay/BigCommerce too.
-      if (!autoRelisted) {
-        try {
-          const pushForm = new URLSearchParams();
-          pushForm.append('identifier', 'guid');
-          pushForm.append('guid', sku);
-          pushForm.append('ebayskip', '0');
-          pushForm.append('bigcommerceskip', '0');
-
-          // Include shelf in the push so eBay item specifics update
-          if (shelf) {
-            pushForm.append('shelf', shelf);
-            pushForm.append('bigcommercebinpickingnumber', shelf);
-          }
-
-          const pushResponse = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'X-Auth-User': SUREDONE_USER,
-              'X-Auth-Token': SUREDONE_TOKEN,
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: pushForm.toString()
-          });
-
-          const pushData = await pushResponse.json();
-          const pushSuccess = pushData.result === 'success' ||
-                              pushData['1']?.result === 'success';
-
-          console.log(`Channel push for ${sku}: ${pushSuccess ? 'SUCCESS' : 'FAILED'}`);
-
-          if (!pushSuccess) {
-            console.warn('Channel push response:', JSON.stringify(pushData));
-          }
-        } catch (pushErr) {
-          console.warn('Channel push failed (non-blocking):', pushErr.message);
-          // Don't fail the stock update just because channel push failed
-        }
-      }
-
-      return { success: true, autoRelisted };
-    }
-
-    console.error('SureDone update did not return success:', data);
-    return { success: false, error: data.message || data.error || 'SureDone did not return success' };
-  } catch (error) {
-    console.error('Error updating SureDone stock:', error);
-    return { success: false, error: error.message };
-  }
-}
