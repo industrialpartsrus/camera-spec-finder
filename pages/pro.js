@@ -3053,6 +3053,35 @@ export default function ProListingBuilder() {
 
     setIsSending(true);
     try {
+      // Auto-generate alt texts if missing
+      const hasAltTexts = item.mediaAltTexts &&
+        Object.keys(item.mediaAltTexts).length >= (item.photos?.length || 0);
+
+      if (!hasAltTexts && item.photos && item.photos.length > 0) {
+        console.log('Auto-generating alt texts...');
+        const autoAltTexts = {};
+
+        item.photos.forEach((photo, index) => {
+          let viewType = item.photoViews?.[index] || `extra_${index + 1}`;
+          if (viewType.startsWith('suredone_')) {
+            const map = { '1': 'center', '2': 'left', '3': 'right', '4': 'nameplate' };
+            viewType = map[viewType.replace('suredone_', '')] || `extra_${index + 1}`;
+          }
+          autoAltTexts[`media${index + 1}`] = generateAltText({
+            brand: item.brand || '',
+            partNumber: item.partNumber || '',
+            viewType,
+            condition: item.condition || 'used_good',
+            productType: item.productCategory || item.usertype || '',
+            photoIndex: index + 1,
+          });
+        });
+
+        await updateDoc(doc(db, 'products', itemId), { mediaAltTexts: autoAltTexts });
+        item.mediaAltTexts = autoAltTexts;
+        console.log(`Auto-generated ${Object.keys(autoAltTexts).length} alt texts`);
+      }
+
       const conditionOption = CONDITION_OPTIONS.find(c => c.value === item.condition);
       const keywords = generateKeywords(item);
       
