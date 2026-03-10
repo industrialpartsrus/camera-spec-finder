@@ -99,7 +99,7 @@ function formatItem(item) {
   }
 
   // Return ALL core SureDone fields
-  return {
+  const result = {
     // ========== Core Identifiers ==========
     sku: item.sku || item.guid || '',
     guid: item.guid || item.sku || '',
@@ -454,4 +454,18 @@ function formatItem(item) {
     bigcommerceid: item.bigcommerceid || '',
     bigcommerceproductid: item.bigcommerceproductid || ''
   };
+
+  // ========== Dynamic eBay Item Specifics ==========
+  // SureDone stores eBay item specifics as ebayitemspecifics* fields
+  // (e.g., ebayitemspecificsvoltage, ebayitemspecificsenclosuretype)
+  // These are dynamic and vary per listing, so capture them all
+  if (item && typeof item === 'object') {
+    for (const key of Object.keys(item)) {
+      if (key.startsWith('ebayitemspecifics') || key.startsWith('ebay2itemspecifics')) {
+        result[key] = item[key] || '';
+      }
+    }
+  }
+
+  return result;
 }
