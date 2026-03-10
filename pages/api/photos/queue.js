@@ -123,6 +123,9 @@ function formatQueueItem(id, data) {
     needsReview: data.needsReview || false,
     photoQueueSkipped: data.photoQueueSkipped || false,
     photoQueueSkippedBy: data.photoQueueSkippedBy || null,
+    // Scanner notes
+    scannerNote: data.scannerNote || null,
+    scannerNoteBy: data.scannerNoteBy || null,
   };
 }
 

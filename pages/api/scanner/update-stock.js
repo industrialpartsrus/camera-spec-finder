@@ -26,6 +26,7 @@ export default async function handler(req, res) {
     healthStatus, // 'green', 'yellow', 'red'
     healthIssues, // Array of issue message strings
     isRestock, // true when stock goes 0 → positive (auto-relist trigger)
+    note, // Optional scanner note for office team
   } = req.body;
 
   // Validation
@@ -60,6 +61,13 @@ export default async function handler(req, res) {
 
     if (shelf) {
       updates.shelf = shelf;
+    }
+
+    // Save scanner note if provided
+    if (note) {
+      updates.scannerNote = note;
+      updates.scannerNoteBy = scannedBy;
+      updates.scannerNoteAt = serverTimestamp();
     }
 
     // Add health routing flags if provided
@@ -99,7 +107,8 @@ export default async function handler(req, res) {
           lifecycle: {
             scannedBy: scannedBy,
             scannedAt: serverTimestamp()
-          }
+          },
+          ...(note ? { scannerNote: note, scannerNoteBy: scannedBy, scannerNoteAt: serverTimestamp() } : {}),
         };
         const docRef = await addDoc(collection(db, 'products'), newProduct);
         createdFirebaseId = docRef.id;
@@ -128,6 +137,7 @@ export default async function handler(req, res) {
           healthStatus: healthStatus || 'yellow',
           healthIssues: healthIssues || [],
           healthCheckedAt: serverTimestamp(),
+          ...(note ? { scannerNote: note, scannerNoteBy: scannedBy, scannerNoteAt: serverTimestamp() } : {}),
         };
         const docRef = await addDoc(collection(db, 'products'), flaggedProduct);
         createdFirebaseId = docRef.id;
@@ -370,6 +380,42 @@ async function updateSureDoneStock(sku, stock, shelf, isCreate = false, isRestoc
     }
 
     if (data.result === 'success' || data.result === 1 || data['1']) {
+      // === Push changes to eBay and BigCommerce ===
+      // SureDone doesn't always auto-push on field updates — explicitly
+      // set skip=0 to trigger the channel push (unless already done for restock)
+      if (!autoRelisted) {
+        try {
+          const pushForm = new URLSearchParams();
+          pushForm.append('identifier', 'guid');
+          pushForm.append('guid', sku);
+          pushForm.append('ebayskip', '0');
+          pushForm.append('bigcommerceskip', '0');
+
+          const pushResponse = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'X-Auth-User': SUREDONE_USER,
+              'X-Auth-Token': SUREDONE_TOKEN,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: pushForm.toString()
+          });
+
+          const pushData = await pushResponse.json();
+          const pushSuccess = pushData.result === 'success' ||
+                              pushData['1']?.result === 'success';
+
+          console.log(`Channel push for ${sku}: ${pushSuccess ? 'SUCCESS' : 'FAILED'}`);
+
+          if (!pushSuccess) {
+            console.warn('Channel push response:', JSON.stringify(pushData));
+          }
+        } catch (pushErr) {
+          console.warn('Channel push failed (non-blocking):', pushErr.message);
+          // Don't fail the stock update just because channel push failed
+        }
+      }
+
       return { success: true, autoRelisted };
     }
 

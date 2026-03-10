@@ -169,10 +169,11 @@ export default function WarehouseScanner() {
   const [selectedMatch, setSelectedMatch] = useState(null);
 
   // Add stock state
-  const [quantityToAdd, setQuantityToAdd] = useState(1);
+  const [quantityToAdd, setQuantityToAdd] = useState(0);
   const [newShelf, setNewShelf] = useState('');
   const [stockMode, setStockMode] = useState('add'); // 'add' or 'set'
   const [absoluteStock, setAbsoluteStock] = useState(0);
+  const [scannerNote, setScannerNote] = useState('');
 
   // New item state
   const [newSku, setNewSku] = useState('');
@@ -453,7 +454,8 @@ export default function WarehouseScanner() {
   const handleSelectMatch = (match) => {
     setSelectedMatch(match);
     setNewShelf(match.shelf || '');
-    setQuantityToAdd(1);
+    setQuantityToAdd(0);
+    setScannerNote('');
     setStockMode('add');
     setAbsoluteStock(match.stock || 0);
     setScreen('add-stock');
@@ -474,10 +476,18 @@ export default function WarehouseScanner() {
   const handleConfirmStockUpdate = async () => {
     if (!selectedMatch) return;
 
+    const oldStock = parseInt(selectedMatch.stock) || 0;
+    const newStock = stockMode === 'set' ? absoluteStock : oldStock + quantityToAdd;
+
+    // If no stock change and no shelf change, nothing to do
+    const shelfChanged = newShelf && newShelf !== selectedMatch.shelf;
+    if (newStock === oldStock && !shelfChanged && !scannerNote.trim()) {
+      alert('No changes to save. Update quantity, shelf location, or add a note.');
+      return;
+    }
+
     setIsProcessing(true);
     try {
-      const oldStock = selectedMatch.stock || 0;
-      const newStock = stockMode === 'set' ? absoluteStock : oldStock + quantityToAdd;
       const isRestock = oldStock === 0 && newStock > 0;
 
       const healthRouting = selectedMatch.health?.routing || 'normal';
@@ -494,6 +504,7 @@ export default function WarehouseScanner() {
           partNumber: partNumber,
           brand: brand,
           shelf: newShelf || selectedMatch.shelf,
+          note: scannerNote.trim() || null,
           scannedBy: currentUser?.name || 'unknown',
           action: 'add_stock',
           firebaseId: selectedMatch.source === 'firebase' ? selectedMatch.id : null,
@@ -603,6 +614,7 @@ export default function WarehouseScanner() {
       setNewCondition('');
       setNewQuantity(1);
       setNewItemShelf('');
+      setScannerNote('');
       setScreen('new-item');
     } catch (error) {
       console.error('SKU generation error:', error);
@@ -636,6 +648,7 @@ export default function WarehouseScanner() {
           brand: brand,
           condition: newCondition, // Send condition from Scanner
           shelf: newItemShelf.toUpperCase(),
+          note: scannerNote.trim() || null,
           scannedBy: currentUser?.name || 'unknown',
           action: 'create_new',
           firebaseId: null
@@ -685,12 +698,13 @@ export default function WarehouseScanner() {
     setMatches([]);
     setDuplicateWarning(null);
     setSelectedMatch(null);
-    setQuantityToAdd(1);
+    setQuantityToAdd(0);
     setNewShelf('');
     setNewSku('');
     setNewCondition('');
     setNewQuantity(1);
     setNewItemShelf('');
+    setScannerNote('');
     setScreen('scan');
   };
 
@@ -1373,7 +1387,18 @@ export default function WarehouseScanner() {
 
                   <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-6">
                     <div className="text-center text-2xl font-bold text-gray-900">
-                      {selectedMatch.stock || 0} + {quantityToAdd} = <span className="text-blue-600">{(selectedMatch.stock || 0) + quantityToAdd}</span>
+                      {quantityToAdd === 0 ? (
+                        <span className="text-gray-500">
+                          Stock stays at {selectedMatch.stock || 0} — shelf update only
+                        </span>
+                      ) : (
+                        <>
+                          {selectedMatch.stock || 0} + {quantityToAdd} = {' '}
+                          <span className="text-blue-600">
+                            {(selectedMatch.stock || 0) + quantityToAdd}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </>
@@ -1429,6 +1454,26 @@ export default function WarehouseScanner() {
                   autoCapitalize="characters"
                 />
               </div>
+
+              {/* Notes for office team */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Note for Office (optional)
+                </label>
+                <textarea
+                  value={scannerNote}
+                  onChange={(e) => setScannerNote(e.target.value)}
+                  placeholder="e.g. Item has scratches on front panel, missing mounting bracket, comes with cable..."
+                  className="w-full px-4 py-3 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none resize-none"
+                  rows={2}
+                  maxLength={500}
+                />
+                {scannerNote.length > 0 && (
+                  <p className="text-xs text-gray-400 mt-1 text-right">
+                    {scannerNote.length}/500
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1442,10 +1487,15 @@ export default function WarehouseScanner() {
                 <RefreshCw size={28} className="animate-spin" />
                 Updating...
               </>
+            ) : stockMode === 'add' && quantityToAdd === 0 ? (
+              <>
+                <Check size={28} />
+                Update Shelf Only
+              </>
             ) : (
               <>
                 <Check size={28} />
-                ✅ Confirm Update
+                {stockMode === 'set' ? `Set Stock to ${absoluteStock}` : `Add ${quantityToAdd} to Stock`}
               </>
             )}
           </button>
@@ -1530,6 +1580,26 @@ export default function WarehouseScanner() {
                 placeholder="B-14"
                 autoCapitalize="characters"
               />
+            </div>
+
+            {/* Notes for office team */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Note for Office (optional)
+              </label>
+              <textarea
+                value={scannerNote}
+                onChange={(e) => setScannerNote(e.target.value)}
+                placeholder="e.g. Item has scratches on front panel, missing mounting bracket, comes with cable..."
+                className="w-full px-4 py-3 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none resize-none"
+                rows={2}
+                maxLength={500}
+              />
+              {scannerNote.length > 0 && (
+                <p className="text-xs text-gray-400 mt-1 text-right">
+                  {scannerNote.length}/500
+                </p>
+              )}
             </div>
           </div>
 

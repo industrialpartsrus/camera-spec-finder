@@ -3720,6 +3720,12 @@ export default function ProListingBuilder() {
                     {item.needsReview && !item.needsRework && (
                       <p className="text-[10px] font-bold text-yellow-700 mt-0.5">🟡 Needs review{item.healthIssues?.length ? ` (${item.healthIssues.length} issues)` : ''}</p>
                     )}
+                    {item.scannerNote && (
+                      <div className="mt-1 bg-blue-50 border border-blue-200 rounded px-2 py-1 text-xs text-blue-800">
+                        📝 {item.scannerNote}
+                        <span className="text-blue-500 ml-1">— {item.scannerNoteBy}</span>
+                      </div>
+                    )}
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }} className="text-red-600 hover:bg-red-50 p-1 rounded ml-2">
                     <X className="w-4 h-4" />
@@ -3819,6 +3825,16 @@ export default function ProListingBuilder() {
                       ))}
                     </ul>
                   )}
+                </div>
+              )}
+
+              {selected.scannerNote && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <p className="text-xs font-semibold text-blue-600 mb-1">📝 Scanner Note</p>
+                  <p className="text-sm text-blue-800">{selected.scannerNote}</p>
+                  <p className="text-xs text-blue-400 mt-1">
+                    — {selected.scannerNoteBy}{selected.scannerNoteAt ? ` ${new Date(selected.scannerNoteAt.seconds * 1000).toLocaleDateString()}` : ''}
+                  </p>
                 </div>
               )}
 

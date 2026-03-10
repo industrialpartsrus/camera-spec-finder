@@ -1069,6 +1069,14 @@ export default function PhotoStation() {
                           Skipped by {item.photoQueueSkippedBy || 'someone'} — tap to photograph anyway
                         </div>
                       )}
+                      {item.scannerNote && (
+                        <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-800">
+                          <strong>Scanner Note:</strong> {item.scannerNote}
+                          <span className="text-xs text-blue-500 ml-2">
+                            — {item.scannerNoteBy || 'Scanner'}
+                          </span>
+                        </div>
+                      )}
                     </button>
 
                     {/* Action buttons row */}
