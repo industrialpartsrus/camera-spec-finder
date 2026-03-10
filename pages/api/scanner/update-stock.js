@@ -175,46 +175,65 @@ export default async function handler(req, res) {
       });
     }
 
-    // === AUTO-RELIST VIA LISTING-ACTION API ===
-    // Uses the listing-action endpoint which handles both:
-    // - "revise" for items with an existing eBay ID
-    // - "start" for items where the eBay listing ended/expired
+    // === AUTO-RELIST: Direct SureDone call ===
+    // Clears skip/end flags so eBay and BigCommerce listings are created/restarted
     let relistResult = null;
 
     if (isRestock || (newStock > 0 && oldStock === 0)) {
-      console.log(`Restock detected for ${sku}: ${oldStock} → ${newStock}`);
+      console.log(`Restock detected for ${sku}: ${oldStock} → ${newStock}, sending start to SureDone...`);
 
       try {
-        const host = process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : `https://${req.headers.host}`;
+        const relistCreds = getSureDoneCredentials();
 
-        const actionRes = await fetch(`${host}/api/suredone/listing-action`, {
+        const startForm = new URLSearchParams();
+        startForm.append('identifier', 'guid');
+        startForm.append('guid', sku);
+        startForm.append('ebayskip', '0');
+        startForm.append('ebayend', '0');
+        startForm.append('bigcommerceskip', '0');
+
+        const startUrl = 'https://api.suredone.com/v1/editor/items/edit';
+        console.log(`Auto-relist: POST ${startUrl} for ${sku}`);
+
+        const startRes = await fetch(startUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sku: sku,
-            action: 'start',
-            channel: 'all'
-          })
+          headers: {
+            'X-Auth-User': relistCreds.user,
+            'X-Auth-Token': relistCreds.token,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: startForm.toString()
         });
 
-        const actionData = await actionRes.json();
+        const startData = await startRes.json();
+        const startOk = startData.result === 'success' ||
+                         startData['1']?.result === 'success';
+
+        // Check for eBay-specific errors in the response
+        const responseStr = JSON.stringify(startData);
+        const hasEbayError = responseStr.includes('ebay') &&
+                             responseStr.includes('error');
+        const hasGoogleError = responseStr.includes('google') &&
+                               responseStr.includes('error');
+
+        // Google errors are OK — they don't affect eBay
+        if (hasGoogleError && !hasEbayError) {
+          console.log(`Auto-relist ${sku}: Google error (ignored), eBay push sent`);
+        }
 
         relistResult = {
-          success: actionData.success,
-          error: actionData.success ? null : (actionData.error || 'Push failed'),
-          ebayUrl: actionData.ebayUrl || null,
+          success: startOk && !hasEbayError,
+          error: startOk ? null : (startData.message || 'Relist failed'),
+          googleError: hasGoogleError,
         };
 
-        if (actionData.success) {
+        if (relistResult.success) {
           suredoneResult.autoRelisted = true;
         }
 
-        console.log(`Auto-relist for ${sku}: ${actionData.success ? 'SUCCESS' : 'FAILED'}`);
-        if (!actionData.success) {
-          console.warn('Relist response:', JSON.stringify(actionData).substring(0, 500));
-        }
+        console.log(`Auto-relist for ${sku}: ${relistResult.success ? 'SUCCESS' : 'FAILED'}`,
+          JSON.stringify(startData).substring(0, 300));
+
       } catch (relistErr) {
         console.error('Auto-relist error:', relistErr.message);
         relistResult = { success: false, error: relistErr.message };
