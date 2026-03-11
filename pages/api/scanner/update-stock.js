@@ -277,57 +277,44 @@ export default async function handler(req, res) {
       console.log(`Skipping SureDone update for new item ${sku} - will be created via Pro Builder`);
     }
 
-    // === AUTO-RELIST: Toggle ebayskip 1→0 to trigger channel push ===
-    // SureDone only pushes when a value CHANGES. If ebayskip is already 0,
-    // setting it to 0 again does nothing. So we toggle: skip first, then unskip.
+    // === AUTO-RELIST: Use SureDone PUT action API ===
     let relistResult = null;
 
     if (suredoneUpdated && (isRestock || (newStock > 0 && oldStock === 0))) {
-      console.log(`Restock for ${sku}: toggling ebayskip 1→0 to trigger relist...`);
+      console.log(`Restock detected for ${sku}: ${oldStock} → ${newStock}, triggering relist...`);
 
       try {
-        // Step 1: Skip eBay (sets ebayskip=1)
-        const skipForm = new URLSearchParams();
-        skipForm.append('identifier', 'guid');
-        skipForm.append('guid', sku);
-        skipForm.append('ebayskip', '1');
-        skipForm.append('bigcommerceskip', '1');
+        const actionUrl = 'https://api.suredone.com/v1/editor/items';
 
-        console.log(`Relist step 1: setting ebayskip=1 for ${sku}`);
-        const skipRes = await fetch(suredoneUrl, {
-          method: 'POST', headers: suredoneHeaders, body: skipForm.toString()
-        });
-        const skipData = await skipRes.json();
-        console.log(`Skip result:`, JSON.stringify(skipData).substring(0, 200));
-
-        // Step 2: Wait for SureDone to process
+        // Wait 2 seconds for stock to fully save in SureDone
         await new Promise(r => setTimeout(r, 2000));
 
-        // Step 3: Unskip eBay (sets ebayskip=0) — this CHANGE triggers the push
-        const startForm = new URLSearchParams();
-        startForm.append('identifier', 'guid');
-        startForm.append('guid', sku);
-        startForm.append('ebayskip', '0');
-        startForm.append('ebayend', '0');
-        startForm.append('bigcommerceskip', '0');
-
-        console.log(`Relist step 2: setting ebayskip=0 for ${sku}`);
-        const startRes = await fetch(suredoneUrl, {
-          method: 'POST', headers: suredoneHeaders, body: startForm.toString()
+        const relistRes = await fetch(actionUrl, {
+          method: 'PUT',
+          headers: {
+            'X-Auth-User': SUREDONE_USER,
+            'X-Auth-Token': SUREDONE_TOKEN,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            guid: sku,
+            action: 'relist'
+          })
         });
-        const startData = await startRes.json();
-        const startOk = startData.result === 'success' ||
-                         startData['1']?.result === 'success';
 
-        console.log(`Relist result for ${sku}: ${startOk ? 'SUCCESS' : 'FAILED'}`,
-          JSON.stringify(startData).substring(0, 300));
+        const relistData = await relistRes.json();
+        const relistOk = relistData.result === 'success' ||
+                          relistData['1']?.result === 'success';
+
+        console.log(`Auto-relist for ${sku}: ${relistOk ? 'SUCCESS' : 'FAILED'}`,
+          JSON.stringify(relistData).substring(0, 500));
 
         relistResult = {
-          success: startOk,
-          error: startOk ? null : (startData.message || 'Relist failed'),
+          success: relistOk,
+          error: relistOk ? null : (relistData.message || 'Relist failed'),
         };
 
-        if (startOk) autoRelisted = true;
+        if (relistOk) autoRelisted = true;
 
       } catch (relistErr) {
         console.error('Auto-relist error:', relistErr.message);

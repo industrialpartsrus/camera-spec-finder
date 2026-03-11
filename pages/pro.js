@@ -3194,6 +3194,29 @@ export default function ProListingBuilder() {
         // Refresh listing URLs after successful update
         fetchListingUrls(item.originalSku);
 
+        // Auto-publish prompt: push changes to eBay/BigCommerce
+        if (confirm('Push changes to eBay & BigCommerce now?\n\nClick OK to revise the live listings, or Cancel to skip.')) {
+          try {
+            const publishRes = await fetch('/api/suredone/listing-action', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sku: item.originalSku, action: 'edit', channel: 'all' }),
+            });
+            const publishData = await publishRes.json();
+            if (publishData.success) {
+              alert(`✅ Changes pushed to channels!\n\nSKU: ${item.originalSku}${publishData.ebayItemId ? `\neBay: ${publishData.ebayItemId}` : ''}`);
+            } else {
+              const errMsg = publishData.instructions?.join('\n\n') || publishData.errors?.[0]?.message || 'Unknown error';
+              alert(`⚠️ Channel push had issues:\n\n${errMsg}\n\nYou can retry from the listing actions panel.`);
+            }
+          } catch (pubErr) {
+            console.error('Auto-publish error:', pubErr);
+            alert('⚠️ Could not push to channels. You can retry from the listing actions panel.');
+          }
+          // Re-fetch URLs after publish attempt
+          fetchListingUrls(item.originalSku);
+        }
+
       } else {
         // CREATE new listing
         const productData = {
@@ -3247,8 +3270,33 @@ export default function ProListingBuilder() {
         logActivity('listing_sent', { sku: responseData.sku || item.sku, title: item.title, price: item.price });
 
         // Refresh listing URLs after successful creation
-        if (responseData.sku) {
-          fetchListingUrls(responseData.sku);
+        const createdSku = responseData.sku;
+        if (createdSku) {
+          fetchListingUrls(createdSku);
+        }
+
+        // Auto-publish prompt: publish new listing to eBay/BigCommerce
+        if (createdSku && confirm('Publish this listing to eBay & BigCommerce now?\n\nClick OK to start the listing, or Cancel to publish later.')) {
+          try {
+            const publishRes = await fetch('/api/suredone/listing-action', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sku: createdSku, action: 'start', channel: 'all' }),
+            });
+            const publishData = await publishRes.json();
+            if (publishData.success) {
+              alert(`✅ Listing published!\n\nSKU: ${createdSku}${publishData.ebayItemId ? `\neBay: ${publishData.ebayItemId}` : ''}${publishData.ebayUrl ? `\n${publishData.ebayUrl}` : ''}`);
+              if (publishData.ebayUrl) setEbayUrl(publishData.ebayUrl);
+            } else {
+              const errMsg = publishData.instructions?.join('\n\n') || publishData.errors?.[0]?.message || 'Unknown error';
+              alert(`⚠️ Publish had issues:\n\n${errMsg}\n\nYou can retry from the listing actions panel.`);
+            }
+          } catch (pubErr) {
+            console.error('Auto-publish error:', pubErr);
+            alert('⚠️ Could not publish listing. You can retry from the listing actions panel.');
+          }
+          // Re-fetch URLs after publish attempt
+          if (createdSku) fetchListingUrls(createdSku);
         }
       }
     } catch (error) {

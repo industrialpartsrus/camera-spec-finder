@@ -3,38 +3,12 @@
 // Centralized endpoint for SureDone listing actions:
 // start, relist, end, revise, delete — across eBay and BigCommerce
 //
-// SureDone API: POST /v1/editor/items/{action}
-// Valid actions: add, edit, delete
-// Channel control via edit: ebayskip, ebayend, bigcommerceskip, bigcommercedisabled
-// Base URL: from getSureDoneCredentials().baseUrl (includes /v1)
+// SureDone API: PUT /v1/editor/items with JSON body { guid, action }
+// Valid actions: start, relist, end, edit
+// Delete uses POST /v1/editor/items/delete (form-urlencoded)
 // ============================================================
 
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
-
-// Helper: send edit request to SureDone
-async function suredoneEdit(baseUrl, headers, fields) {
-  const formData = new URLSearchParams();
-  formData.append('identifier', 'guid');
-  for (const [key, value] of Object.entries(fields)) {
-    formData.append(key, String(value));
-  }
-
-  console.log('SureDone edit:', Object.keys(fields).join(', '));
-
-  const response = await fetch(
-    `${baseUrl}/editor/items/edit`,
-    { method: 'POST', headers, body: formData.toString() }
-  );
-
-  const text = await response.text();
-  console.log('SureDone response:', text.substring(0, 500));
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { result: 'failure', message: text.substring(0, 200) };
-  }
-}
 
 // Helper: check if SureDone response indicates success
 function isSuccess(data) {
@@ -101,6 +75,53 @@ function extractError(data) {
   return errors;
 }
 
+// Helper: send PUT action to SureDone
+async function suredoneAction(headers, guid, actionName) {
+  const actionUrl = 'https://api.suredone.com/v1/editor/items';
+
+  console.log(`[listing-action] PUT ${actionUrl} — guid=${guid}, action=${actionName}`);
+
+  const response = await fetch(actionUrl, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ guid, action: actionName })
+  });
+
+  const text = await response.text();
+  console.log(`[listing-action] Response:`, text.substring(0, 500));
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { result: 'failure', message: text.substring(0, 200) };
+  }
+}
+
+// Helper: send form-urlencoded edit to SureDone (for profile fix retries)
+async function suredoneEdit(headers, fields) {
+  const editUrl = 'https://api.suredone.com/v1/editor/items/edit';
+  const formData = new URLSearchParams();
+  formData.append('identifier', 'guid');
+  for (const [key, value] of Object.entries(fields)) {
+    formData.append(key, String(value));
+  }
+
+  const editHeaders = { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' };
+
+  const response = await fetch(editUrl, {
+    method: 'POST',
+    headers: editHeaders,
+    body: formData.toString()
+  });
+
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { result: 'failure', message: text.substring(0, 200) };
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -119,14 +140,13 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: 'SureDone credentials not configured' });
   }
 
-  // Use baseUrl from config (already includes /v1)
-  // Safety: strip trailing /v1 if present, we add it via the endpoint paths
-  const SUREDONE_URL = creds.baseUrl.replace(/\/v1\/?$/, '') + '/v1';
+  const SUREDONE_USER = creds.user;
+  const SUREDONE_TOKEN = creds.token;
 
-  const headers = {
-    'X-Auth-User': creds.user,
-    'X-Auth-Token': creds.token,
-    'Content-Type': 'application/x-www-form-urlencoded',
+  const jsonHeaders = {
+    'X-Auth-User': SUREDONE_USER,
+    'X-Auth-Token': SUREDONE_TOKEN,
+    'Content-Type': 'application/json',
   };
 
   console.log(`Listing action: ${action} on ${sku} (channel: ${channel})`);
@@ -135,129 +155,101 @@ export default async function handler(req, res) {
     let result;
     let retried = false;
 
-    switch (action) {
-      case 'start': {
-        const fields = { guid: sku };
-        if (channel === 'ebay' || channel === 'all') {
-          fields.ebayskip = '0';
-        }
-        if (channel === 'bigcommerce' || channel === 'all') {
-          fields.bigcommerceskip = '0';
-        }
-        result = await suredoneEdit(SUREDONE_URL, headers, fields);
+    if (action === 'start' || action === 'add') {
+      // Start/publish listing
+      console.log(`[listing-action] Starting/publishing ${sku}`);
+      result = await suredoneAction(jsonHeaders, sku, 'start');
 
-        // Auto-fix: if payment profile error, retry with no profile
-        if (!isSuccess(result)) {
-          const errors = extractError(result);
-          const profileError = errors.find(e => e.type === 'payment_profile');
-          if (profileError) {
-            console.log('Payment profile error detected, retrying with no profile...');
-            fields.ebayprofile = '';
-            fields.ebaypaymentprofile = '';
-            result = await suredoneEdit(SUREDONE_URL, headers, fields);
-            retried = true;
-          }
+      // Auto-fix: if payment profile error, clear profiles and retry
+      if (!isSuccess(result)) {
+        const errors = extractError(result);
+        const profileError = errors.find(e => e.type === 'payment_profile');
+        if (profileError) {
+          console.log('Payment profile error detected, clearing profiles and retrying start...');
+          await suredoneEdit(
+            { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
+            { guid: sku, ebayprofile: '', ebaypaymentprofile: '' }
+          );
+          result = await suredoneAction(jsonHeaders, sku, 'start');
+          retried = true;
         }
-        break;
       }
 
-      case 'end': {
-        const fields = { guid: sku };
-        if (channel === 'ebay' || channel === 'all') {
-          fields.ebayend = '1';
+    } else if (action === 'relist') {
+      // Relist listing
+      console.log(`[listing-action] Relisting ${sku}`);
+      result = await suredoneAction(jsonHeaders, sku, 'relist');
+
+      // Auto-fix payment profile on relist too
+      if (!isSuccess(result)) {
+        const errors = extractError(result);
+        const profileError = errors.find(e => e.type === 'payment_profile');
+        if (profileError) {
+          console.log('Payment profile error on relist, clearing profiles and retrying...');
+          await suredoneEdit(
+            { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
+            { guid: sku, ebayprofile: '', ebaypaymentprofile: '' }
+          );
+          result = await suredoneAction(jsonHeaders, sku, 'relist');
+          retried = true;
         }
-        if (channel === 'bigcommerce' || channel === 'all') {
-          fields.bigcommercedisabled = '1';
-        }
-        result = await suredoneEdit(SUREDONE_URL, headers, fields);
-        break;
       }
 
-      case 'relist': {
-        // Step 1: End on eBay
-        const endFields = { guid: sku, ebayend: '1' };
-        const endResult = await suredoneEdit(SUREDONE_URL, headers, endFields);
-        console.log('Relist step 1 (end):', isSuccess(endResult) ? 'success' : 'failed');
+    } else if (action === 'end') {
+      // End listing
+      console.log(`[listing-action] Ending ${sku}`);
+      result = await suredoneAction(jsonHeaders, sku, 'end');
 
-        // Step 2: Wait for eBay to process the end
-        await new Promise(r => setTimeout(r, 3000));
+    } else if (action === 'revise' || action === 'edit') {
+      // Revise/edit listing
+      console.log(`[listing-action] Revising ${sku}`);
+      result = await suredoneAction(jsonHeaders, sku, 'edit');
 
-        // Step 3: Re-start on eBay
-        const startFields = {
-          guid: sku,
-          ebayend: '0',
-          ebayskip: '0'
-        };
-        if (channel === 'all') {
-          startFields.bigcommerceskip = '0';
+      // Auto-fix payment profile
+      if (!isSuccess(result)) {
+        const errors = extractError(result);
+        const profileError = errors.find(e => e.type === 'payment_profile');
+        if (profileError) {
+          console.log('Payment profile error on revise, clearing profiles and retrying...');
+          await suredoneEdit(
+            { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
+            { guid: sku, ebayprofile: '', ebaypaymentprofile: '' }
+          );
+          result = await suredoneAction(jsonHeaders, sku, 'edit');
+          retried = true;
         }
-        result = await suredoneEdit(SUREDONE_URL, headers, startFields);
-
-        // Auto-fix payment profile on relist too
-        if (!isSuccess(result)) {
-          const errors = extractError(result);
-          const profileError = errors.find(e => e.type === 'payment_profile');
-          if (profileError) {
-            console.log('Payment profile error on relist, retrying...');
-            startFields.ebayprofile = '';
-            startFields.ebaypaymentprofile = '';
-            result = await suredoneEdit(SUREDONE_URL, headers, startFields);
-            retried = true;
-          }
-        }
-        break;
       }
 
-      case 'revise':
-      case 'edit': {
-        const fields = { guid: sku };
-        if (channel === 'ebay' || channel === 'all') {
-          fields.ebayskip = '0';
-        }
-        if (channel === 'bigcommerce' || channel === 'all') {
-          fields.bigcommerceskip = '0';
-        }
-        result = await suredoneEdit(SUREDONE_URL, headers, fields);
+    } else if (action === 'delete') {
+      // Delete still uses the old POST endpoint
+      const deleteUrl = 'https://api.suredone.com/v1/editor/items/delete';
+      const deleteForm = new URLSearchParams();
+      deleteForm.append('identifier', 'guid');
+      deleteForm.append('guid', sku);
 
-        // Auto-fix payment profile
-        if (!isSuccess(result)) {
-          const errors = extractError(result);
-          const profileError = errors.find(e => e.type === 'payment_profile');
-          if (profileError) {
-            console.log('Payment profile error on revise, retrying...');
-            fields.ebayprofile = '';
-            fields.ebaypaymentprofile = '';
-            result = await suredoneEdit(SUREDONE_URL, headers, fields);
-            retried = true;
-          }
-        }
-        break;
+      console.log(`[listing-action] Deleting ${sku}`);
+      const deleteRes = await fetch(deleteUrl, {
+        method: 'POST',
+        headers: {
+          'X-Auth-User': SUREDONE_USER,
+          'X-Auth-Token': SUREDONE_TOKEN,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: deleteForm.toString()
+      });
+
+      const text = await deleteRes.text();
+      try {
+        result = JSON.parse(text);
+      } catch {
+        result = { result: 'failure', message: text.substring(0, 200) };
       }
 
-      case 'delete': {
-        const formData = new URLSearchParams();
-        formData.append('identifier', 'guid');
-        formData.append('guid', sku);
-
-        const response = await fetch(
-          `${SUREDONE_URL}/editor/items/delete`,
-          { method: 'POST', headers, body: formData.toString() }
-        );
-
-        const text = await response.text();
-        try {
-          result = JSON.parse(text);
-        } catch {
-          result = { result: 'failure', message: text.substring(0, 200) };
-        }
-        break;
-      }
-
-      default:
-        return res.status(400).json({
-          success: false,
-          error: `Unknown action: ${action}`
-        });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: `Unknown action: ${action}`
+      });
     }
 
     // Determine success and build response
