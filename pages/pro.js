@@ -2688,13 +2688,22 @@ export default function ProListingBuilder() {
       // Preserve photos from SureDone (don't wipe them on re-research)
       if (item.photos && item.photos.length > 0) {
         updateData.photos = item.photos;
-        updateData.photoViews = item.photoViews;
-        updateData.photosSource = item.photosSource;
-        updateData.photosPulledAt = item.photosPulledAt;
-        updateData.photosPulledFrom = item.photosPulledFrom;
+        if (item.photoViews) updateData.photoViews = item.photoViews;
+        if (item.photosSource) updateData.photosSource = item.photosSource;
+        if (item.photosPulledAt) updateData.photosPulledAt = item.photosPulledAt;
+        if (item.photosPulledFrom) updateData.photosPulledFrom = item.photosPulledFrom;
       }
-      
-      await updateDoc(doc(db, 'products', itemId), updateData);
+
+      // Strip undefined values before Firestore write
+      const cleanForFirestore = (obj) => {
+        const cleaned = {};
+        for (const [key, value] of Object.entries(obj)) {
+          if (value !== undefined) cleaned[key] = value;
+        }
+        return cleaned;
+      };
+
+      await updateDoc(doc(db, 'products', itemId), cleanForFirestore(updateData));
       setSubmitAttempted(prev => ({ ...prev, [itemId]: true }));
 
       // Log research completion
@@ -4821,6 +4830,7 @@ export default function ProListingBuilder() {
                           <div className="space-y-4">
                             {/* Editable prose before table */}
                             <ReactQuill
+                              key={selected.id + '-table'}
                               theme="snow"
                               value={beforeTable}
                               onChange={(content) => {
@@ -4863,6 +4873,7 @@ export default function ProListingBuilder() {
                         ) : (
                           // No table - use regular ReactQuill
                           <ReactQuill
+                            key={selected.id}
                             theme="snow"
                             value={selected.description || ''}
                             onChange={(content) => {
