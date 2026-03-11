@@ -1772,6 +1772,50 @@ export default function ProListingBuilder() {
               updateData.originalSku = sku;
               updateData.isEditingExisting = true;
             }
+            // Country of Origin
+            if (!item.countryOfOrigin && (sd.countryoforigin || sd.countryregionofmanufacture)) {
+              updateData.countryOfOrigin = sd.countryoforigin || sd.countryregionofmanufacture;
+            }
+            // eBay Return Profile
+            if (!item.ebayReturnProfileId && sd.ebayreturnprofileid) {
+              updateData.ebayReturnProfileId = sd.ebayreturnprofileid;
+            }
+            // Stock (preserve 0 correctly)
+            if (sd.stock !== undefined && sd.stock !== null && sd.stock !== '') {
+              updateData.quantity = String(sd.stock);
+            }
+            // Product type / usertype
+            if (!item.usertype && sd.usertype) {
+              updateData.usertype = sd.usertype;
+              if (!item.productCategory) {
+                updateData.productCategory = sd.usertype;
+              }
+            }
+            // Dimensions & weight
+            if (!item.boxLength && sd.boxlength) updateData.boxLength = sd.boxlength;
+            if (!item.boxWidth && sd.boxwidth) updateData.boxWidth = sd.boxwidth;
+            if (!item.boxHeight && sd.boxheight) updateData.boxHeight = sd.boxheight;
+            if (!item.weight && (sd.weight || sd.boxweight)) {
+              updateData.weight = sd.weight || sd.boxweight;
+            }
+            // Shelf
+            if (!item.shelf && sd.shelf) updateData.shelf = sd.shelf;
+            // Short description
+            if (!item.shortDescription && sd.shortdescription) {
+              updateData.shortDescription = sd.shortdescription;
+            }
+            // Condition notes
+            if (!item.conditionNotes && sd.notes) {
+              updateData.conditionNotes = sd.notes;
+            }
+            // Shipping profile
+            if (!item.ebayShippingProfileId && sd.ebayshippingprofileid) {
+              updateData.ebayShippingProfileId = sd.ebayshippingprofileid;
+            }
+            // Store category 2
+            if (!item.ebayStoreCategoryId2 && sd.ebaystoreid2) {
+              updateData.ebayStoreCategoryId2 = sd.ebaystoreid2;
+            }
 
             await updateDoc(doc(db, 'products', item.id), updateData);
 
@@ -2521,12 +2565,23 @@ export default function ProListingBuilder() {
         condition: mappedCondition,
         conditionNotes: CONDITION_NOTES[mappedCondition] || '',
         price: existingData.price || '',
-        quantity: existingData.stock || '1',
+        quantity: (existingData.stock !== undefined && existingData.stock !== null && existingData.stock !== '')
+          ? String(existingData.stock)
+          : '1',
         shelf: existingData.shelf || '',
         boxLength: existingData.boxlength || '',
         boxWidth: existingData.boxwidth || '',
         boxHeight: existingData.boxheight || '',
         weight: existingData.weight || existingData.boxweight || '',
+        // Country of Origin
+        countryOfOrigin: existingData.countryoforigin ||
+                         existingData.countryregionofmanufacture || '',
+        // eBay Profiles
+        ebayReturnProfileId: existingData.ebayreturnprofileid || '',
+        ebayPaymentProfileId: existingData.ebaypaymentprofileid || '0',
+        ebayTemplate: existingData.ebaytemplate || '',
+        // Product type
+        usertype: existingData.usertype || '',
         qualityFlag: 'EDITING',
         ebayCategoryId: detectedEbayCatId || existingData.ebaycatid || '',
         ebayStoreCategoryId: existingData.ebaystoreid || '',
@@ -3134,7 +3189,15 @@ export default function ProListingBuilder() {
           ...(item.boxHeight && { boxheight: item.boxHeight }),
           ...(item.weight && { weight: item.weight }),
           ...(item.shelf && { shelf: item.shelf }),
-          ...(item.countryOfOrigin && { countryoforigin: item.countryOfOrigin }),
+          ...(item.countryOfOrigin && {
+            countryoforigin: item.countryOfOrigin,
+            countryregionofmanufacture: item.countryOfOrigin,
+          }),
+          // eBay profiles — always set payment to 0
+          ebaypaymentprofileid: '0',
+          ...(item.ebayReturnProfileId && {
+            ebayreturnprofileid: item.ebayReturnProfileId
+          }),
           // Only send eBay fields if they have values (don't wipe existing data)
           ...(item.ebayCategoryId && { ebaycatid: item.ebayCategoryId }),
           ...(item.ebayStoreCategoryId && { ebaystoreid: item.ebayStoreCategoryId }),
