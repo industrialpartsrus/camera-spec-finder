@@ -212,6 +212,12 @@ export default async function handler(req, res) {
           formData.append('bigcommercempn', partNumber.toUpperCase());
         }
 
+        // Clear SureDone automation rules that could block relisting
+        if (isRestock || (newStock > 0 && oldStock === 0)) {
+          formData.append('sd_rule', '');
+          formData.append('sd_rulestate', '');
+        }
+
         // CRITICAL: Skip Google Shopping — it's broken and blocks edits
         formData.append('googleskip', '1');
 

@@ -158,6 +158,15 @@ export default async function handler(req, res) {
     if (action === 'start' || action === 'add') {
       // Start/publish listing
       console.log(`[listing-action] Starting/publishing ${sku}`);
+
+      // Clear automation rules that might block the listing
+      await suredoneEdit(
+        { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
+        { guid: sku, sd_rule: '', sd_rulestate: '', ebaypaymentprofileid: '0' }
+      );
+      console.log(`[listing-action] Cleared sd_rule/sd_rulestate/payment profile for ${sku}`);
+      await new Promise(r => setTimeout(r, 1000));
+
       result = await suredoneAction(jsonHeaders, sku, 'start');
 
       // Auto-fix: if payment profile error, clear profiles and retry
@@ -201,6 +210,15 @@ export default async function handler(req, res) {
 
       const actualAction = hasEbayId ? 'relist' : 'start';
       console.log(`[listing-action] Using action=${actualAction} for ${sku}`);
+
+      // Clear automation rules that might block the listing
+      await suredoneEdit(
+        { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
+        { guid: sku, sd_rule: '', sd_rulestate: '', ebaypaymentprofileid: '0' }
+      );
+      console.log(`[listing-action] Cleared sd_rule/sd_rulestate/payment profile for ${sku}`);
+      await new Promise(r => setTimeout(r, 1000));
+
       result = await suredoneAction(jsonHeaders, sku, actualAction);
 
       // Auto-fix payment profile on relist/start too
