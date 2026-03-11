@@ -358,7 +358,29 @@ const PRODUCT_TYPE_TO_EBAY_CATEGORY = {
   'Sprocket': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
   'Chain': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
   'Roller Chain': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
-  
+  'V-Belt Sheave': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Variable Speed Pulley': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Variable Pitch Sheave': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Adjustable Speed Sheave': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Idler Pulley': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Flat Belt Pulley': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Roller Chain Sprocket': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Double Sprocket': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Spur Gear': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Helical Gear': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Bevel Gear': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Miter Gear': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Gear Rack': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Pinion Gear': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Coupling': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Jaw Coupling': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Flexible Coupling': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Taper Lock Bushing': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'QD Bushing': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Split Taper Bushing': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Synchronous Belt': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+  'Conveyor Chain': { ebayCategoryId: '181772', ebayCategoryName: 'Gearboxes & Speed Reducers' },
+
   // ==================== PUMPS ====================
   'Pump': { ebayCategoryId: '184101', ebayCategoryName: 'Hydraulic Pumps' },
   'Centrifugal Pump': { ebayCategoryId: '184101', ebayCategoryName: 'Hydraulic Pumps' },
@@ -509,8 +531,30 @@ const PRODUCT_TYPE_TO_STORE_CATEGORY = {
   'Pulley': '6688333015',
   'Timing Pulley': '6688333015',
   'Sprocket': '6688334015',
+  'Roller Chain Sprocket': '6688334015',
+  'Double Sprocket': '6688334015',
   'Chain': '6688335015',
   'Roller Chain': '6688335015',
+  'Conveyor Chain': '6688335015',
+  'V-Belt Sheave': '6688333015',
+  'Variable Speed Pulley': '6688333015',
+  'Variable Pitch Sheave': '6688333015',
+  'Adjustable Speed Sheave': '6688333015',
+  'Idler Pulley': '6688333015',
+  'Flat Belt Pulley': '6688333015',
+  'Synchronous Belt': '6688333015',
+  'Spur Gear': '6688332015',
+  'Helical Gear': '6688332015',
+  'Bevel Gear': '6688332015',
+  'Miter Gear': '6688332015',
+  'Gear Rack': '6688332015',
+  'Pinion Gear': '6688332015',
+  'Coupling': '6688332015',
+  'Jaw Coupling': '6688332015',
+  'Flexible Coupling': '6688332015',
+  'Taper Lock Bushing': '6688332015',
+  'QD Bushing': '6688332015',
+  'Split Taper Bushing': '6688332015',
   'Brake': '6688331015',
   'Motor Brake': '6688331015',
   'Electromagnetic Brake': '6688331015',
@@ -870,7 +914,11 @@ FIRST, determine what TYPE of product this is. Choose the MOST SPECIFIC type fro
 **PNEUMATIC VALVES:** Pneumatic Valve, Solenoid Valve, Manifold
 **PNEUMATIC OTHER:** Air Regulator, FRL, Air Filter, Lubricator, Air Dryer, Muffler
 **HYDRAULICS:** Hydraulic Cylinder, Hydraulic Valve, Hydraulic Pump, Hydraulic Motor, Hydraulic Accumulator
-**POWER TRANSMISSION:** Gearbox, Gear Reducer, Ball Screw, Linear Actuator, Linear Guide, Linear Rail, Brake, Clutch, Belt, Pulley, Sprocket, Chain
+**POWER TRANSMISSION:** Gearbox, Gear Reducer, Ball Screw, Linear Actuator, Linear Guide, Linear Rail, Brake, Clutch, Coupling, Jaw Coupling, Flexible Coupling
+**PULLEYS & SHEAVES:** Pulley, V-Belt Sheave, Timing Pulley, Flat Belt Pulley, Variable Speed Pulley, Variable Pitch Sheave, Adjustable Speed Sheave, Idler Pulley, Tensioner Pulley
+**SPROCKETS & GEARS:** Sprocket, Roller Chain Sprocket, Double Sprocket, Idler Sprocket, Spur Gear, Helical Gear, Bevel Gear, Worm Gear, Gear Rack, Pinion Gear, Miter Gear
+**BELTS & CHAIN:** V-Belt, Timing Belt, Synchronous Belt, Poly-V Belt, Flat Belt, Roller Chain, Conveyor Chain, Silent Chain, Leaf Chain
+**BUSHINGS (POWER TRANS):** Taper Lock Bushing, QD Bushing, Split Taper Bushing, Weld-On Hub, Shaft Collar, Keyless Bushing
 **BEARINGS:** Ball Bearing, Roller Bearing, Needle Bearing, Thrust Bearing, Pillow Block, Linear Bearing, Cam Follower
 **PUMPS:** Centrifugal Pump, Diaphragm Pump, Vacuum Pump, Metering Pump
 **VALVES:** Ball Valve, Butterfly Valve, Check Valve, Globe Valve, Relief Valve, Control Valve
@@ -894,6 +942,29 @@ SECOND, extract EVERY possible technical specification. Here are the key specs t
   - When identifying coil voltage, normalize to standard values: 12VDC, 24VDC, 48VDC, 12VAC, 24VAC, 48VAC, 110VAC, 120VAC, 208VAC, 220VAC, 230VAC, 240VAC, 277VAC, 380VAC, 400VAC, 480VAC, 600VAC. For ranges like 110/120V, use 120VAC. For 220/240V, use 240VAC. For 460/480V, use 480VAC. For 575/600V, use 600VAC.
   - Include coil voltage in the title if found.
   - Flag if coil voltage could not be determined by setting qualityFlag to "COIL_VOLTAGE_UNKNOWN".
+**PULLEYS & SHEAVES (ALL TYPES):** outsidediameter, pitchdiameter, borediameter, boretype (finished/rough/tapered/keyed/QD), numberofgrooves, groovesize (A/B/C/D/3V/5V/8V), belttype (A/B/C/D/3V/5V/8V/3VX/5VX), bushingtype (QD/TaperLock/none), bushingnumber (e.g., SK, SH, SDS, SD, SF, E, J, M, N, S), keyway (yes/no, size), material (cast iron/steel/aluminum/zinc), maxrpm, hubtype (standard/detachable), weight
+  - For V-belt sheaves: ALWAYS identify groove profile (A/B/C/3V/5V/8V), number of grooves, and outside diameter
+  - For variable speed/adjustable sheaves: include speed range, min/max pitch diameter, spring tension type
+  - For timing pulleys: include tooth count, pitch (XL/L/H/T5/T10/MXL/GT2/GT3/HTD), belt width
+  - Common bushing cross-reference: QD=Quick Disconnect, TL=Taper Lock, SK/SH/SDS/SD/SF=QD bushing sizes
+  - Include bushing bore size if part number indicates it (e.g., "1-3/8" bore)
+  - Title format: "{Brand} {PartNumber} {NumGrooves}-Groove {BeltSize} V-Belt Sheave {Bore}bore {BushingType}"
+**SPROCKETS (ALL TYPES):** numberofteeth, chainnumber (25/35/40/41/50/60/80/100/120), chainpitch, borediameter, boretype (finished/rough/keyed/tapered), hubtype (A-plate/B-hub one side/C-hub both sides/D-detachable), material (steel/stainless/cast iron/plastic), hardened (yes/no), numberofstrands (single/double/triple), rollerdiameter, pitchdiameter, maxrpm, weight, setscrews, keyway
+  - ALWAYS identify chain size from part number (e.g., "60B18" = #60 chain, B-hub, 18 teeth)
+  - Common chain sizes: #25 (1/4"), #35 (3/8"), #40 (1/2"), #41 (1/2" narrow), #50 (5/8"), #60 (3/4"), #80 (1"), #100 (1-1/4"), #120 (1-1/2")
+  - Hub types: A=flat plate no hub, B=hub one side, C=hub both sides, D=detachable hub
+  - Title format: "{Brand} {PartNumber} #{ChainSize} {HubType}-Hub {NumTeeth}T Sprocket {Bore}bore"
+**GEARS (ALL TYPES):** numberofteeth, module, diametricalpitch, pressureangle (14.5/20 degrees), pitchdiameter, borediameter, facewidth, hubdiameter, overallwidth, material (steel/cast iron/brass/nylon/delrin), geartype (spur/helical/bevel/worm/miter/rack), boretype (plain/keyed/setscrew), keyway, mountingtype
+  - For worm gears: include ratio, lead angle, hand (left/right)
+  - For bevel/miter gears: include shaft angle, mounting distance
+  - For gear racks: include length, pitch, face width, material
+  - Title format: "{Brand} {PartNumber} {GearType} Gear {NumTeeth}T {Pitch}DP {Bore}bore"
+**COUPLINGS:** couplingtype (jaw/disc/gear/oldham/beam/bellows/rigid/flexible), borediameter (both sides if different), maxrpm, maxtorque, material (steel/aluminum/rubber), hubtype, keyway, overall length, outsidediameter, inserttype (spider material/durometer for jaw couplings), shafttolerances
+  - For jaw couplings: identify spider/insert separately (e.g., "Lovejoy L-100 w/ Buna-N spider")
+**BUSHINGS (QD/TAPER LOCK):** boresizeinches, bushingletter (SK/SH/SDS/SD/SF/E/J/M/N/S/W), outsidediameter, length, keyway, keywaysize, material (steel/cast iron/stainless), setscrew, splittype
+  - QD bushing sizing: SK=smallest through W=largest
+  - ALWAYS include bore size in title — it's the #1 search term
+  - Title format: "{Brand} {PartNumber} QD Bushing {BoreSize} Bore {BushingSize}"
 **ALLEN-BRADLEY PRODUCTS:** series, firmwarerevision, fwrevision, frn, platform, catalogprefix
   - ALLEN-BRADLEY SERIES vs PLATFORM — IMPORTANT DISTINCTION:
   - "Series" = HARDWARE REVISION LETTER (A, B, C, D) printed on the label. NOT the product family.
