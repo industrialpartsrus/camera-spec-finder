@@ -214,8 +214,8 @@ export default async function handler(req, res) {
 
         // Clear SureDone automation rules that could block relisting
         if (isRestock || (newStock > 0 && oldStock === 0)) {
-          formData.append('sd_rule', '');
-          formData.append('sd_rulestate', '');
+          formData.append('rule', '');
+          formData.append('rulestate', '');
         }
 
         // CRITICAL: Skip Google Shopping — it's broken and blocks edits
@@ -286,11 +286,11 @@ export default async function handler(req, res) {
       console.log(`Skipping SureDone update for new item ${sku} - will be created via Pro Builder`);
     }
 
-    // === AUTO-RELIST/START: Use SureDone PUT action API ===
+    // === AUTO-RELIST/START: Use SureDone POST action endpoints ===
     let relistResult = null;
 
     if (suredoneUpdated && (isRestock || (newStock > 0 && oldStock === 0))) {
-      console.log(`Restock detected for ${sku}: ${oldStock} → ${newStock}, triggering channel push...`);
+      console.log(`Restock detected for ${sku}: ${oldStock} → ${newStock}, checking ebayid...`);
 
       try {
         // Wait 2 seconds for stock to fully save in SureDone
@@ -312,40 +312,41 @@ export default async function handler(req, res) {
           if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
             const ebayId = checkData[key].ebayid || '';
             hasEbayId = ebayId.length >= 6 && /^\d+$/.test(ebayId);
-            console.log(`${sku} ebayid: ${ebayId || 'none'}, hasEbayId: ${hasEbayId}`);
+            console.log(`${sku} ebayid=${ebayId || 'none'}, hasEbayId=${hasEbayId}`);
             break;
           }
         }
 
-        // Use "relist" if item has eBay ID, "start" if not
-        const relistAction = hasEbayId ? 'relist' : 'start';
-        console.log(`Auto-${relistAction} for ${sku}...`);
+        // Use /relist if has eBay ID, /start if not
+        const endpoint = hasEbayId ? 'relist' : 'start';
+        const baseUrl = 'https://api.suredone.com/v1/editor/items';
 
-        const actionUrl = 'https://api.suredone.com/v1/editor/items';
-        const relistRes = await fetch(actionUrl, {
-          method: 'PUT',
+        const form = new URLSearchParams();
+        form.append('identifier', 'guid');
+        form.append('guid', sku);
+
+        console.log(`Auto-${endpoint} for ${sku}: POST ${baseUrl}/${endpoint}`);
+        const relistRes = await fetch(`${baseUrl}/${endpoint}`, {
+          method: 'POST',
           headers: {
             'X-Auth-User': SUREDONE_USER,
             'X-Auth-Token': SUREDONE_TOKEN,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: JSON.stringify({
-            guid: sku,
-            action: relistAction
-          })
+          body: form.toString()
         });
 
         const relistData = await relistRes.json();
         const relistOk = relistData.result === 'success' ||
                           relistData['1']?.result === 'success';
 
-        console.log(`Auto-${relistAction} for ${sku}: ${relistOk ? 'SUCCESS' : 'FAILED'}`,
+        console.log(`Auto-${endpoint} for ${sku}: ${relistOk ? 'SUCCESS' : 'FAILED'}`,
           JSON.stringify(relistData).substring(0, 500));
 
         relistResult = {
           success: relistOk,
-          action: relistAction,
-          error: relistOk ? null : (relistData.message || `${relistAction} failed`),
+          action: endpoint,
+          error: relistOk ? null : (relistData.message || `${endpoint} failed`),
         };
 
         if (relistOk) autoRelisted = true;

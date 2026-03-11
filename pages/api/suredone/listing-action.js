@@ -3,12 +3,17 @@
 // Centralized endpoint for SureDone listing actions:
 // start, relist, end, revise, delete — across eBay and BigCommerce
 //
-// SureDone API: PUT /v1/editor/items with JSON body { guid, action }
-// Valid actions: start, relist, end, edit
-// Delete uses POST /v1/editor/items/delete (form-urlencoded)
+// SureDone API: POST form-urlencoded to action-specific endpoints:
+//   /v1/editor/items/edit    — update fields
+//   /v1/editor/items/relist  — relist ended eBay listing
+//   /v1/editor/items/start   — fresh new listing
+//   /v1/editor/items/end     — end listing
+//   /v1/editor/items/delete  — remove item
 // ============================================================
 
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
+
+const BASE_URL = 'https://api.suredone.com/v1/editor/items';
 
 // Helper: check if SureDone response indicates success
 function isSuccess(data) {
@@ -75,46 +80,28 @@ function extractError(data) {
   return errors;
 }
 
-// Helper: send PUT action to SureDone
-async function suredoneAction(headers, guid, actionName) {
-  const actionUrl = 'https://api.suredone.com/v1/editor/items';
+// Helper: build form data with identifier=guid
+function makeForm(sku) {
+  const form = new URLSearchParams();
+  form.append('identifier', 'guid');
+  form.append('guid', sku);
+  return form;
+}
 
-  console.log(`[listing-action] PUT ${actionUrl} — guid=${guid}, action=${actionName}`);
+// Helper: POST form-urlencoded to a SureDone endpoint
+async function suredonePost(headers, endpoint, form) {
+  const url = `${BASE_URL}/${endpoint}`;
+  console.log(`[listing-action] POST ${url} — ${form.toString().substring(0, 200)}`);
 
-  const response = await fetch(actionUrl, {
-    method: 'PUT',
+  const response = await fetch(url, {
+    method: 'POST',
     headers,
-    body: JSON.stringify({ guid, action: actionName })
+    body: form.toString()
   });
 
   const text = await response.text();
   console.log(`[listing-action] Response:`, text.substring(0, 500));
 
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { result: 'failure', message: text.substring(0, 200) };
-  }
-}
-
-// Helper: send form-urlencoded edit to SureDone (for profile fix retries)
-async function suredoneEdit(headers, fields) {
-  const editUrl = 'https://api.suredone.com/v1/editor/items/edit';
-  const formData = new URLSearchParams();
-  formData.append('identifier', 'guid');
-  for (const [key, value] of Object.entries(fields)) {
-    formData.append(key, String(value));
-  }
-
-  const editHeaders = { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' };
-
-  const response = await fetch(editUrl, {
-    method: 'POST',
-    headers: editHeaders,
-    body: formData.toString()
-  });
-
-  const text = await response.text();
   try {
     return JSON.parse(text);
   } catch {
@@ -143,6 +130,12 @@ export default async function handler(req, res) {
   const SUREDONE_USER = creds.user;
   const SUREDONE_TOKEN = creds.token;
 
+  const formHeaders = {
+    'X-Auth-User': SUREDONE_USER,
+    'X-Auth-Token': SUREDONE_TOKEN,
+    'Content-Type': 'application/x-www-form-urlencoded',
+  };
+
   const jsonHeaders = {
     'X-Auth-User': SUREDONE_USER,
     'X-Auth-Token': SUREDONE_TOKEN,
@@ -155,47 +148,12 @@ export default async function handler(req, res) {
     let result;
     let retried = false;
 
-    if (action === 'start' || action === 'add') {
-      // Start/publish listing
-      console.log(`[listing-action] Starting/publishing ${sku}`);
-
-      // Clear automation rules that might block the listing
-      await suredoneEdit(
-        { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
-        { guid: sku, sd_rule: '', sd_rulestate: '', ebaypaymentprofileid: '0' }
-      );
-      console.log(`[listing-action] Cleared sd_rule/sd_rulestate/payment profile for ${sku}`);
-      await new Promise(r => setTimeout(r, 1000));
-
-      result = await suredoneAction(jsonHeaders, sku, 'start');
-
-      // Auto-fix: if payment profile error, clear profiles and retry
-      if (!isSuccess(result)) {
-        const errors = extractError(result);
-        const profileError = errors.find(e => e.type === 'payment_profile');
-        if (profileError) {
-          console.log('Payment profile error detected, clearing profiles and retrying start...');
-          await suredoneEdit(
-            { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
-            { guid: sku, ebayprofile: '', ebaypaymentprofile: '', ebaypaymentprofileid: '0' }
-          );
-          result = await suredoneAction(jsonHeaders, sku, 'start');
-          retried = true;
-        }
-      }
-
-    } else if (action === 'relist') {
+    if (action === 'relist') {
       // Smart relist: check if item has eBay ID to decide relist vs start
       console.log(`[listing-action] Relist requested for ${sku}, checking eBay ID...`);
 
       const checkUrl = `https://api.suredone.com/v1/search/items/${encodeURIComponent('guid:=' + sku)}`;
-      const checkRes = await fetch(checkUrl, {
-        headers: {
-          'X-Auth-User': SUREDONE_USER,
-          'X-Auth-Token': SUREDONE_TOKEN,
-          'Content-Type': 'application/json',
-        }
-      });
+      const checkRes = await fetch(checkUrl, { headers: jsonHeaders });
       const checkData = await checkRes.json();
 
       let hasEbayId = false;
@@ -203,48 +161,91 @@ export default async function handler(req, res) {
         if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
           const ebayId = checkData[key].ebayid || '';
           hasEbayId = ebayId.length >= 6 && /^\d+$/.test(ebayId);
-          console.log(`[listing-action] ${sku} ebayid: ${ebayId || 'none'}, hasEbayId: ${hasEbayId}`);
+          console.log(`[listing-action] ${sku} ebayid=${ebayId || 'none'}, hasEbayId=${hasEbayId}`);
           break;
         }
       }
 
-      const actualAction = hasEbayId ? 'relist' : 'start';
-      console.log(`[listing-action] Using action=${actualAction} for ${sku}`);
+      // Step 1: Clear automation rules that block relisting
+      const clearForm = makeForm(sku);
+      clearForm.append('rule', '');
+      clearForm.append('rulestate', '');
+      clearForm.append('ebaypaymentprofileid', '0');
 
-      // Clear automation rules that might block the listing
-      await suredoneEdit(
-        { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
-        { guid: sku, sd_rule: '', sd_rulestate: '', ebaypaymentprofileid: '0' }
-      );
-      console.log(`[listing-action] Cleared sd_rule/sd_rulestate/payment profile for ${sku}`);
+      console.log(`[listing-action] Clearing rule/rulestate for ${sku}`);
+      await suredonePost(formHeaders, 'edit', clearForm);
       await new Promise(r => setTimeout(r, 1000));
 
-      result = await suredoneAction(jsonHeaders, sku, actualAction);
+      // Step 2: Use /relist if has eBay ID, /start if not
+      const endpoint = hasEbayId ? 'relist' : 'start';
+      const form = makeForm(sku);
 
-      // Auto-fix payment profile on relist/start too
+      console.log(`[listing-action] POST /${endpoint} for ${sku}`);
+      result = await suredonePost(formHeaders, endpoint, form);
+
+      // Auto-fix payment profile on failure
       if (!isSuccess(result)) {
         const errors = extractError(result);
         const profileError = errors.find(e => e.type === 'payment_profile');
         if (profileError) {
-          console.log(`Payment profile error on ${actualAction}, clearing profiles and retrying...`);
-          await suredoneEdit(
-            { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
-            { guid: sku, ebayprofile: '', ebaypaymentprofile: '', ebaypaymentprofileid: '0' }
-          );
-          result = await suredoneAction(jsonHeaders, sku, actualAction);
+          console.log(`Payment profile error on ${endpoint}, clearing profiles and retrying...`);
+          const fixForm = makeForm(sku);
+          fixForm.append('ebayprofile', '');
+          fixForm.append('ebaypaymentprofile', '');
+          fixForm.append('ebaypaymentprofileid', '0');
+          await suredonePost(formHeaders, 'edit', fixForm);
+
+          const retryForm = makeForm(sku);
+          result = await suredonePost(formHeaders, endpoint, retryForm);
+          retried = true;
+        }
+      }
+
+    } else if (action === 'start' || action === 'add') {
+      // Clear rules first
+      const clearForm = makeForm(sku);
+      clearForm.append('rule', '');
+      clearForm.append('rulestate', '');
+      clearForm.append('ebaypaymentprofileid', '0');
+
+      console.log(`[listing-action] Clearing rule/rulestate for ${sku}`);
+      await suredonePost(formHeaders, 'edit', clearForm);
+      await new Promise(r => setTimeout(r, 1000));
+
+      // Start/publish listing
+      const form = makeForm(sku);
+      console.log(`[listing-action] POST /start for ${sku}`);
+      result = await suredonePost(formHeaders, 'start', form);
+
+      // Auto-fix payment profile on failure
+      if (!isSuccess(result)) {
+        const errors = extractError(result);
+        const profileError = errors.find(e => e.type === 'payment_profile');
+        if (profileError) {
+          console.log('Payment profile error detected, clearing profiles and retrying start...');
+          const fixForm = makeForm(sku);
+          fixForm.append('ebayprofile', '');
+          fixForm.append('ebaypaymentprofile', '');
+          fixForm.append('ebaypaymentprofileid', '0');
+          await suredonePost(formHeaders, 'edit', fixForm);
+
+          const retryForm = makeForm(sku);
+          result = await suredonePost(formHeaders, 'start', retryForm);
           retried = true;
         }
       }
 
     } else if (action === 'end') {
-      // End listing
-      console.log(`[listing-action] Ending ${sku}`);
-      result = await suredoneAction(jsonHeaders, sku, 'end');
+      const form = makeForm(sku);
+      console.log(`[listing-action] POST /end for ${sku}`);
+      result = await suredonePost(formHeaders, 'end', form);
 
     } else if (action === 'revise' || action === 'edit') {
-      // Revise/edit listing
-      console.log(`[listing-action] Revising ${sku}`);
-      result = await suredoneAction(jsonHeaders, sku, 'edit');
+      const form = makeForm(sku);
+      form.append('ebayskip', '0');
+      form.append('bigcommerceskip', '0');
+      console.log(`[listing-action] POST /edit (revise) for ${sku}`);
+      result = await suredonePost(formHeaders, 'edit', form);
 
       // Auto-fix payment profile
       if (!isSuccess(result)) {
@@ -252,39 +253,24 @@ export default async function handler(req, res) {
         const profileError = errors.find(e => e.type === 'payment_profile');
         if (profileError) {
           console.log('Payment profile error on revise, clearing profiles and retrying...');
-          await suredoneEdit(
-            { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
-            { guid: sku, ebayprofile: '', ebaypaymentprofile: '', ebaypaymentprofileid: '0' }
-          );
-          result = await suredoneAction(jsonHeaders, sku, 'edit');
+          const fixForm = makeForm(sku);
+          fixForm.append('ebayprofile', '');
+          fixForm.append('ebaypaymentprofile', '');
+          fixForm.append('ebaypaymentprofileid', '0');
+          await suredonePost(formHeaders, 'edit', fixForm);
+
+          const retryForm = makeForm(sku);
+          retryForm.append('ebayskip', '0');
+          retryForm.append('bigcommerceskip', '0');
+          result = await suredonePost(formHeaders, 'edit', retryForm);
           retried = true;
         }
       }
 
     } else if (action === 'delete') {
-      // Delete still uses the old POST endpoint
-      const deleteUrl = 'https://api.suredone.com/v1/editor/items/delete';
-      const deleteForm = new URLSearchParams();
-      deleteForm.append('identifier', 'guid');
-      deleteForm.append('guid', sku);
-
-      console.log(`[listing-action] Deleting ${sku}`);
-      const deleteRes = await fetch(deleteUrl, {
-        method: 'POST',
-        headers: {
-          'X-Auth-User': SUREDONE_USER,
-          'X-Auth-Token': SUREDONE_TOKEN,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: deleteForm.toString()
-      });
-
-      const text = await deleteRes.text();
-      try {
-        result = JSON.parse(text);
-      } catch {
-        result = { result: 'failure', message: text.substring(0, 200) };
-      }
+      const form = makeForm(sku);
+      console.log(`[listing-action] POST /delete for ${sku}`);
+      result = await suredonePost(formHeaders, 'delete', form);
 
     } else {
       return res.status(400).json({
@@ -292,6 +278,9 @@ export default async function handler(req, res) {
         error: `Unknown action: ${action}`
       });
     }
+
+    console.log(`[listing-action] ${action} result for ${sku}:`,
+      JSON.stringify(result).substring(0, 500));
 
     // Determine success and build response
     const success = isSuccess(result);
