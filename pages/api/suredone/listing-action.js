@@ -168,7 +168,7 @@ export default async function handler(req, res) {
           console.log('Payment profile error detected, clearing profiles and retrying start...');
           await suredoneEdit(
             { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
-            { guid: sku, ebayprofile: '', ebaypaymentprofile: '' }
+            { guid: sku, ebayprofile: '', ebaypaymentprofile: '', ebaypaymentprofileid: '0' }
           );
           result = await suredoneAction(jsonHeaders, sku, 'start');
           retried = true;
@@ -176,21 +176,44 @@ export default async function handler(req, res) {
       }
 
     } else if (action === 'relist') {
-      // Relist listing
-      console.log(`[listing-action] Relisting ${sku}`);
-      result = await suredoneAction(jsonHeaders, sku, 'relist');
+      // Smart relist: check if item has eBay ID to decide relist vs start
+      console.log(`[listing-action] Relist requested for ${sku}, checking eBay ID...`);
 
-      // Auto-fix payment profile on relist too
+      const checkUrl = `https://api.suredone.com/v1/search/items/${encodeURIComponent('guid:=' + sku)}`;
+      const checkRes = await fetch(checkUrl, {
+        headers: {
+          'X-Auth-User': SUREDONE_USER,
+          'X-Auth-Token': SUREDONE_TOKEN,
+          'Content-Type': 'application/json',
+        }
+      });
+      const checkData = await checkRes.json();
+
+      let hasEbayId = false;
+      for (const key of Object.keys(checkData)) {
+        if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
+          const ebayId = checkData[key].ebayid || '';
+          hasEbayId = ebayId.length >= 6 && /^\d+$/.test(ebayId);
+          console.log(`[listing-action] ${sku} ebayid: ${ebayId || 'none'}, hasEbayId: ${hasEbayId}`);
+          break;
+        }
+      }
+
+      const actualAction = hasEbayId ? 'relist' : 'start';
+      console.log(`[listing-action] Using action=${actualAction} for ${sku}`);
+      result = await suredoneAction(jsonHeaders, sku, actualAction);
+
+      // Auto-fix payment profile on relist/start too
       if (!isSuccess(result)) {
         const errors = extractError(result);
         const profileError = errors.find(e => e.type === 'payment_profile');
         if (profileError) {
-          console.log('Payment profile error on relist, clearing profiles and retrying...');
+          console.log(`Payment profile error on ${actualAction}, clearing profiles and retrying...`);
           await suredoneEdit(
             { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
-            { guid: sku, ebayprofile: '', ebaypaymentprofile: '' }
+            { guid: sku, ebayprofile: '', ebaypaymentprofile: '', ebaypaymentprofileid: '0' }
           );
-          result = await suredoneAction(jsonHeaders, sku, 'relist');
+          result = await suredoneAction(jsonHeaders, sku, actualAction);
           retried = true;
         }
       }
@@ -213,7 +236,7 @@ export default async function handler(req, res) {
           console.log('Payment profile error on revise, clearing profiles and retrying...');
           await suredoneEdit(
             { 'X-Auth-User': SUREDONE_USER, 'X-Auth-Token': SUREDONE_TOKEN },
-            { guid: sku, ebayprofile: '', ebaypaymentprofile: '' }
+            { guid: sku, ebayprofile: '', ebaypaymentprofile: '', ebaypaymentprofileid: '0' }
           );
           result = await suredoneAction(jsonHeaders, sku, 'edit');
           retried = true;

@@ -215,6 +215,9 @@ export default async function handler(req, res) {
         // CRITICAL: Skip Google Shopping — it's broken and blocks edits
         formData.append('googleskip', '1');
 
+        // Clear payment profile to prevent old PayPal profiles from blocking push
+        formData.append('ebaypaymentprofileid', '0');
+
         console.log(`Updating SureDone ${sku}: stock=${newStock}, shelf=${shelf || 'unchanged'}, condition=${condition || 'unchanged'}`);
 
         const response = await fetch(suredoneUrl, {
@@ -277,18 +280,42 @@ export default async function handler(req, res) {
       console.log(`Skipping SureDone update for new item ${sku} - will be created via Pro Builder`);
     }
 
-    // === AUTO-RELIST: Use SureDone PUT action API ===
+    // === AUTO-RELIST/START: Use SureDone PUT action API ===
     let relistResult = null;
 
     if (suredoneUpdated && (isRestock || (newStock > 0 && oldStock === 0))) {
-      console.log(`Restock detected for ${sku}: ${oldStock} → ${newStock}, triggering relist...`);
+      console.log(`Restock detected for ${sku}: ${oldStock} → ${newStock}, triggering channel push...`);
 
       try {
-        const actionUrl = 'https://api.suredone.com/v1/editor/items';
-
         // Wait 2 seconds for stock to fully save in SureDone
         await new Promise(r => setTimeout(r, 2000));
 
+        // Check if item has an existing eBay listing
+        const checkUrl = `https://api.suredone.com/v1/search/items/${encodeURIComponent('guid:=' + sku)}`;
+        const checkRes = await fetch(checkUrl, {
+          headers: {
+            'X-Auth-User': SUREDONE_USER,
+            'X-Auth-Token': SUREDONE_TOKEN,
+            'Content-Type': 'application/json',
+          }
+        });
+        const checkData = await checkRes.json();
+
+        let hasEbayId = false;
+        for (const key of Object.keys(checkData)) {
+          if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
+            const ebayId = checkData[key].ebayid || '';
+            hasEbayId = ebayId.length >= 6 && /^\d+$/.test(ebayId);
+            console.log(`${sku} ebayid: ${ebayId || 'none'}, hasEbayId: ${hasEbayId}`);
+            break;
+          }
+        }
+
+        // Use "relist" if item has eBay ID, "start" if not
+        const relistAction = hasEbayId ? 'relist' : 'start';
+        console.log(`Auto-${relistAction} for ${sku}...`);
+
+        const actionUrl = 'https://api.suredone.com/v1/editor/items';
         const relistRes = await fetch(actionUrl, {
           method: 'PUT',
           headers: {
@@ -298,7 +325,7 @@ export default async function handler(req, res) {
           },
           body: JSON.stringify({
             guid: sku,
-            action: 'relist'
+            action: relistAction
           })
         });
 
@@ -306,12 +333,13 @@ export default async function handler(req, res) {
         const relistOk = relistData.result === 'success' ||
                           relistData['1']?.result === 'success';
 
-        console.log(`Auto-relist for ${sku}: ${relistOk ? 'SUCCESS' : 'FAILED'}`,
+        console.log(`Auto-${relistAction} for ${sku}: ${relistOk ? 'SUCCESS' : 'FAILED'}`,
           JSON.stringify(relistData).substring(0, 500));
 
         relistResult = {
           success: relistOk,
-          error: relistOk ? null : (relistData.message || 'Relist failed'),
+          action: relistAction,
+          error: relistOk ? null : (relistData.message || `${relistAction} failed`),
         };
 
         if (relistOk) autoRelisted = true;

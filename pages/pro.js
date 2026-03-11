@@ -776,6 +776,26 @@ const SHIPPING_PROFILES = [
   { id: '161228820015', name: 'Local Pickup Only' }
 ];
 
+// SureDone/eBay Business Policy Profile IDs
+const EBAY_PROFILES = {
+  shipping: {
+    smallPackage: '69077991015',
+    smallPackageFree: '71204399015',
+    mediumPackage: '109762088015',
+    freight: '124173115015',
+    localPickup: '161228820015',
+    heavyFreight: '274433302015',
+  },
+  returns: {
+    standard30Day: '61860297015',
+    international30Day: '254359770015',
+  },
+  payment: {
+    dontUse: '0',
+    managed: '239866024015',
+  }
+};
+
 // eBay Store Categories (YOUR store's categories)
 // Complete list from eBay Store - Updated January 2025
 const EBAY_STORE_CATEGORIES = [

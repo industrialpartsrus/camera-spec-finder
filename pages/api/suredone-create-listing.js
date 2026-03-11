@@ -1491,11 +1491,13 @@ export default async function handler(req, res) {
       console.log('eBay Store Category 2:', product.ebayStoreCategoryId2);
     }
 
-    // === EBAY SHIPPING & RETURN ===
+    // === EBAY SHIPPING, RETURN & PAYMENT PROFILES ===
     formData.append('ebayshippingprofileid', product.ebayShippingProfileId || '69077991015');
     if (!isForParts) {
       formData.append('ebayreturnprofileid', product.ebayReturnProfileId || '61860297015');
     }
+    // Clear payment profile to prevent old PayPal profiles from blocking push
+    formData.append('ebaypaymentprofileid', '0');
 
     // === MAP SPECIFICATIONS TO EBAY INLINE FIELDS ===
     // Using SHORT field names (no prefix) to populate RECOMMENDED section
