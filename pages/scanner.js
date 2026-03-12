@@ -530,9 +530,18 @@ export default function WarehouseScanner() {
         // Build base success message
         let msg = `✅ ${selectedMatch.sku} updated!\nStock: ${oldStock} → ${newStock}\nShelf: ${newShelf || selectedMatch.shelf || 'Not Assigned'}`;
 
-        // Restock notification
-        if (isRestock && data.autoRelisted) {
-          msg += '\n\n🔄 AUTO-RELISTED\neBay & BigCommerce skip flags cleared — item will push to channels';
+        // Restock / channel result notification
+        if (isRestock && data.relistResult) {
+          if (data.relistResult.success) {
+            msg += `\n\n✅ Pushed to eBay! (${data.relistResult.action})`;
+          } else if (data.relistResult.needsReview) {
+            msg += '\n\n⚠️ ' + data.relistResult.error;
+            msg += '\nRouted to Listing Builder queue.';
+          } else if (data.relistResult.error) {
+            msg += '\n\n⚠️ Channel push: ' + data.relistResult.error;
+          }
+        } else if (isRestock && data.autoRelisted) {
+          msg += '\n\n🔄 AUTO-RELISTED';
         } else if (isRestock) {
           msg += '\n\n📦 RESTOCKED from zero';
         }

@@ -286,17 +286,16 @@ export default async function handler(req, res) {
       console.log(`Skipping SureDone update for new item ${sku} - will be created via Pro Builder`);
     }
 
-    // === AUTO-RELIST/START: Use SureDone POST action endpoints ===
+    // === SMART CHANNEL DETECTION: Check item state before relist ===
     let relistResult = null;
 
     if (suredoneUpdated && (isRestock || (newStock > 0 && oldStock === 0))) {
-      console.log(`Restock detected for ${sku}: ${oldStock} → ${newStock}, checking ebayid...`);
+      console.log(`Restock for ${sku}: ${oldStock} → ${newStock}, checking channel state...`);
 
       try {
-        // Wait 2 seconds for stock to fully save in SureDone
         await new Promise(r => setTimeout(r, 2000));
 
-        // Check if item has an existing eBay listing
+        // Fetch item to check eBay state
         const checkUrl = `https://api.suredone.com/v1/search/items/${encodeURIComponent('guid:=' + sku)}`;
         const checkRes = await fetch(checkUrl, {
           headers: {
@@ -308,48 +307,136 @@ export default async function handler(req, res) {
         const checkData = await checkRes.json();
 
         let hasEbayId = false;
+        let ebayId = '';
+        let hasImages = false;
+        let hasTitle = false;
+        let hasCatId = false;
+
         for (const key of Object.keys(checkData)) {
           if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
-            const ebayId = checkData[key].ebayid || '';
+            const sdItem = checkData[key];
+            ebayId = sdItem.ebayid || '';
             hasEbayId = ebayId.length >= 6 && /^\d+$/.test(ebayId);
-            console.log(`${sku} ebayid=${ebayId || 'none'}, hasEbayId=${hasEbayId}`);
+            hasImages = !!(sdItem.media1 && sdItem.media1.trim());
+            hasTitle = !!(sdItem.title && sdItem.title.trim().length > 5);
+            hasCatId = !!(sdItem.ebaycatid && sdItem.ebaycatid.length > 3);
+
+            console.log(`${sku} state: ebayid=${ebayId || 'none'}, hasImages=${hasImages}, hasTitle=${hasTitle}, hasCatId=${hasCatId}`);
             break;
           }
         }
 
-        // Use /relist if has eBay ID, /start if not
-        const endpoint = hasEbayId ? 'relist' : 'start';
-        const baseUrl = 'https://api.suredone.com/v1/editor/items';
-
-        const form = new URLSearchParams();
-        form.append('identifier', 'guid');
-        form.append('guid', sku);
-
-        console.log(`Auto-${endpoint} for ${sku}: POST ${baseUrl}/${endpoint}`);
-        const relistRes = await fetch(`${baseUrl}/${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'X-Auth-User': SUREDONE_USER,
-            'X-Auth-Token': SUREDONE_TOKEN,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: form.toString()
-        });
-
-        const relistData = await relistRes.json();
-        const relistOk = relistData.result === 'success' ||
-                          relistData['1']?.result === 'success';
-
-        console.log(`Auto-${endpoint} for ${sku}: ${relistOk ? 'SUCCESS' : 'FAILED'}`,
-          JSON.stringify(relistData).substring(0, 500));
-
-        relistResult = {
-          success: relistOk,
-          action: endpoint,
-          error: relistOk ? null : (relistData.message || `${endpoint} failed`),
+        const sdHeaders = {
+          'X-Auth-User': SUREDONE_USER,
+          'X-Auth-Token': SUREDONE_TOKEN,
+          'Content-Type': 'application/x-www-form-urlencoded',
         };
+        const sdBase = 'https://api.suredone.com/v1/editor/items';
 
-        if (relistOk) autoRelisted = true;
+        if (hasEbayId) {
+          // STATE 1: Active eBay listing — relist
+          console.log(`${sku}: Has eBay ID ${ebayId}, sending relist...`);
+          const form = new URLSearchParams();
+          form.append('identifier', 'guid');
+          form.append('guid', sku);
+
+          const rlRes = await fetch(`${sdBase}/relist`, {
+            method: 'POST', headers: sdHeaders, body: form.toString()
+          });
+          const rlData = await rlRes.json();
+          const ok = rlData.result === 'success' || rlData['1']?.result === 'success';
+
+          relistResult = {
+            success: ok,
+            action: 'relist',
+            error: ok ? null : (rlData['1']?.messages || rlData.message || 'Relist failed'),
+          };
+          if (ok) autoRelisted = true;
+
+        } else if (!hasEbayId && hasImages && hasTitle && hasCatId) {
+          // STATE 2: No eBay ID but listing looks complete — try start
+          console.log(`${sku}: No eBay ID but listing complete, clearing rules then start...`);
+
+          // Clear stuck rules first
+          const clearForm = new URLSearchParams();
+          clearForm.append('identifier', 'guid');
+          clearForm.append('guid', sku);
+          clearForm.append('rule', '');
+          clearForm.append('rulestate', '');
+          clearForm.append('ebaypaymentprofileid', '0');
+          await fetch(`${sdBase}/edit`, {
+            method: 'POST', headers: sdHeaders, body: clearForm.toString()
+          });
+          await new Promise(r => setTimeout(r, 1000));
+
+          const form = new URLSearchParams();
+          form.append('identifier', 'guid');
+          form.append('guid', sku);
+          const stRes = await fetch(`${sdBase}/start`, {
+            method: 'POST', headers: sdHeaders, body: form.toString()
+          });
+          const stData = await stRes.json();
+          const ok = stData.result === 'success' || stData['1']?.result === 'success';
+
+          const itemResult = stData['1'] || {};
+          const errorMsg = typeof itemResult.messages === 'string' ? itemResult.messages : '';
+          const hasImageError = errorMsg.toLowerCase().includes('image') ||
+                                errorMsg.toLowerCase().includes('photo') ||
+                                errorMsg.toLowerCase().includes('picture');
+
+          if (!ok && hasImageError) {
+            relistResult = {
+              success: false,
+              action: 'start',
+              error: 'Images too small for eBay — needs review in Listing Builder',
+              needsReview: true,
+              reviewReason: 'image_size',
+            };
+          } else {
+            relistResult = {
+              success: ok,
+              action: 'start',
+              error: ok ? null : (errorMsg || stData.message || 'Start failed'),
+            };
+            if (ok) autoRelisted = true;
+          }
+
+        } else {
+          // STATE 3: Missing required data — flag for review
+          const missing = [];
+          if (!hasImages) missing.push('photos');
+          if (!hasTitle) missing.push('title');
+          if (!hasCatId) missing.push('eBay category');
+
+          console.log(`${sku}: No eBay ID and missing ${missing.join(', ')} — flagging for review`);
+
+          relistResult = {
+            success: false,
+            action: 'none',
+            error: `Needs review: missing ${missing.join(', ')}`,
+            needsReview: true,
+            reviewReason: 'incomplete_listing',
+          };
+        }
+
+        console.log(`Auto-channel result for ${sku}:`, JSON.stringify(relistResult));
+
+        // Flag for review in Firebase if needed
+        if (relistResult.needsReview && (firebaseId || createdFirebaseId)) {
+          try {
+            const fbId = firebaseId || createdFirebaseId;
+            await updateDoc(doc(db, 'products', fbId), {
+              needsRework: true,
+              channelPushFailed: true,
+              channelPushError: relistResult.error,
+              channelPushAction: relistResult.action,
+              reviewReason: relistResult.reviewReason,
+            });
+            console.log(`Flagged ${sku} for review in Firebase: ${relistResult.reviewReason}`);
+          } catch (flagErr) {
+            console.warn('Failed to flag for review:', flagErr.message);
+          }
+        }
 
       } catch (relistErr) {
         console.error('Auto-relist error:', relistErr.message);
