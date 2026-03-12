@@ -11,6 +11,7 @@ import app from '../firebase';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { getCurrentUser, clearCurrentUser, getTeamMemberById } from '../lib/users';
+import { printProductLabel } from '../lib/zebra-print';
 
 // Condition configuration - matches Pro Builder CONDITION_OPTIONS exactly
 const CONDITIONS = {
@@ -184,6 +185,7 @@ export default function WarehouseScanner() {
 
   // Success state
   const [successMessage, setSuccessMessage] = useState('');
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // Load current user on mount
   useEffect(() => {
@@ -1691,7 +1693,38 @@ export default function WarehouseScanner() {
               <Check size={64} className="text-white" />
             </div>
             <pre className="text-2xl font-bold text-gray-900 whitespace-pre-wrap mb-4">{successMessage}</pre>
-            <p className="text-gray-600">Returning to scanner...</p>
+
+            {/* Print Label Button */}
+            <button
+              onClick={async () => {
+                setIsPrinting(true);
+                try {
+                  await printProductLabel({
+                    sku: selectedMatch?.sku || '',
+                    brand: brand || selectedMatch?.brand || '',
+                    partNumber: partNumber || selectedMatch?.partNumber || '',
+                    shelf: newShelf || selectedMatch?.shelf || '',
+                    price: selectedMatch?.price || '',
+                    condition: selectedMatch?.condition || '',
+                  });
+                  setTimeout(() => setIsPrinting(false), 2000);
+                } catch (err) {
+                  console.error('Print error:', err);
+                  alert('Print failed: ' + err.message);
+                  setIsPrinting(false);
+                }
+              }}
+              disabled={isPrinting}
+              className="mt-4 px-6 py-4 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white rounded-xl text-lg font-bold transition disabled:opacity-50 flex items-center justify-center gap-2 mx-auto"
+            >
+              {isPrinting ? '🖨️ Printing...' : '🏷️ Print Label'}
+            </button>
+
+            {isPrinting && (
+              <p className="text-sm text-green-600 mt-2 font-medium">Label sent to printer</p>
+            )}
+
+            <p className="text-gray-600 mt-4">Returning to scanner...</p>
           </div>
         </div>
       )}

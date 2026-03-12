@@ -24,6 +24,7 @@ const ReactQuill = dynamic(() => import('react-quill'), {
 import PhotoEditor from '../components/PhotoEditor';
 import { scoreListingQuality } from '../lib/listingScorer';
 import { generateAltText } from '../lib/generate-alt-text-templates';
+import { printProductLabel } from '../lib/zebra-print';
 
 const QUILL_MODULES = {
   toolbar: [
@@ -1600,6 +1601,7 @@ export default function ProListingBuilder() {
   const [currentUser, setCurrentUserState] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [isPrintingLabel, setIsPrintingLabel] = useState(false);
   const [showPartRequest, setShowPartRequest] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState({});
   const [coilVoltageVerified, setCoilVoltageVerified] = useState({});
@@ -3300,6 +3302,22 @@ export default function ProListingBuilder() {
           fetchListingUrls(item.originalSku);
         }
 
+        // Offer to print a shelf label
+        if (confirm('Print a shelf label?')) {
+          try {
+            await printProductLabel({
+              sku: item.originalSku || '',
+              brand: item.brand || '',
+              partNumber: item.partNumber || '',
+              shelf: item.shelf || '',
+              price: item.price || '',
+              condition: item.condition || '',
+            });
+          } catch (printErr) {
+            console.error('Print error:', printErr);
+          }
+        }
+
       } else {
         // CREATE new listing
         const productData = {
@@ -3380,6 +3398,22 @@ export default function ProListingBuilder() {
           }
           // Re-fetch URLs after publish attempt
           if (createdSku) fetchListingUrls(createdSku);
+        }
+
+        // Offer to print a shelf label
+        if (createdSku && confirm('Print a shelf label?')) {
+          try {
+            await printProductLabel({
+              sku: createdSku || '',
+              brand: item.brand || '',
+              partNumber: item.partNumber || '',
+              shelf: item.shelf || '',
+              price: item.price || '',
+              condition: item.condition || '',
+            });
+          } catch (printErr) {
+            console.error('Print error:', printErr);
+          }
         }
       }
     } catch (error) {
@@ -5471,6 +5505,33 @@ export default function ProListingBuilder() {
                       className="w-full mt-3 px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-semibold text-base flex items-center justify-center gap-2"
                     >
                       📍 Return to Shelf
+                    </button>
+                  )}
+
+                  {/* Print Label */}
+                  {(selected.sku || selected.originalSku) && (
+                    <button
+                      onClick={async () => {
+                        setIsPrintingLabel(true);
+                        try {
+                          await printProductLabel({
+                            sku: selected.originalSku || selected.sku || '',
+                            brand: selected.brand || '',
+                            partNumber: selected.partNumber || '',
+                            shelf: selected.shelf || '',
+                            price: selected.price || '',
+                            condition: selected.condition || '',
+                          });
+                          setTimeout(() => setIsPrintingLabel(false), 2000);
+                        } catch (err) {
+                          alert('Print failed: ' + err.message);
+                          setIsPrintingLabel(false);
+                        }
+                      }}
+                      disabled={isPrintingLabel}
+                      className="w-full mt-3 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-base flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isPrintingLabel ? '🖨️ Printing...' : '🏷️ Print Shelf Label'}
                     </button>
                   )}
 
