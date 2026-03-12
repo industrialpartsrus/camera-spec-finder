@@ -3193,9 +3193,26 @@ export default function ProListingBuilder() {
 
       const conditionOption = CONDITION_OPTIONS.find(c => c.value === item.condition);
       const keywords = generateKeywords(item);
-      
-      // Check if updating existing or creating new
+
+      // Verify item exists in SureDone before using update path
+      let actuallyExists = false;
       if (item.isEditingExisting && item.originalSku) {
+        try {
+          const checkRes = await fetch(
+            `/api/suredone/get-item?sku=${encodeURIComponent(item.originalSku)}`
+          );
+          const checkData = await checkRes.json();
+          actuallyExists = checkData.success && checkData.item;
+          if (!actuallyExists) {
+            console.warn(`Item ${item.originalSku} marked as existing but NOT found in SureDone — routing to CREATE`);
+          }
+        } catch (e) {
+          console.warn('Could not verify item existence:', e.message);
+        }
+      }
+
+      // Check if updating existing or creating new
+      if (item.isEditingExisting && item.originalSku && actuallyExists) {
         // UPDATE existing listing in SureDone
         const updateData = {
           guid: item.originalSku,

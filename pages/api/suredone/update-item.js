@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     // SureDone requires these fields to identify which item to update
     formData.append('identifier', 'guid');  // Tell SureDone we're using 'guid' as the identifier
     formData.append('guid', updateData.guid);  // The SKU value
-    formData.append('sku', updateData.guid);  // Also set sku field to match guid
+    // NOTE: Do NOT send 'sku' as an editable field — triggers error 51 when using identifier=guid
 
     // Only append fields that have actual values
     // Skip empty strings, empty arrays, and empty objects
