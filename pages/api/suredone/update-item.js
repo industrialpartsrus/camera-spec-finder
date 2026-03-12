@@ -179,7 +179,21 @@ export default async function handler(req, res) {
       data = { raw: responseText };
     }
 
-    if (response.ok && (data.result === 'success' || data.result === 1 || data['1'])) {
+    // Check ITEM-level result, not just top-level
+    // SureDone returns: { "result": "success", "1": { "result": "success"|"failure", ... } }
+    // Top-level "success" just means API received it — item "1" has the actual result
+    const itemResult = data['1'] || data[1] || {};
+    const itemSuccess = itemResult.result === 'success' ||
+      (data.result === 'success' && !itemResult.result);
+    const itemFailed = itemResult.result === 'failure';
+
+    console.log('=== UPDATE RESULT ===');
+    console.log('Top-level result:', data.result);
+    console.log('Item result:', itemResult.result);
+    console.log('Item messages:', itemResult.messages || itemResult.codes || 'none');
+    console.log('itemSuccess:', itemSuccess, 'itemFailed:', itemFailed);
+
+    if (response.ok && itemSuccess && !itemFailed) {
       return res.status(200).json({
         success: true,
         message: 'Item updated successfully',
@@ -187,9 +201,12 @@ export default async function handler(req, res) {
         response: data
       });
     } else {
+      const errorMsg = itemResult.messages || itemResult.codes ||
+        data.message || data.error || 'Update failed — SureDone rejected the edit';
+      console.error('SureDone update FAILED for', updateData.guid, ':', errorMsg);
       return res.status(200).json({
         success: false,
-        error: data.message || data.error || 'Update may have failed',
+        error: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg),
         guid: updateData.guid,
         response: data
       });

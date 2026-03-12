@@ -3245,8 +3245,13 @@ export default function ProListingBuilder() {
           removeBgFlags: item.removeBgFlags || {}
         };
         
-        console.log('Updating existing listing:', updateData);
-        
+        console.log('=== SENDING TO SUREDONE (UPDATE) ===');
+        console.log('SKU:', item.originalSku);
+        console.log('Title:', item.title);
+        console.log('Price:', item.price);
+        console.log('Stock:', item.quantity);
+        console.log('Fields:', Object.keys(updateData).join(', '));
+
         const response = await fetch('/api/suredone/update-item', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3254,6 +3259,8 @@ export default function ProListingBuilder() {
         });
 
         const responseData = await response.json();
+        console.log('SureDone response status:', response.status);
+        console.log('SureDone response:', JSON.stringify(responseData).substring(0, 500));
         if (!response.ok || !responseData.success) {
           throw new Error(responseData.error || 'Failed to update listing');
         }
@@ -3380,8 +3387,12 @@ export default function ProListingBuilder() {
           includedComponents: item.includedComponents || []
         };
         
-        console.log('Creating new listing:', productData);
-        
+        console.log('=== SENDING TO SUREDONE (CREATE) ===');
+        console.log('SKU:', item.sku || item.id || 'NEW');
+        console.log('Title:', item.title);
+        console.log('Price:', item.price);
+        console.log('Fields:', Object.keys(productData).join(', '));
+
         const response = await fetch('/api/suredone-create-listing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3389,6 +3400,8 @@ export default function ProListingBuilder() {
         });
 
         const responseData = await response.json();
+        console.log('SureDone response status:', response.status);
+        console.log('SureDone response:', JSON.stringify(responseData).substring(0, 500));
         if (!response.ok) throw new Error(responseData.error || 'Failed to create listing');
         alert(`✅ Successfully sent to SureDone!\n\nSKU: ${responseData.sku}\n\n${item.title}`);
         logActivity('listing_sent', { sku: responseData.sku || item.sku, title: item.title, price: item.price });
