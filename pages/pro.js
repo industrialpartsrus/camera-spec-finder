@@ -1818,6 +1818,17 @@ export default function ProListingBuilder() {
             if (!item.ebayStoreCategoryId2 && sd.ebaystoreid2) {
               updateData.ebayStoreCategoryId2 = sd.ebaystoreid2;
             }
+            // Extract alt texts from SureDone
+            const altTexts = {};
+            for (let i = 1; i <= 12; i++) {
+              if (sd[`media${i}alttext`]) {
+                altTexts[`media${i}`] = sd[`media${i}alttext`].trim();
+              }
+            }
+            if (Object.keys(altTexts).length > 0 &&
+                (!item.mediaAltTexts || Object.keys(item.mediaAltTexts).length === 0)) {
+              updateData.mediaAltTexts = altTexts;
+            }
 
             await updateDoc(doc(db, 'products', item.id), updateData);
 
@@ -2549,6 +2560,16 @@ export default function ProListingBuilder() {
       }
       console.log(`Extracted ${Object.keys(ebayItemSpecificsForSuredone).length} eBay item specifics from SureDone`);
 
+      // === EXTRACT MEDIA ALT TEXTS FROM SUREDONE ===
+      const mediaAltTexts = {};
+      for (let i = 1; i <= 12; i++) {
+        const altText = existingData[`media${i}alttext`];
+        if (altText && altText.trim() !== '') {
+          mediaAltTexts[`media${i}`] = altText.trim();
+        }
+      }
+      console.log(`Extracted ${Object.keys(mediaAltTexts).length} media alt texts from SureDone`);
+
       const loadedDesc = existingData.longdescription || '';
       const docRef = await addDoc(collection(db, 'products'), {
         brand: existingData.brand || existingData.manufacturer || '',
@@ -2598,6 +2619,8 @@ export default function ProListingBuilder() {
         photosPulledFrom: existingData.sku || existingData.guid,
         // eBay item specifics (for update roundtrip)
         ebayItemSpecificsForSuredone: ebayItemSpecificsForSuredone,
+        // Media alt texts from SureDone
+        mediaAltTexts: Object.keys(mediaAltTexts).length > 0 ? mediaAltTexts : {},
         // Mark as editing existing
         isEditingExisting: true,
         originalSku: existingData.sku || existingData.guid,
