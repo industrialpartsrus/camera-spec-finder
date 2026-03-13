@@ -298,16 +298,22 @@ function formatFirebaseMatch(id, data) {
   return {
     source: 'firebase',
     id: id,
-    sku: data.sku || 'N/A',
+    sku: data.sku || data.originalSku || 'N/A',
     brand: data.brand || 'Unknown',
     partNumber: data.partNumber || data.model || '',
     title: data.title || 'No Title',
     condition: data.condition || 'Unknown',
     shelf: data.shelf || 'Not Assigned',
-    stock: parseInt(data.stock) || 0,
+    stock: parseInt(data.stock || data.quantity) || 0,
     price: data.price || '0.00',
-    thumbnail: data.thumbnail || null,
-    lastModified: data.updatedAt || data.createdAt || null
+    thumbnail: data.photos?.[0] || data.thumbnail || null,
+    lastModified: data.updatedAt || data.createdAt || null,
+    isQueueItem: !data.originalSku, // Items without originalSku are queue items (not yet in SureDone)
+    status: data.status || 'in_queue',
+    weight: data.weight || '',
+    boxlength: data.boxLength || '',
+    boxwidth: data.boxWidth || '',
+    boxheight: data.boxHeight || '',
   };
 }
 
@@ -346,5 +352,10 @@ function formatSureDoneMatch(item) {
     bigcommercecustomurl: item.bigcommercecustomurl || null,
     bigcommercempn: item.bigcommercempn || null,
     bigcommercebinpickingnumber: item.bigcommercebinpickingnumber || null,
+    // Shipping measurements
+    weight: item.weight || '',
+    boxlength: item.boxlength || '',
+    boxwidth: item.boxwidth || '',
+    boxheight: item.boxheight || '',
   };
 }

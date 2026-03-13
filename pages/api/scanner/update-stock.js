@@ -27,6 +27,10 @@ export default async function handler(req, res) {
     healthIssues, // Array of issue message strings
     isRestock, // true when stock goes 0 → positive (auto-relist trigger)
     note, // Optional scanner note for office team
+    weight, // Optional shipping weight (lbs)
+    boxLength, // Optional box length (inches)
+    boxWidth, // Optional box width (inches)
+    boxHeight, // Optional box height (inches)
   } = req.body;
 
   // Validation
@@ -69,6 +73,12 @@ export default async function handler(req, res) {
       updates.scannerNoteBy = scannedBy;
       updates.scannerNoteAt = serverTimestamp();
     }
+
+    // Save shipping measurements if provided
+    if (weight) updates.weight = weight;
+    if (boxLength) updates.boxLength = boxLength;
+    if (boxWidth) updates.boxWidth = boxWidth;
+    if (boxHeight) updates.boxHeight = boxHeight;
 
     // Save condition override if provided
     if (condition) {
@@ -211,6 +221,12 @@ export default async function handler(req, res) {
         if (partNumber) {
           formData.append('bigcommercempn', partNumber.toUpperCase());
         }
+
+        // Shipping measurements (only if provided by scanner)
+        if (weight) formData.append('weight', weight);
+        if (boxLength) formData.append('boxlength', boxLength);
+        if (boxWidth) formData.append('boxwidth', boxWidth);
+        if (boxHeight) formData.append('boxheight', boxHeight);
 
         // Clear SureDone automation rules and channel overrides on restock
         if (isRestock || (newStock > 0 && oldStock === 0)) {

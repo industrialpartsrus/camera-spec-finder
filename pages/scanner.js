@@ -177,6 +177,13 @@ export default function WarehouseScanner() {
   const [scannerNote, setScannerNote] = useState('');
   const [overrideCondition, setOverrideCondition] = useState(null);
 
+  // Shipping measurements state (optional)
+  const [showShipping, setShowShipping] = useState(false);
+  const [shippingWeight, setShippingWeight] = useState('');
+  const [shippingLength, setShippingLength] = useState('');
+  const [shippingWidth, setShippingWidth] = useState('');
+  const [shippingHeight, setShippingHeight] = useState('');
+
   // New item state
   const [newSku, setNewSku] = useState('');
   const [newCondition, setNewCondition] = useState('used_good'); // Default to 'used_good'
@@ -462,6 +469,12 @@ export default function WarehouseScanner() {
     setStockMode('add');
     setAbsoluteStock(match.stock || 0);
     setOverrideCondition(null);
+    // Pre-populate shipping measurements from existing data
+    setShippingWeight(match.weight || match.boxweight || '');
+    setShippingLength(match.boxlength || '');
+    setShippingWidth(match.boxwidth || '');
+    setShippingHeight(match.boxheight || '');
+    setShowShipping(!!(match.weight || match.boxlength));
     setScreen('add-stock');
   };
 
@@ -519,6 +532,10 @@ export default function WarehouseScanner() {
           healthStatus: healthStatus,
           healthIssues: healthIssues.map(i => i.message),
           isRestock: isRestock,
+          weight: shippingWeight || null,
+          boxLength: shippingLength || null,
+          boxWidth: shippingWidth || null,
+          boxHeight: shippingHeight || null,
         })
       });
 
@@ -636,6 +653,11 @@ export default function WarehouseScanner() {
       setNewQuantity(1);
       setNewItemShelf('');
       setScannerNote('');
+      setShowShipping(false);
+      setShippingWeight('');
+      setShippingLength('');
+      setShippingWidth('');
+      setShippingHeight('');
       setScreen('new-item');
     } catch (error) {
       console.error('SKU generation error:', error);
@@ -672,7 +694,11 @@ export default function WarehouseScanner() {
           note: scannerNote.trim() || null,
           scannedBy: currentUser?.name || 'unknown',
           action: 'create_new',
-          firebaseId: null
+          firebaseId: null,
+          weight: shippingWeight || null,
+          boxLength: shippingLength || null,
+          boxWidth: shippingWidth || null,
+          boxHeight: shippingHeight || null
         })
       });
 
@@ -1213,6 +1239,11 @@ export default function WarehouseScanner() {
                       <span className={`px-2 py-0.5 rounded text-xs font-bold ${getConditionColor(match.condition)}`}>
                         {match.condition}
                       </span>
+                      {match.isQueueItem && (
+                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700 border border-blue-300">
+                          In Queue
+                        </span>
+                      )}
                       {match.health && match.health.status !== 'green' && (
                         <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                           match.health.status === 'red' ? 'bg-red-600 text-white' : 'bg-yellow-500 text-white'
@@ -1545,6 +1576,77 @@ export default function WarehouseScanner() {
                   </p>
                 )}
               </div>
+
+              {/* Shipping Measurements (collapsible) */}
+              <div className="mb-6">
+                <button
+                  type="button"
+                  onClick={() => setShowShipping(!showShipping)}
+                  className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-800"
+                >
+                  <span className={`transform transition-transform ${showShipping ? 'rotate-90' : ''}`}>▶</span>
+                  📦 Shipping Measurements
+                  {(shippingWeight || shippingLength || shippingWidth || shippingHeight) && !showShipping && (
+                    <span className="text-xs text-green-600 ml-2">
+                      {shippingWeight ? `${shippingWeight}lb` : ''} {shippingLength && shippingWidth && shippingHeight ? `${shippingLength}×${shippingWidth}×${shippingHeight}"` : ''}
+                    </span>
+                  )}
+                </button>
+                {showShipping && (
+                  <div className="mt-3 p-4 bg-gray-50 rounded-lg border space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Weight (lbs)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={shippingWeight}
+                        onChange={(e) => setShippingWeight(e.target.value)}
+                        placeholder="e.g. 2.5"
+                        className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Length (in)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={shippingLength}
+                          onChange={(e) => setShippingLength(e.target.value)}
+                          placeholder="L"
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Width (in)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={shippingWidth}
+                          onChange={(e) => setShippingWidth(e.target.value)}
+                          placeholder="W"
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Height (in)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={shippingHeight}
+                          onChange={(e) => setShippingHeight(e.target.value)}
+                          placeholder="H"
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1672,6 +1774,77 @@ export default function WarehouseScanner() {
                 </p>
               )}
             </div>
+
+              {/* Shipping Measurements (collapsible) */}
+              <div className="mb-6">
+                <button
+                  type="button"
+                  onClick={() => setShowShipping(!showShipping)}
+                  className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-800"
+                >
+                  <span className={`transform transition-transform ${showShipping ? 'rotate-90' : ''}`}>▶</span>
+                  📦 Shipping Measurements
+                  {(shippingWeight || shippingLength || shippingWidth || shippingHeight) && !showShipping && (
+                    <span className="text-xs text-green-600 ml-2">
+                      {shippingWeight ? `${shippingWeight}lb` : ''} {shippingLength && shippingWidth && shippingHeight ? `${shippingLength}×${shippingWidth}×${shippingHeight}"` : ''}
+                    </span>
+                  )}
+                </button>
+                {showShipping && (
+                  <div className="mt-3 p-4 bg-gray-50 rounded-lg border space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Weight (lbs)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={shippingWeight}
+                        onChange={(e) => setShippingWeight(e.target.value)}
+                        placeholder="e.g. 2.5"
+                        className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Length (in)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={shippingLength}
+                          onChange={(e) => setShippingLength(e.target.value)}
+                          placeholder="L"
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Width (in)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={shippingWidth}
+                          onChange={(e) => setShippingWidth(e.target.value)}
+                          placeholder="W"
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Height (in)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={shippingHeight}
+                          onChange={(e) => setShippingHeight(e.target.value)}
+                          placeholder="H"
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
           </div>
 
           <button
