@@ -100,8 +100,9 @@ export default async function handler(req, res) {
     formData.append('ebayprice', '');
     formData.append('ebaytitle', '');
 
-    // Skip ebay2 — not used
+    // Skip ebay2 and Google Shopping — not used
     formData.append('ebay2skip', '1');
+    formData.append('googleskip', '1');
 
     // BigCommerce SEO fields (same as create flow)
     appendIfValue('bigcommercepagetitle', updateData.bigcommercepagetitle);

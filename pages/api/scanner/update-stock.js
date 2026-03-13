@@ -240,8 +240,8 @@ export default async function handler(req, res) {
         }
 
         // CRITICAL: Skip Google Shopping and ebay2 — not used
-        formData.append('googleskip', '1');
         formData.append('ebay2skip', '1');
+        formData.append('googleskip', '1');
 
         // Clear payment profile to prevent old PayPal profiles from blocking push
         // Send both field name patterns (SureDone uses both conventions)
@@ -336,6 +336,7 @@ export default async function handler(req, res) {
         let hasTitle = false;
         let hasCatId = false;
         let confirmedStock = 0;
+        let itemTitle = '';
 
         for (const key of Object.keys(checkData)) {
           if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
@@ -346,6 +347,7 @@ export default async function handler(req, res) {
             hasTitle = !!(sdItem.title && sdItem.title.trim().length > 5);
             hasCatId = !!(sdItem.ebaycatid && sdItem.ebaycatid.length > 3);
             confirmedStock = parseInt(sdItem.stock) || 0;
+            itemTitle = sdItem.title || '';
 
             // Log channel overrides for debugging
             const overrideFields = ['ebayprice', 'ebaytitle', 'bigcommerceprice', 'bigcommercetitle', 'rule', 'rulestate', 'ebayskip', 'state'];
@@ -383,6 +385,7 @@ export default async function handler(req, res) {
         stockForm.append('guid', sku);
         stockForm.append('stock', String(newStock));
         stockForm.append('ebay2skip', '1');
+        stockForm.append('googleskip', '1');
 
         await fetch(`${sdBase}/edit`, {
           method: 'POST', headers: sdHeaders, body: stockForm.toString()
@@ -391,12 +394,33 @@ export default async function handler(req, res) {
         await new Promise(r => setTimeout(r, 2000));
 
         if (hasEbayId) {
-          // STATE 1: Active eBay listing — relist
-          console.log(`${sku}: Has eBay ID ${ebayId}, sending relist...`);
+          // STATE 1: Has eBay ID — set ebaytitle then relist
+          console.log(`${sku}: Has eBay ID ${ebayId}, setting ebaytitle then relist...`);
+
+          // Set ebaytitle (REQUIRED for /relist — error 62 if blank) + clear blockers
+          const prepForm = new URLSearchParams();
+          prepForm.append('identifier', 'guid');
+          prepForm.append('guid', sku);
+          prepForm.append('stock', String(newStock));
+          prepForm.append('rule', '');
+          prepForm.append('rulestate', '');
+          prepForm.append('ebaypaymentprofileid', '0');
+          prepForm.append('paymentprofileidebay', '0');
+          prepForm.append('ebayprice', '');
+          prepForm.append('ebay2skip', '1');
+          prepForm.append('googleskip', '1');
+          if (itemTitle) prepForm.append('ebaytitle', itemTitle);
+
+          await fetch(`${sdBase}/edit`, {
+            method: 'POST', headers: sdHeaders, body: prepForm.toString()
+          });
+          await new Promise(r => setTimeout(r, 2000));
+
           const form = new URLSearchParams();
           form.append('identifier', 'guid');
           form.append('guid', sku);
           form.append('ebay2skip', '1');
+          form.append('googleskip', '1');
 
           const rlRes = await fetch(`${sdBase}/relist`, {
             method: 'POST', headers: sdHeaders, body: form.toString()
@@ -412,10 +436,10 @@ export default async function handler(req, res) {
           if (ok) autoRelisted = true;
 
         } else if (!hasEbayId && hasImages && hasTitle && hasCatId) {
-          // STATE 2: No eBay ID but listing looks complete — try start
-          console.log(`${sku}: No eBay ID but listing complete, clearing rules then start...`);
+          // STATE 2: No eBay ID but listing looks complete — use /relist (NOT /start — rejects existing SKUs)
+          console.log(`${sku}: No eBay ID but listing complete, clearing rules then relist...`);
 
-          // Clear stuck rules first
+          // Set ebaytitle + clear stuck rules
           const clearForm = new URLSearchParams();
           clearForm.append('identifier', 'guid');
           clearForm.append('guid', sku);
@@ -424,25 +448,29 @@ export default async function handler(req, res) {
           clearForm.append('ebaypaymentprofileid', '0');
           clearForm.append('paymentprofileidebay', '0');
           clearForm.append('ebayprice', '');
-          clearForm.append('ebaytitle', '');
           clearForm.append('ebay2skip', '1');
+          clearForm.append('googleskip', '1');
+          // CRITICAL: ebaytitle MUST be populated for relist
+          if (itemTitle) clearForm.append('ebaytitle', itemTitle);
+
           await fetch(`${sdBase}/edit`, {
             method: 'POST', headers: sdHeaders, body: clearForm.toString()
           });
-          await new Promise(r => setTimeout(r, 1000));
+          await new Promise(r => setTimeout(r, 2000));
 
           const form = new URLSearchParams();
           form.append('identifier', 'guid');
           form.append('guid', sku);
           form.append('ebay2skip', '1');
-          const stRes = await fetch(`${sdBase}/start`, {
+          form.append('googleskip', '1');
+          const rlRes = await fetch(`${sdBase}/relist`, {
             method: 'POST', headers: sdHeaders, body: form.toString()
           });
-          const stData = await stRes.json();
-          const ok = stData.result === 'success' || stData['1']?.result === 'success';
+          const rlData = await rlRes.json();
+          const ok = rlData.result === 'success' || rlData['1']?.result === 'success';
 
-          const itemResult = stData['1'] || {};
-          const errorMsg = typeof itemResult.messages === 'string' ? itemResult.messages : '';
+          const rlItemResult = rlData['1'] || {};
+          const errorMsg = typeof rlItemResult.messages === 'string' ? rlItemResult.messages : '';
           const hasImageError = errorMsg.toLowerCase().includes('image') ||
                                 errorMsg.toLowerCase().includes('photo') ||
                                 errorMsg.toLowerCase().includes('picture');
@@ -450,7 +478,7 @@ export default async function handler(req, res) {
           if (!ok && hasImageError) {
             relistResult = {
               success: false,
-              action: 'start',
+              action: 'relist',
               error: 'Images too small for eBay — needs review in Listing Builder',
               needsReview: true,
               reviewReason: 'image_size',
@@ -458,8 +486,8 @@ export default async function handler(req, res) {
           } else {
             relistResult = {
               success: ok,
-              action: 'start',
-              error: ok ? null : (errorMsg || stData.message || 'Start failed'),
+              action: 'relist',
+              error: ok ? null : (errorMsg || rlData.message || 'Relist failed'),
             };
             if (ok) autoRelisted = true;
           }
