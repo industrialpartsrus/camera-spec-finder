@@ -249,18 +249,53 @@ export default async function handler(req, res) {
       result = await suredonePost(formHeaders, 'end', form);
 
     } else if (action === 'revise' || action === 'edit') {
-      const form = makeForm(sku);
-      form.append('ebayskip', '0');
-      form.append('bigcommerceskip', '0');
-      console.log(`[listing-action] POST /edit (revise) for ${sku}`);
-      result = await suredonePost(formHeaders, 'edit', form);
+      // Check if item has an eBay listing to revise
+      const checkUrl = `https://api.suredone.com/v1/search/items/${encodeURIComponent('guid:=' + sku)}`;
+      const checkRes = await fetch(checkUrl, { headers: jsonHeaders });
+      const checkData = await checkRes.json();
 
-      // Auto-fix payment profile
+      let hasEbayId = false;
+      for (const key of Object.keys(checkData)) {
+        if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
+          const ebayId = checkData[key].ebayid || '';
+          hasEbayId = ebayId.length >= 6 && /^\d+$/.test(ebayId);
+          console.log(`[listing-action] edit/revise: ${sku} ebayid=${ebayId || 'none'}, hasEbayId=${hasEbayId}`);
+          break;
+        }
+      }
+
+      if (hasEbayId) {
+        // Has eBay listing — revise it
+        const form = makeForm(sku);
+        form.append('ebayskip', '0');
+        form.append('bigcommerceskip', '0');
+        console.log(`[listing-action] POST /edit (revise) for ${sku}`);
+        result = await suredonePost(formHeaders, 'edit', form);
+      } else {
+        // No eBay listing — need to START a new one
+        const clearForm = makeForm(sku);
+        clearForm.append('rule', '');
+        clearForm.append('rulestate', '');
+        clearForm.append('ebayprice', '');
+        clearForm.append('ebaytitle', '');
+        clearForm.append('ebaypaymentprofileid', '0');
+        clearForm.append('paymentprofileidebay', '0');
+
+        console.log(`[listing-action] No eBay ID for ${sku}, clearing blockers then POST /start`);
+        await suredonePost(formHeaders, 'edit', clearForm);
+        await new Promise(r => setTimeout(r, 1000));
+
+        const form = makeForm(sku);
+        console.log(`[listing-action] POST /start for ${sku}`);
+        result = await suredonePost(formHeaders, 'start', form);
+      }
+
+      // Auto-fix payment profile on failure (applies to both paths)
       if (!isSuccess(result)) {
         const errors = extractError(result);
         const profileError = errors.find(e => e.type === 'payment_profile');
         if (profileError) {
-          console.log('Payment profile error on revise, clearing profiles and retrying...');
+          console.log('Payment profile error on edit/start, clearing profiles and retrying...');
           const fixForm = makeForm(sku);
           fixForm.append('ebayprofile', '');
           fixForm.append('ebaypaymentprofile', '');
@@ -269,9 +304,13 @@ export default async function handler(req, res) {
           await suredonePost(formHeaders, 'edit', fixForm);
 
           const retryForm = makeForm(sku);
-          retryForm.append('ebayskip', '0');
-          retryForm.append('bigcommerceskip', '0');
-          result = await suredonePost(formHeaders, 'edit', retryForm);
+          if (hasEbayId) {
+            retryForm.append('ebayskip', '0');
+            retryForm.append('bigcommerceskip', '0');
+            result = await suredonePost(formHeaders, 'edit', retryForm);
+          } else {
+            result = await suredonePost(formHeaders, 'start', retryForm);
+          }
           retried = true;
         }
       }
