@@ -92,7 +92,13 @@ export default async function handler(req, res) {
     appendIfValue('ebayshippingprofileid', updateData.ebayshippingprofileid);
 
     // Clear payment profile to prevent old PayPal profiles from blocking push
+    // Send both field name patterns (SureDone uses both conventions)
     formData.append('ebaypaymentprofileid', '0');
+    formData.append('paymentprofileidebay', '0');
+
+    // Clear channel-specific overrides so base fields are used
+    formData.append('ebayprice', '');
+    formData.append('ebaytitle', '');
 
     // BigCommerce SEO fields (same as create flow)
     appendIfValue('bigcommercepagetitle', updateData.bigcommercepagetitle);

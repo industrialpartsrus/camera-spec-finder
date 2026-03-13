@@ -212,17 +212,24 @@ export default async function handler(req, res) {
           formData.append('bigcommercempn', partNumber.toUpperCase());
         }
 
-        // Clear SureDone automation rules that could block relisting
+        // Clear SureDone automation rules and channel overrides on restock
         if (isRestock || (newStock > 0 && oldStock === 0)) {
           formData.append('rule', '');
           formData.append('rulestate', '');
+          // Clear channel-specific overrides so base fields are used
+          formData.append('ebayprice', '');
+          formData.append('ebaytitle', '');
+          formData.append('bigcommerceprice', '');
+          formData.append('bigcommercetitle', '');
         }
 
         // CRITICAL: Skip Google Shopping — it's broken and blocks edits
         formData.append('googleskip', '1');
 
         // Clear payment profile to prevent old PayPal profiles from blocking push
+        // Send both field name patterns (SureDone uses both conventions)
         formData.append('ebaypaymentprofileid', '0');
+        formData.append('paymentprofileidebay', '0');
 
         console.log(`Updating SureDone ${sku}: stock=${newStock}, shelf=${shelf || 'unchanged'}, condition=${condition || 'unchanged'}`);
 
@@ -321,6 +328,18 @@ export default async function handler(req, res) {
             hasTitle = !!(sdItem.title && sdItem.title.trim().length > 5);
             hasCatId = !!(sdItem.ebaycatid && sdItem.ebaycatid.length > 3);
 
+            // Log channel overrides for debugging
+            const overrideFields = ['ebayprice', 'ebaytitle', 'bigcommerceprice', 'bigcommercetitle', 'rule', 'rulestate', 'ebayskip', 'state'];
+            const overrides = {};
+            for (const f of overrideFields) {
+              if (sdItem[f] !== undefined && sdItem[f] !== '') {
+                overrides[f] = sdItem[f];
+              }
+            }
+            if (Object.keys(overrides).length > 0) {
+              console.log(`${sku} channel overrides:`, JSON.stringify(overrides));
+            }
+
             console.log(`${sku} state: ebayid=${ebayId || 'none'}, hasImages=${hasImages}, hasTitle=${hasTitle}, hasCatId=${hasCatId}`);
             break;
           }
@@ -364,6 +383,9 @@ export default async function handler(req, res) {
           clearForm.append('rule', '');
           clearForm.append('rulestate', '');
           clearForm.append('ebaypaymentprofileid', '0');
+          clearForm.append('paymentprofileidebay', '0');
+          clearForm.append('ebayprice', '');
+          clearForm.append('ebaytitle', '');
           await fetch(`${sdBase}/edit`, {
             method: 'POST', headers: sdHeaders, body: clearForm.toString()
           });

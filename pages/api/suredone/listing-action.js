@@ -166,13 +166,16 @@ export default async function handler(req, res) {
         }
       }
 
-      // Step 1: Clear automation rules that block relisting
+      // Step 1: Clear automation rules and channel overrides that block relisting
       const clearForm = makeForm(sku);
       clearForm.append('rule', '');
       clearForm.append('rulestate', '');
+      clearForm.append('ebayprice', '');
+      clearForm.append('ebaytitle', '');
       clearForm.append('ebaypaymentprofileid', '0');
+      clearForm.append('paymentprofileidebay', '0');
 
-      console.log(`[listing-action] Clearing rule/rulestate for ${sku}`);
+      console.log(`[listing-action] Clearing rule/rulestate/overrides for ${sku}`);
       await suredonePost(formHeaders, 'edit', clearForm);
       await new Promise(r => setTimeout(r, 1000));
 
@@ -193,6 +196,7 @@ export default async function handler(req, res) {
           fixForm.append('ebayprofile', '');
           fixForm.append('ebaypaymentprofile', '');
           fixForm.append('ebaypaymentprofileid', '0');
+          fixForm.append('paymentprofileidebay', '0');
           await suredonePost(formHeaders, 'edit', fixForm);
 
           const retryForm = makeForm(sku);
@@ -202,13 +206,16 @@ export default async function handler(req, res) {
       }
 
     } else if (action === 'start' || action === 'add') {
-      // Clear rules first
+      // Clear rules and channel overrides first
       const clearForm = makeForm(sku);
       clearForm.append('rule', '');
       clearForm.append('rulestate', '');
+      clearForm.append('ebayprice', '');
+      clearForm.append('ebaytitle', '');
       clearForm.append('ebaypaymentprofileid', '0');
+      clearForm.append('paymentprofileidebay', '0');
 
-      console.log(`[listing-action] Clearing rule/rulestate for ${sku}`);
+      console.log(`[listing-action] Clearing rule/rulestate/overrides for ${sku}`);
       await suredonePost(formHeaders, 'edit', clearForm);
       await new Promise(r => setTimeout(r, 1000));
 
@@ -227,6 +234,7 @@ export default async function handler(req, res) {
           fixForm.append('ebayprofile', '');
           fixForm.append('ebaypaymentprofile', '');
           fixForm.append('ebaypaymentprofileid', '0');
+          fixForm.append('paymentprofileidebay', '0');
           await suredonePost(formHeaders, 'edit', fixForm);
 
           const retryForm = makeForm(sku);
@@ -257,6 +265,7 @@ export default async function handler(req, res) {
           fixForm.append('ebayprofile', '');
           fixForm.append('ebaypaymentprofile', '');
           fixForm.append('ebaypaymentprofileid', '0');
+          fixForm.append('paymentprofileidebay', '0');
           await suredonePost(formHeaders, 'edit', fixForm);
 
           const retryForm = makeForm(sku);
