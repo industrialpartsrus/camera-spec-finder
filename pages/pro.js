@@ -3359,6 +3359,7 @@ export default function ProListingBuilder() {
               shelf: item.shelf || '',
               price: item.price || '',
               condition: item.condition || '',
+              requestedBy: userName || 'Pro Builder',
             });
           } catch (printErr) {
             console.error('Print error:', printErr);
@@ -3463,6 +3464,7 @@ export default function ProListingBuilder() {
               shelf: item.shelf || '',
               price: item.price || '',
               condition: item.condition || '',
+              requestedBy: userName || 'Pro Builder',
             });
           } catch (printErr) {
             console.error('Print error:', printErr);
@@ -3790,6 +3792,12 @@ export default function ProListingBuilder() {
                   className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-1"
                 >
                   ⚙️ Admin
+                </a>
+                <a
+                  href="/print-monitor"
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-1"
+                >
+                  🖨️ Print Monitor
                 </a>
               </>
             )}
@@ -5574,6 +5582,7 @@ export default function ProListingBuilder() {
                             shelf: selected.shelf || '',
                             price: selected.price || '',
                             condition: selected.condition || '',
+                            requestedBy: userName || 'Pro Builder',
                           });
                           setTimeout(() => setIsPrintingLabel(false), 2000);
                         } catch (err) {

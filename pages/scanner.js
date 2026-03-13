@@ -1708,14 +1708,19 @@ export default function WarehouseScanner() {
               onClick={async () => {
                 setIsPrinting(true);
                 try {
-                  await printProductLabel({
+                  const result = await printProductLabel({
                     sku: selectedMatch?.sku || '',
                     brand: brand || selectedMatch?.brand || '',
                     partNumber: partNumber || selectedMatch?.partNumber || '',
                     shelf: newShelf || selectedMatch?.shelf || '',
                     price: selectedMatch?.price || '',
                     condition: selectedMatch?.condition || '',
+                    requestedBy: currentUser?.name || 'Scanner',
                   });
+
+                  if (result.method === 'queued') {
+                    alert('🏷️ Label sent to print queue!');
+                  }
                   setTimeout(() => setIsPrinting(false), 2000);
                 } catch (err) {
                   console.error('Print error:', err);
@@ -1726,7 +1731,7 @@ export default function WarehouseScanner() {
               disabled={isPrinting}
               className="mt-4 px-6 py-4 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white rounded-xl text-lg font-bold transition disabled:opacity-50 flex items-center justify-center gap-2 mx-auto"
             >
-              {isPrinting ? '🖨️ Printing...' : '🏷️ Print Label'}
+              {isPrinting ? '🖨️ Sending...' : '🏷️ Print Label'}
             </button>
 
             {isPrinting && (
