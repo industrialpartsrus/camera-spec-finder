@@ -174,14 +174,16 @@ export default async function handler(req, res) {
       clearForm.append('ebaytitle', '');
       clearForm.append('ebaypaymentprofileid', '0');
       clearForm.append('paymentprofileidebay', '0');
+      clearForm.append('ebay2skip', '1');
 
       console.log(`[listing-action] Clearing rule/rulestate/overrides for ${sku}`);
       await suredonePost(formHeaders, 'edit', clearForm);
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 3000));
 
       // Step 2: Use /relist if has eBay ID, /start if not
       const endpoint = hasEbayId ? 'relist' : 'start';
       const form = makeForm(sku);
+      form.append('ebay2skip', '1');
 
       console.log(`[listing-action] POST /${endpoint} for ${sku}`);
       result = await suredonePost(formHeaders, endpoint, form);
@@ -197,9 +199,11 @@ export default async function handler(req, res) {
           fixForm.append('ebaypaymentprofile', '');
           fixForm.append('ebaypaymentprofileid', '0');
           fixForm.append('paymentprofileidebay', '0');
+          fixForm.append('ebay2skip', '1');
           await suredonePost(formHeaders, 'edit', fixForm);
 
           const retryForm = makeForm(sku);
+          retryForm.append('ebay2skip', '1');
           result = await suredonePost(formHeaders, endpoint, retryForm);
           retried = true;
         }
@@ -214,13 +218,15 @@ export default async function handler(req, res) {
       clearForm.append('ebaytitle', '');
       clearForm.append('ebaypaymentprofileid', '0');
       clearForm.append('paymentprofileidebay', '0');
+      clearForm.append('ebay2skip', '1');
 
       console.log(`[listing-action] Clearing rule/rulestate/overrides for ${sku}`);
       await suredonePost(formHeaders, 'edit', clearForm);
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 3000));
 
       // Start/publish listing
       const form = makeForm(sku);
+      form.append('ebay2skip', '1');
       console.log(`[listing-action] POST /start for ${sku}`);
       result = await suredonePost(formHeaders, 'start', form);
 
@@ -235,9 +241,11 @@ export default async function handler(req, res) {
           fixForm.append('ebaypaymentprofile', '');
           fixForm.append('ebaypaymentprofileid', '0');
           fixForm.append('paymentprofileidebay', '0');
+          fixForm.append('ebay2skip', '1');
           await suredonePost(formHeaders, 'edit', fixForm);
 
           const retryForm = makeForm(sku);
+          retryForm.append('ebay2skip', '1');
           result = await suredonePost(formHeaders, 'start', retryForm);
           retried = true;
         }
@@ -245,6 +253,7 @@ export default async function handler(req, res) {
 
     } else if (action === 'end') {
       const form = makeForm(sku);
+      form.append('ebay2skip', '1');
       console.log(`[listing-action] POST /end for ${sku}`);
       result = await suredonePost(formHeaders, 'end', form);
 
@@ -269,6 +278,7 @@ export default async function handler(req, res) {
         const form = makeForm(sku);
         form.append('ebayskip', '0');
         form.append('bigcommerceskip', '0');
+        form.append('ebay2skip', '1');
         console.log(`[listing-action] POST /edit (revise) for ${sku}`);
         result = await suredonePost(formHeaders, 'edit', form);
       } else {
@@ -280,12 +290,14 @@ export default async function handler(req, res) {
         clearForm.append('ebaytitle', '');
         clearForm.append('ebaypaymentprofileid', '0');
         clearForm.append('paymentprofileidebay', '0');
+        clearForm.append('ebay2skip', '1');
 
         console.log(`[listing-action] No eBay ID for ${sku}, clearing blockers then POST /start`);
         await suredonePost(formHeaders, 'edit', clearForm);
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 3000));
 
         const form = makeForm(sku);
+        form.append('ebay2skip', '1');
         console.log(`[listing-action] POST /start for ${sku}`);
         result = await suredonePost(formHeaders, 'start', form);
       }
@@ -301,9 +313,11 @@ export default async function handler(req, res) {
           fixForm.append('ebaypaymentprofile', '');
           fixForm.append('ebaypaymentprofileid', '0');
           fixForm.append('paymentprofileidebay', '0');
+          fixForm.append('ebay2skip', '1');
           await suredonePost(formHeaders, 'edit', fixForm);
 
           const retryForm = makeForm(sku);
+          retryForm.append('ebay2skip', '1');
           if (hasEbayId) {
             retryForm.append('ebayskip', '0');
             retryForm.append('bigcommerceskip', '0');
@@ -317,6 +331,7 @@ export default async function handler(req, res) {
 
     } else if (action === 'delete') {
       const form = makeForm(sku);
+      form.append('ebay2skip', '1');
       console.log(`[listing-action] POST /delete for ${sku}`);
       result = await suredonePost(formHeaders, 'delete', form);
 

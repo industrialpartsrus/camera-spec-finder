@@ -223,8 +223,9 @@ export default async function handler(req, res) {
           formData.append('bigcommercetitle', '');
         }
 
-        // CRITICAL: Skip Google Shopping — it's broken and blocks edits
+        // CRITICAL: Skip Google Shopping and ebay2 — not used
         formData.append('googleskip', '1');
+        formData.append('ebay2skip', '1');
 
         // Clear payment profile to prevent old PayPal profiles from blocking push
         // Send both field name patterns (SureDone uses both conventions)
@@ -300,9 +301,9 @@ export default async function handler(req, res) {
       console.log(`Restock for ${sku}: ${oldStock} → ${newStock}, checking channel state...`);
 
       try {
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 5000));
 
-        // Fetch item to check eBay state
+        // Verify stock saved before attempting relist
         const checkUrl = `https://api.suredone.com/v1/search/items/${encodeURIComponent('guid:=' + sku)}`;
         const checkRes = await fetch(checkUrl, {
           headers: {
@@ -318,6 +319,7 @@ export default async function handler(req, res) {
         let hasImages = false;
         let hasTitle = false;
         let hasCatId = false;
+        let confirmedStock = 0;
 
         for (const key of Object.keys(checkData)) {
           if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
@@ -327,6 +329,7 @@ export default async function handler(req, res) {
             hasImages = !!(sdItem.media1 && sdItem.media1.trim());
             hasTitle = !!(sdItem.title && sdItem.title.trim().length > 5);
             hasCatId = !!(sdItem.ebaycatid && sdItem.ebaycatid.length > 3);
+            confirmedStock = parseInt(sdItem.stock) || 0;
 
             // Log channel overrides for debugging
             const overrideFields = ['ebayprice', 'ebaytitle', 'bigcommerceprice', 'bigcommercetitle', 'rule', 'rulestate', 'ebayskip', 'state'];
@@ -340,9 +343,15 @@ export default async function handler(req, res) {
               console.log(`${sku} channel overrides:`, JSON.stringify(overrides));
             }
 
-            console.log(`${sku} state: ebayid=${ebayId || 'none'}, hasImages=${hasImages}, hasTitle=${hasTitle}, hasCatId=${hasCatId}`);
+            console.log(`${sku} state: ebayid=${ebayId || 'none'}, hasImages=${hasImages}, hasTitle=${hasTitle}, hasCatId=${hasCatId}, stock=${confirmedStock}`);
             break;
           }
+        }
+
+        // If stock not yet confirmed, wait longer
+        if (confirmedStock < 1) {
+          console.warn(`${sku}: Stock not yet confirmed (showing ${confirmedStock}), waiting 5 more seconds...`);
+          await new Promise(r => setTimeout(r, 5000));
         }
 
         const sdHeaders = {
@@ -352,12 +361,26 @@ export default async function handler(req, res) {
         };
         const sdBase = 'https://api.suredone.com/v1/editor/items';
 
+        // Safety: re-send stock right before relist
+        const stockForm = new URLSearchParams();
+        stockForm.append('identifier', 'guid');
+        stockForm.append('guid', sku);
+        stockForm.append('stock', String(newStock));
+        stockForm.append('ebay2skip', '1');
+
+        await fetch(`${sdBase}/edit`, {
+          method: 'POST', headers: sdHeaders, body: stockForm.toString()
+        });
+        console.log(`Re-confirmed stock=${newStock} for ${sku} before relist`);
+        await new Promise(r => setTimeout(r, 2000));
+
         if (hasEbayId) {
           // STATE 1: Active eBay listing — relist
           console.log(`${sku}: Has eBay ID ${ebayId}, sending relist...`);
           const form = new URLSearchParams();
           form.append('identifier', 'guid');
           form.append('guid', sku);
+          form.append('ebay2skip', '1');
 
           const rlRes = await fetch(`${sdBase}/relist`, {
             method: 'POST', headers: sdHeaders, body: form.toString()
@@ -386,6 +409,7 @@ export default async function handler(req, res) {
           clearForm.append('paymentprofileidebay', '0');
           clearForm.append('ebayprice', '');
           clearForm.append('ebaytitle', '');
+          clearForm.append('ebay2skip', '1');
           await fetch(`${sdBase}/edit`, {
             method: 'POST', headers: sdHeaders, body: clearForm.toString()
           });
@@ -394,6 +418,7 @@ export default async function handler(req, res) {
           const form = new URLSearchParams();
           form.append('identifier', 'guid');
           form.append('guid', sku);
+          form.append('ebay2skip', '1');
           const stRes = await fetch(`${sdBase}/start`, {
             method: 'POST', headers: sdHeaders, body: form.toString()
           });
