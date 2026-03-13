@@ -1135,6 +1135,40 @@ function renderStoreCategoryOptions() {
 
 // SPEC_LABELS replaced by FIELD_LABELS from lib/spec-field-options.js (744 entries vs old 40)
 
+// Convert flat SureDone ebayitemspecifics* object to UI array for purple panel
+function convertSuredoneSpecsToUIArray(suredoneSpecs) {
+  const arr = [];
+  for (const [fieldName, value] of Object.entries(suredoneSpecs)) {
+    const suffix = fieldName.replace(/^ebayitemspecifics/, '');
+    // Try FIELD_LABELS first for clean display name
+    let displayName = FIELD_LABELS[fieldName] || FIELD_LABELS[fieldName.toLowerCase()] || null;
+    if (!displayName) {
+      // Fallback: split on known word boundaries and title-case
+      displayName = suffix
+        .replace(/(number|type|rating|voltage|style|material|country|region|manufacture|model|brand|capacity|size|length|width|height|diameter|power|phase|frequency|speed|weight|color|mount|application|compatible|features|unit|source|enclosure|output|input)/gi, ' $1')
+        .replace(/^\s+/, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+      if (displayName.length < 2) displayName = suffix;
+    }
+    arr.push({
+      ebayName: displayName,
+      value: value,
+      suredoneInlineField: fieldName,
+      suredoneDynamicField: fieldName,
+      required: false,
+      mode: 'FREE_TEXT',
+      usage: 'RECOMMENDED',
+      allowedValues: [],
+      source: 'suredone_import',
+    });
+  }
+  return arr;
+}
+
 // ============================================
 // SKU LOOKUP COMPONENT (INLINE)
 // ============================================
@@ -1757,6 +1791,8 @@ export default function ProListingBuilder() {
                 (!item.ebayItemSpecificsForSuredone ||
                  Object.keys(item.ebayItemSpecificsForSuredone).length === 0)) {
               updateData.ebayItemSpecificsForSuredone = ebaySpecs;
+              // Convert to UI array for purple panel display
+              updateData.ebayItemSpecifics = convertSuredoneSpecsToUIArray(ebaySpecs);
             }
             if (photos.length > 0 && (!item.photos || item.photos.length === 0)) {
               updateData.photos = photos;
@@ -2560,6 +2596,12 @@ export default function ProListingBuilder() {
       }
       console.log(`Extracted ${Object.keys(ebayItemSpecificsForSuredone).length} eBay item specifics from SureDone`);
 
+      // === CONVERT SUREDONE SPECIFICS TO UI ARRAY ===
+      // Transform flat {ebayitemspecificsvoltage: "24VDC"} into
+      // [{ebayName: "Voltage", value: "24VDC", ...}] for the purple panel display
+      const ebayItemSpecificsArray = convertSuredoneSpecsToUIArray(ebayItemSpecificsForSuredone);
+      console.log(`Converted ${ebayItemSpecificsArray.length} eBay specifics to UI format`);
+
       // === EXTRACT MEDIA ALT TEXTS FROM SUREDONE ===
       const mediaAltTexts = {};
       for (let i = 1; i <= 12; i++) {
@@ -2619,6 +2661,7 @@ export default function ProListingBuilder() {
         photosPulledFrom: existingData.sku || existingData.guid,
         // eBay item specifics (for update roundtrip)
         ebayItemSpecificsForSuredone: ebayItemSpecificsForSuredone,
+        ebayItemSpecifics: ebayItemSpecificsArray,
         // Media alt texts from SureDone
         mediaAltTexts: Object.keys(mediaAltTexts).length > 0 ? mediaAltTexts : {},
         // Mark as editing existing
