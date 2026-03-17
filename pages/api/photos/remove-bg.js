@@ -1,166 +1,176 @@
 // pages/api/photos/remove-bg.js
-// Remove background from product photo using Remove.bg API
-// Flattens transparency onto white background, returns JPEG
+// Remove background from product photo using self-hosted rembg server
+// Falls back to Remove.bg API if rembg server is down
 
-import sharp from 'sharp';
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb',
+    },
+  },
+};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const {
-    imageBase64,
-    view,
-    // Enhanced options for auto-crop + center + scale + templates
-    background = 'white',  // 'white', 'transparent', 'lightgray', 'warehouse', 'studio', 'industrial'
-    autoCrop = true,
-    scale = 80  // 50-95 as integer
-  } = req.body;
+  const { imageBase64, background, autoCrop, scale, view } = req.body;
 
   if (!imageBase64) {
-    return res.status(400).json({
-      error: 'imageBase64 is required',
-      success: false
-    });
+    return res.status(400).json({ error: 'imageBase64 required', success: false });
   }
 
-  if (!process.env.REMOVE_BG_API_KEY) {
-    return res.status(500).json({
-      error: 'Remove.bg API key not configured',
-      success: false
-    });
+  const REMBG_URL = process.env.REMBG_SERVER_URL || 'http://104.131.11.17:7000';
+
+  // Log server status on first call (cached)
+  if (!global._rembgChecked) {
+    try {
+      const healthRes = await fetch(`${REMBG_URL}/health`);
+      const health = await healthRes.json();
+      console.log(`[remove-bg] Server health: ${JSON.stringify(health)}`);
+      global._rembgChecked = true;
+    } catch (e) {
+      console.warn(`[remove-bg] Health check failed: ${e.message}`);
+    }
   }
 
   try {
-    console.log(`Processing background removal for ${view || 'photo'} (crop: ${autoCrop}, scale: ${scale}%, bg: ${background})...`);
+    console.log(`[remove-bg] Sending image to rembg server for view: ${view || 'unknown'}`);
 
-    // Call Remove.bg API with enhanced parameters
-    const formData = new FormData();
-    formData.append('image_file_b64', imageBase64);
-    formData.append('type', 'product'); // Optimized for product photography
-    formData.append('size', 'full'); // Max resolution (up to 50MP)
+    // Build form data for the rembg server
+    const formData = new URLSearchParams();
+    formData.append('image_base64', imageBase64);
 
-    // Auto-crop and center options
-    if (autoCrop) {
-      formData.append('crop', 'true');
-      formData.append('crop_margin', '10%'); // Small margin around subject
-      formData.append('scale', `${scale}%`); // Subject fills X% of frame
-      formData.append('position', 'center'); // Center the product
-    }
-
-    // Background handling: solid colors, transparent, or custom templates
-    const templateBackgrounds = ['warehouse', 'studio', 'industrial'];
-
-    if (background === 'transparent') {
-      // Transparent PNG
-      formData.append('format', 'png');
-    } else if (background === 'white') {
-      // White background
-      formData.append('format', 'png');
-      formData.append('bg_color', 'white');
-    } else if (background === 'lightgray') {
-      // Light gray background
-      formData.append('format', 'png');
-      formData.append('bg_color', 'f5f5f5');
-    } else if (templateBackgrounds.includes(background)) {
-      // Custom background template using bg_image_url
-      const templateMap = {
-        'warehouse': '/bg-templates/warehouse-floor.jpg',
-        'studio': '/bg-templates/studio-gradient.jpg',
-        'industrial': '/bg-templates/industrial.jpg',
-      };
-
-      // Remove.bg needs a full URL, not a relative path
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://camera-spec-finder.vercel.app';
-      const bgImageUrl = baseUrl + templateMap[background];
-
-      formData.append('format', 'png');
-      formData.append('bg_image_url', bgImageUrl);
-      console.log(`Using custom background template: ${bgImageUrl}`);
-    } else {
-      // Fallback to white
-      formData.append('format', 'png');
-      formData.append('bg_color', 'white');
-    }
-
-    const response = await fetch('https://api.remove.bg/v1.0/removebg', {
+    const response = await fetch(`${REMBG_URL}/remove-bg`, {
       method: 'POST',
       headers: {
-        'X-Api-Key': process.env.REMOVE_BG_API_KEY
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: formData
+      body: formData.toString(),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Remove.bg API error: ${response.status}`, errorText);
+      console.error(`[remove-bg] Server error: ${response.status} ${errorText}`);
+      throw new Error(`rembg server returned ${response.status}`);
+    }
 
-      // Handle specific error cases
-      if (response.status === 402) {
-        return res.status(402).json({
-          error: 'Remove.bg API quota exceeded. Please check your account.',
-          success: false
-        });
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Background removal failed');
+    }
+
+    console.log(`[remove-bg] Success: ${data.width}x${data.height} ${data.format}`);
+
+    // Build data URL from the base64 response
+    let dataUrl = `data:image/png;base64,${data.image_base64}`;
+
+    // If PhotoEditor requests special processing (auto-crop, scale,
+    // custom background), apply it with sharp
+    if (autoCrop || (scale && scale !== 1) || (background && background !== 'white' && background !== '#ffffff')) {
+      try {
+        const sharp = require('sharp');
+        const resultBuffer = Buffer.from(data.image_base64, 'base64');
+
+        // Determine background color
+        let bgColor = { r: 255, g: 255, b: 255, alpha: 1 };
+        if (background === 'transparent') {
+          bgColor = { r: 0, g: 0, b: 0, alpha: 0 };
+        } else if (background === '#f5f5f5' || background === 'lightgray') {
+          bgColor = { r: 245, g: 245, b: 245, alpha: 1 };
+        }
+
+        if (autoCrop) {
+          // Trim whitespace, then center on square canvas
+          const trimmed = await sharp(resultBuffer)
+            .trim({ threshold: 10 })
+            .toBuffer({ resolveWithObject: true });
+
+          const padding = Math.round(
+            Math.max(trimmed.info.width, trimmed.info.height) * 0.05
+          );
+          const outputSize = Math.max(
+            trimmed.info.width, trimmed.info.height
+          ) + (padding * 2);
+
+          let productBuffer = trimmed.data;
+
+          // Scale product if requested
+          if (scale && scale !== 1) {
+            const scaledW = Math.round(trimmed.info.width * scale);
+            const scaledH = Math.round(trimmed.info.height * scale);
+            productBuffer = await sharp(trimmed.data)
+              .resize(scaledW, scaledH)
+              .toBuffer();
+          }
+
+          // Create square canvas with centered product
+          const canvas = await sharp({
+            create: {
+              width: outputSize,
+              height: outputSize,
+              channels: 4,
+              background: bgColor,
+            }
+          }).png().toBuffer();
+
+          const finalBuffer = await sharp(canvas)
+            .composite([{ input: productBuffer, gravity: 'centre' }])
+            .png()
+            .toBuffer();
+
+          dataUrl = `data:image/png;base64,${finalBuffer.toString('base64')}`;
+        }
+      } catch (sharpErr) {
+        console.warn('[remove-bg] Sharp processing failed, returning raw result:', sharpErr.message);
+        // Fall through with the raw dataUrl
       }
-
-      return res.status(response.status).json({
-        error: `Remove.bg API error: ${response.status} ${errorText}`,
-        success: false
-      });
     }
-
-    // Get the processed image as buffer (PNG from remove.bg, possibly with bg_color or bg_image_url already applied)
-    const imageBuffer = await response.arrayBuffer();
-    const processedBuffer = Buffer.from(imageBuffer);
-
-    // Determine output format based on background selection
-    let finalBuffer;
-    let mimeType;
-
-    if (background === 'transparent') {
-      // Return PNG with transparency (no flattening)
-      finalBuffer = processedBuffer;
-      mimeType = 'image/png';
-    } else if (['warehouse', 'studio', 'industrial'].includes(background)) {
-      // Custom template backgrounds - Remove.bg already composited, return as PNG
-      // Convert to JPEG for smaller file size (templates are already opaque)
-      finalBuffer = await sharp(processedBuffer)
-        .jpeg({ quality: 95 })
-        .toBuffer();
-      mimeType = 'image/jpeg';
-    } else {
-      // Solid color backgrounds (white, lightgray) - flatten to JPEG for smaller file size
-      // Remove.bg should have already applied bg_color, but we flatten to ensure solid background
-      const bgRgb = background === 'white'
-        ? { r: 255, g: 255, b: 255 }
-        : background === 'lightgray'
-        ? { r: 245, g: 245, b: 245 }
-        : { r: 255, g: 255, b: 255 }; // default white
-
-      finalBuffer = await sharp(processedBuffer)
-        .flatten({ background: bgRgb })
-        .jpeg({ quality: 95 })
-        .toBuffer();
-      mimeType = 'image/jpeg';
-    }
-
-    // Convert to base64
-    const processedBase64 = finalBuffer.toString('base64');
-
-    console.log(`Background removed for ${view || 'photo'} (${Math.round(processedBase64.length / 1024)}KB ${mimeType} with ${background} background)`);
 
     return res.status(200).json({
       success: true,
-      processedBase64: processedBase64,
-      dataUrl: `data:${mimeType};base64,${processedBase64}`
+      dataUrl: dataUrl,
     });
+
   } catch (error) {
-    console.error('Background removal error:', error);
+    console.error('[remove-bg] Error:', error.message);
+
+    // Fallback to Remove.bg API if rembg server is down
+    if (process.env.REMOVE_BG_API_KEY) {
+      console.log('[remove-bg] Falling back to Remove.bg API...');
+      try {
+        const removeBgRes = await fetch('https://api.remove.bg/v1.0/removebg', {
+          method: 'POST',
+          headers: {
+            'X-Api-Key': process.env.REMOVE_BG_API_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            image_base64: imageBase64,
+            size: 'auto',
+            format: 'png',
+          }),
+        });
+
+        if (removeBgRes.ok) {
+          const buf = Buffer.from(await removeBgRes.arrayBuffer());
+          console.log('[remove-bg] Remove.bg fallback succeeded');
+          return res.status(200).json({
+            success: true,
+            dataUrl: `data:image/png;base64,${buf.toString('base64')}`,
+            fallback: true,
+          });
+        }
+      } catch (fbErr) {
+        console.error('[remove-bg] Remove.bg fallback also failed:', fbErr.message);
+      }
+    }
+
     return res.status(500).json({
-      error: 'Failed to remove background',
-      details: error.message,
-      success: false
+      success: false,
+      error: error.message || 'Background removal failed',
     });
   }
 }
