@@ -38,16 +38,27 @@ export default async function handler(req, res) {
   try {
     console.log(`[remove-bg] Sending image to rembg server for view: ${view || 'unknown'}`);
 
-    // Build form data for the rembg server
-    const formData = new URLSearchParams();
-    formData.append('image_base64', imageBase64);
+    // Convert base64 to buffer and send as multipart file upload
+    // (URL-encoded base64 breaks with large 1-5MB images)
+    const imageBuffer = Buffer.from(imageBase64, 'base64');
+
+    const boundary = '----RembgBoundary' + Date.now();
+    const bodyParts = [
+      `--${boundary}`,
+      'Content-Disposition: form-data; name="file"; filename="image.jpg"',
+      'Content-Type: image/jpeg',
+      '',
+    ];
+    const header = Buffer.from(bodyParts.join('\r\n') + '\r\n');
+    const footer = Buffer.from(`\r\n--${boundary}--\r\n`);
+    const multipartBody = Buffer.concat([header, imageBuffer, footer]);
 
     const response = await fetch(`${REMBG_URL}/remove-bg`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
-      body: formData.toString(),
+      body: multipartBody,
     });
 
     if (!response.ok) {
