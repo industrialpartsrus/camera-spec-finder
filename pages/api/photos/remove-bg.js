@@ -35,14 +35,31 @@ export default async function handler(req, res) {
       }
     }
 
-    // Send raw bytes to rembg server
+    // Resize BEFORE sending to rembg — large images cause timeout
     const imageBuffer = Buffer.from(imageBase64, 'base64');
-    console.log(`[remove-bg] Sending ${(imageBuffer.length / 1024).toFixed(0)}KB to rembg server...`);
+    let sendBuffer = imageBuffer;
+    try {
+      const meta = await sharp(imageBuffer).metadata();
+      const maxDim = Math.max(meta.width || 0, meta.height || 0);
+
+      if (maxDim > 800) {
+        sendBuffer = await sharp(imageBuffer)
+          .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        console.log(`[remove-bg] Resized ${meta.width}x${meta.height} to 800px max: ${(sendBuffer.length / 1024).toFixed(0)}KB`);
+      }
+    } catch (resizeErr) {
+      console.warn('[remove-bg] Pre-resize failed, sending original:', resizeErr.message);
+      sendBuffer = imageBuffer;
+    }
+
+    console.log(`[remove-bg] Sending ${(sendBuffer.length / 1024).toFixed(0)}KB to rembg server...`);
 
     const response = await fetch(`${REMBG_URL}/remove-bg-raw`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/octet-stream' },
-      body: imageBuffer,
+      body: sendBuffer,
     });
 
     if (!response.ok) {
@@ -56,19 +73,15 @@ export default async function handler(req, res) {
 
     console.log(`[remove-bg] Success: ${data.width}x${data.height} ${data.format}`);
 
-    // Decode result
+    // Decode result and upscale to 1600px for eBay listing quality
     let resultBuffer = Buffer.from(data.image_base64, 'base64');
     console.log(`[remove-bg] Raw result: ${(resultBuffer.length / 1024 / 1024).toFixed(1)}MB`);
 
-    // Resize if over 1600px to stay under Vercel response limit
-    const maxDim = Math.max(data.width || 0, data.height || 0);
-    if (maxDim > 1600) {
-      resultBuffer = await sharp(resultBuffer)
-        .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
-        .png({ compressionLevel: 8 })
-        .toBuffer();
-      console.log(`[remove-bg] Resized: ${(resultBuffer.length / 1024 / 1024).toFixed(1)}MB`);
-    }
+    resultBuffer = await sharp(resultBuffer)
+      .resize(1600, 1600, { fit: 'inside', withoutEnlargement: false })
+      .png({ compressionLevel: 6 })
+      .toBuffer();
+    console.log(`[remove-bg] Output: ${(resultBuffer.length / 1024).toFixed(0)}KB`);
 
     // If still over 3MB, compress to JPEG
     if (resultBuffer.length > 3 * 1024 * 1024) {
