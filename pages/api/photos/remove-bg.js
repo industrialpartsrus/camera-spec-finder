@@ -38,27 +38,18 @@ export default async function handler(req, res) {
   try {
     console.log(`[remove-bg] Sending image to rembg server for view: ${view || 'unknown'}`);
 
-    // Convert base64 to buffer and send as multipart file upload
-    // (URL-encoded base64 breaks with large 1-5MB images)
+    // Convert base64 to raw image buffer
     const imageBuffer = Buffer.from(imageBase64, 'base64');
 
-    const boundary = '----RembgBoundary' + Date.now();
-    const bodyParts = [
-      `--${boundary}`,
-      'Content-Disposition: form-data; name="file"; filename="image.jpg"',
-      'Content-Type: image/jpeg',
-      '',
-    ];
-    const header = Buffer.from(bodyParts.join('\r\n') + '\r\n');
-    const footer = Buffer.from(`\r\n--${boundary}--\r\n`);
-    const multipartBody = Buffer.concat([header, imageBuffer, footer]);
+    console.log(`[remove-bg] Sending ${(imageBuffer.length / 1024).toFixed(0)}KB to rembg server...`);
 
-    const response = await fetch(`${REMBG_URL}/remove-bg`, {
+    // Send raw bytes to the simple endpoint
+    const response = await fetch(`${REMBG_URL}/remove-bg-raw`, {
       method: 'POST',
       headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        'Content-Type': 'application/octet-stream',
       },
-      body: multipartBody,
+      body: imageBuffer,
     });
 
     if (!response.ok) {
