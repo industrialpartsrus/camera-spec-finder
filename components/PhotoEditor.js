@@ -273,15 +273,25 @@ export default function PhotoEditor({
         scale: productScale
       });
 
-      // Convert current canvas to base64
+      // Convert current canvas to base64, resized to max 1200px to avoid Vercel timeout
       const tempCanvas = document.createElement('canvas');
       const img = editImageRef.current;
-      tempCanvas.width = img.width;
-      tempCanvas.height = img.height;
-      const ctx = tempCanvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+      const maxDim = 1200;
+      let exportWidth = img.width;
+      let exportHeight = img.height;
 
-      const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.95);
+      if (Math.max(img.width, img.height) > maxDim) {
+        const ratio = maxDim / Math.max(img.width, img.height);
+        exportWidth = Math.round(img.width * ratio);
+        exportHeight = Math.round(img.height * ratio);
+      }
+
+      tempCanvas.width = exportWidth;
+      tempCanvas.height = exportHeight;
+      const ctx = tempCanvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, exportWidth, exportHeight);
+
+      const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
       const base64 = dataUrl.split(',')[1]; // Remove "data:image/jpeg;base64," prefix
 
       const response = await fetch('/api/photos/remove-bg', {
