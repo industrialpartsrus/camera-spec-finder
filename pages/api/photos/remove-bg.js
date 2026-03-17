@@ -66,16 +66,43 @@ export default async function handler(req, res) {
 
     console.log(`[remove-bg] Success: ${data.width}x${data.height} ${data.format}`);
 
-    // Build data URL from the base64 response
-    let dataUrl = `data:image/png;base64,${data.image_base64}`;
+    const sharp = require('sharp');
+
+    // Decode the base64 PNG from rembg server
+    let resultBuffer = Buffer.from(data.image_base64, 'base64');
+    console.log('[remove-bg] Raw result: ' + (resultBuffer.length / 1024 / 1024).toFixed(1) + 'MB');
+
+    // Resize to max 1600px (our eBay output size) to stay under
+    // Vercel's 4.5MB response limit
+    const metadata = await sharp(resultBuffer).metadata();
+    const maxDim = Math.max(metadata.width || 0, metadata.height || 0);
+
+    if (maxDim > 1600) {
+      resultBuffer = await sharp(resultBuffer)
+        .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+        .png({ compressionLevel: 8 })
+        .toBuffer();
+      console.log('[remove-bg] Resized: ' + (resultBuffer.length / 1024 / 1024).toFixed(1) + 'MB');
+    }
+
+    // If STILL over 3MB as PNG, convert to JPEG
+    if (resultBuffer.length > 3 * 1024 * 1024) {
+      resultBuffer = await sharp(resultBuffer)
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+      console.log('[remove-bg] Compressed to JPEG: ' + (resultBuffer.length / 1024 / 1024).toFixed(1) + 'MB');
+
+      return res.status(200).json({
+        success: true,
+        dataUrl: 'data:image/jpeg;base64,' + resultBuffer.toString('base64'),
+      });
+    }
 
     // If PhotoEditor requests special processing (auto-crop, scale,
     // custom background), apply it with sharp
     if (autoCrop || (scale && scale !== 1) || (background && background !== 'white' && background !== '#ffffff')) {
       try {
-        const sharp = require('sharp');
-        const resultBuffer = Buffer.from(data.image_base64, 'base64');
-
         // Determine background color
         let bgColor = { r: 255, g: 255, b: 255, alpha: 1 };
         if (background === 'transparent') {
@@ -123,17 +150,16 @@ export default async function handler(req, res) {
             .png()
             .toBuffer();
 
-          dataUrl = `data:image/png;base64,${finalBuffer.toString('base64')}`;
+          resultBuffer = finalBuffer;
         }
       } catch (sharpErr) {
         console.warn('[remove-bg] Sharp processing failed, returning raw result:', sharpErr.message);
-        // Fall through with the raw dataUrl
       }
     }
 
     return res.status(200).json({
       success: true,
-      dataUrl: dataUrl,
+      dataUrl: 'data:image/png;base64,' + resultBuffer.toString('base64'),
     });
 
   } catch (error) {
