@@ -68,26 +68,40 @@ async function searchFirebase(brand, partNumber) {
     const productsRef = collection(db, 'products');
     const matches = [];
 
-    // Query by partNumber field
-    const q1 = query(productsRef, where('partNumber', '==', partNumber));
-    const snapshot1 = await getDocs(q1);
-    snapshot1.forEach(doc => {
-      const data = doc.data();
-      if (!brand || data.brand?.toUpperCase().includes(brand)) {
-        matches.push(formatFirebaseMatch(doc.id, data));
-      }
-    });
+    // Query by partNumber field (try both original case and uppercase)
+    const seenIds = new Set();
+    const partNumberVariants = [partNumber];
+    if (partNumber !== partNumber.toUpperCase()) {
+      partNumberVariants.push(partNumber.toUpperCase());
+    }
 
-    // Query by model field if no matches yet
-    if (matches.length === 0) {
-      const q2 = query(productsRef, where('model', '==', partNumber));
-      const snapshot2 = await getDocs(q2);
-      snapshot2.forEach(doc => {
+    for (const pn of partNumberVariants) {
+      const q1 = query(productsRef, where('partNumber', '==', pn));
+      const snapshot1 = await getDocs(q1);
+      snapshot1.forEach(doc => {
+        if (seenIds.has(doc.id)) return;
         const data = doc.data();
-        if (!brand || data.brand?.toUpperCase().includes(brand)) {
+        if (!brand || verifyBrand(brand, data.brand).matches) {
+          seenIds.add(doc.id);
           matches.push(formatFirebaseMatch(doc.id, data));
         }
       });
+    }
+
+    // Query by model field if no matches yet
+    if (matches.length === 0) {
+      for (const pn of partNumberVariants) {
+        const q2 = query(productsRef, where('model', '==', pn));
+        const snapshot2 = await getDocs(q2);
+        snapshot2.forEach(doc => {
+          if (seenIds.has(doc.id)) return;
+          const data = doc.data();
+          if (!brand || verifyBrand(brand, data.brand).matches) {
+            seenIds.add(doc.id);
+            matches.push(formatFirebaseMatch(doc.id, data));
+          }
+        });
+      }
     }
 
     return matches;
