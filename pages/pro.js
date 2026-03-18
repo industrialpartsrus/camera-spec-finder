@@ -5793,16 +5793,25 @@ export default function ProListingBuilder() {
                 const updatedPhotos = [...item.photos];
                 updatedPhotos[editingPhoto.originalIdx] = newUrl;
 
-                // Update Firestore
-                await updateDoc(doc(db, 'products', editingPhoto.itemId), {
-                  photos: updatedPhotos
-                });
+                // Build Firestore update — always update photos array
+                const firestoreUpdate = { photos: updatedPhotos };
 
-                // Update local queue state so the UI reflects the new photo
-                // immediately without needing a page refresh
+                // If this photo had a nobg override, clear it so the edited
+                // version in photos[] is displayed instead of the old nobg
+                const viewName = editingPhoto.viewName;
+                const updatedPhotosNobg = { ...(item.photosNobg || {}) };
+                if (viewName && updatedPhotosNobg[viewName]) {
+                  updatedPhotosNobg[viewName] = null;
+                  firestoreUpdate[`photosNobg.${viewName}`] = null;
+                }
+
+                // Update Firestore
+                await updateDoc(doc(db, 'products', editingPhoto.itemId), firestoreUpdate);
+
+                // Update local queue state immediately so UI reflects new photo
                 setQueue(prev => prev.map(q => {
                   if (q.id !== editingPhoto.itemId) return q;
-                  return { ...q, photos: updatedPhotos };
+                  return { ...q, photos: updatedPhotos, photosNobg: updatedPhotosNobg };
                 }));
 
                 console.log(`Photo updated at index ${editingPhoto.originalIdx}: ${newUrl}`);
