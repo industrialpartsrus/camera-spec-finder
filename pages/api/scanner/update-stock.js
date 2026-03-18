@@ -130,6 +130,26 @@ export default async function handler(req, res) {
         const docRef = await addDoc(collection(db, 'products'), newProduct);
         createdFirebaseId = docRef.id;
         console.log(`Created Firebase product ${createdFirebaseId} for SKU ${sku}`);
+
+        // Create photo_queue entry so Photo Station picks this up
+        await addDoc(collection(db, 'photo_queue'), {
+          sku: sku,
+          partNumber: partNumber || '',
+          brand: brand || '',
+          condition: condition || 'used_good',
+          shelf_location: shelf || 'Not Assigned',
+          priority: 'normal',
+          status: 'pending',
+          assigned_to: null,
+          photos_required: ['left', 'right', 'center', 'nameplate'],
+          photos_completed: [],
+          queued_at: serverTimestamp(),
+          started_at: null,
+          completed_at: null,
+          completed_by: null,
+          productDocId: docRef.id,
+        });
+        console.log(`Created photo_queue entry for SKU ${sku}`);
       } else if (firebaseId) {
         // UPDATE existing Firebase document
         const productRef = doc(db, 'products', firebaseId);
