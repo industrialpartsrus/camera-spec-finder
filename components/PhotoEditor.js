@@ -1,500 +1,262 @@
 // components/PhotoEditor.js
-// Reusable photo editor with zoom, pan, rotate, brightness, and watermark preview
-// Outputs 2000x2000 square images (eBay standard) with white background
+// Photo editor: zoom, pan, rotate, brightness, background removal, watermark preview
+// Outputs 2000x2000 JPEG images for eBay listings
+//
+// COORDINATE SYSTEM:
+// - pan is stored in DISPLAY pixels (canvas is 500x500)
+// - pan is applied BEFORE rotation so dragging right always moves image right on screen
+// - zoom=1.0 means "fill the frame" (image fills canvas edge-to-edge)
+// - Export canvas is 2000x2000 — pan is scaled up by 4x (2000/500) for export
 
 import { useState, useRef, useEffect } from 'react';
 
-// Output canvas size (2000x2000 for high quality eBay images)
 const OUTPUT_SIZE = 2000;
+const DISPLAY_SIZE = 500;
+const PAN_SCALE = OUTPUT_SIZE / DISPLAY_SIZE; // 4
+
+function getFillScale(imgW, imgH, rotDeg, canvasSize) {
+  const isRotated = rotDeg === 90 || rotDeg === 270;
+  const effectiveW = isRotated ? imgH : imgW;
+  const effectiveH = isRotated ? imgW : imgH;
+  return Math.max(canvasSize / effectiveW, canvasSize / effectiveH);
+}
+
+function drawImageToCtx(ctx, img, canvasSize, rotDeg, zoomMultiplier, panPx, brightnessDelta) {
+  const tmp = document.createElement('canvas');
+  tmp.width = img.width;
+  tmp.height = img.height;
+  const tmpCtx = tmp.getContext('2d');
+  tmpCtx.drawImage(img, 0, 0);
+
+  if (brightnessDelta !== 0) {
+    const id = tmpCtx.getImageData(0, 0, img.width, img.height);
+    const d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i]   = Math.max(0, Math.min(255, d[i]   + brightnessDelta));
+      d[i+1] = Math.max(0, Math.min(255, d[i+1] + brightnessDelta));
+      d[i+2] = Math.max(0, Math.min(255, d[i+2] + brightnessDelta));
+    }
+    tmpCtx.putImageData(id, 0, 0);
+  }
+
+  const fillScale = getFillScale(img.width, img.height, rotDeg, canvasSize);
+  const totalScale = fillScale * zoomMultiplier;
+
+  ctx.save();
+  ctx.translate(canvasSize / 2 + panPx.x, canvasSize / 2 + panPx.y);
+  ctx.rotate((rotDeg * Math.PI) / 180);
+  ctx.scale(totalScale, totalScale);
+  ctx.drawImage(tmp, -img.width / 2, -img.height / 2, img.width, img.height);
+  ctx.restore();
+}
 
 export default function PhotoEditor({
-  photoUrl,
-  sku,
-  viewName,
-  onSave,
-  onCancel,
-  showWatermarkOption = true
+  photoUrl, sku, viewName, onSave, onCancel, showWatermarkOption = true
 }) {
-  // State
-  const [rotation, setRotation] = useState(0);           // 0, 90, 180, 270
-  const [brightness, setBrightness] = useState(0);       // -50 to +50
-  const [zoom, setZoom] = useState(1);                   // 0.5 to 3.0
-  const [pan, setPan] = useState({ x: 0, y: 0 });        // Offset in export pixels (OUTPUT_SIZE scale)
+  const [rotation, setRotation]     = useState(0);
+  const [brightness, setBrightness] = useState(0);
+  const [zoom, setZoom]             = useState(1);
+  const [pan, setPan]               = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart]   = useState({ x: 0, y: 0 });
   const [showWatermark, setShowWatermark] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving]     = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState(photoUrl);
   const [showBgOptions, setShowBgOptions] = useState(false);
   const [selectedBg, setSelectedBg] = useState('white');
   const [autoCropCenter, setAutoCropCenter] = useState(true);
   const [productScale, setProductScale] = useState(80);
-
-  // FIX: Use a counter instead of editImageRef.current as a useEffect dependency.
-  // React cannot reliably track ref.current changes, which caused the auto-zoom
-  // effect to fire at wrong times and randomly reset pan to {0,0} during dragging.
-  // imageLoadId increments only when a new image actually finishes loading.
   const [imageLoadId, setImageLoadId] = useState(0);
 
-  // Refs
-  const editImageRef = useRef(null);                     // Preloaded source image
-  const displayCanvasRef = useRef(null);                 // 500x500 preview canvas
-  const watermarkLogoRef = useRef(null);                 // Watermark logo PNG
-  const watermarkContactRef = useRef(null);              // Watermark contact info PNG
+  const editImageRef      = useRef(null);
+  const displayCanvasRef  = useRef(null);
+  const watermarkLogoRef  = useRef(null);
+  const watermarkContactRef = useRef(null);
 
-  // Load watermark images
   useEffect(() => {
     const logo = new Image();
     logo.src = '/watermarks/logo.png';
-    logo.onload = () => {
-      watermarkLogoRef.current = logo;
-      console.log('✅ Watermark logo loaded:', logo.width, 'x', logo.height);
-    };
-    logo.onerror = () => {
-      console.error('❌ Failed to load watermark logo from /watermarks/logo.png');
-    };
-
+    logo.onload = () => { watermarkLogoRef.current = logo; };
     const contact = new Image();
     contact.src = '/watermarks/contact-info.png';
-    contact.onload = () => {
-      watermarkContactRef.current = contact;
-      console.log('✅ Watermark contact loaded:', contact.width, 'x', contact.height);
-    };
-    contact.onerror = () => {
-      console.error('❌ Failed to load watermark contact from /watermarks/contact-info.png');
-    };
+    contact.onload = () => { watermarkContactRef.current = contact; };
   }, []);
 
-  // Preload image with CORS fallback
   useEffect(() => {
     if (!currentPhotoUrl) return;
-
     const img = new Image();
     img.crossOrigin = 'anonymous';
-
     img.onload = () => {
       editImageRef.current = img;
-      console.log('✅ Image loaded:', img.width, 'x', img.height);
-      // FIX: Increment imageLoadId to signal a new image is ready.
-      // This triggers the auto-zoom effect exactly once per image load,
-      // without interfering with user pan/zoom actions afterward.
+      console.log('Image loaded:', img.width, 'x', img.height);
       setImageLoadId(prev => prev + 1);
     };
-
     img.onerror = async () => {
-      console.log('CORS blocked, using proxy:', currentPhotoUrl);
       try {
-        const proxyRes = await fetch(
-          `/api/photos/proxy-image?url=${encodeURIComponent(currentPhotoUrl)}`
-        );
-        if (proxyRes.ok) {
-          const proxyData = await proxyRes.json();
-          if (proxyData.success && proxyData.dataUrl) {
-            img.crossOrigin = undefined;
-            img.src = proxyData.dataUrl;
-          } else {
-            throw new Error('Proxy returned invalid data');
-          }
-        } else {
-          throw new Error(`Proxy failed: ${proxyRes.status}`);
-        }
+        const r = await fetch(`/api/photos/proxy-image?url=${encodeURIComponent(currentPhotoUrl)}`);
+        if (!r.ok) throw new Error(`Proxy failed: ${r.status}`);
+        const d = await r.json();
+        if (!d.success || !d.dataUrl) throw new Error('Proxy invalid');
+        img.crossOrigin = undefined;
+        img.src = d.dataUrl;
       } catch (err) {
-        console.error('Proxy fallback failed:', err);
         alert('Failed to load image for editing.');
         onCancel();
       }
     };
-
     img.src = currentPhotoUrl;
   }, [currentPhotoUrl, onCancel]);
 
-  // Auto-zoom to fill frame when a new image loads
-  // FIX: Depends on imageLoadId (not editImageRef.current) so it only fires
-  // on actual image load, never during user pan/zoom interactions.
   useEffect(() => {
     if (!editImageRef.current) return;
-
-    const img = editImageRef.current;
-    const isRotated = Math.abs(rotation) % 180 !== 0;
-    const imgW = isRotated ? img.height : img.width;
-    const imgH = isRotated ? img.width : img.height;
-
-    const fitScale = Math.min(OUTPUT_SIZE / imgW, OUTPUT_SIZE / imgH);
-    const fillScale = Math.max(OUTPUT_SIZE / imgW, OUTPUT_SIZE / imgH);
-
-    // Default zoom: 85% toward fill (shows product larger without excessive cropping)
-    const autoZoom = Math.min((fillScale / fitScale) * 0.85, 2.0);
-
-    setZoom(autoZoom);
+    setZoom(1);
     setPan({ x: 0, y: 0 });
-  }, [imageLoadId]); // ← Only fires when a new image loads, not on every re-render
+  }, [imageLoadId]);
 
-  // Render display canvas (500x500 preview)
   useEffect(() => {
     if (!editImageRef.current || !displayCanvasRef.current) return;
-
     const canvas = displayCanvasRef.current;
     const ctx = canvas.getContext('2d');
-    const img = editImageRef.current;
-
-    const displaySize = 500;
-    canvas.width = displaySize;
-    canvas.height = displaySize;
-
-    // White background
+    canvas.width = DISPLAY_SIZE;
+    canvas.height = DISPLAY_SIZE;
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, displaySize, displaySize);
-
-    ctx.save();
-
-    // Move to center for rotation
-    ctx.translate(displaySize / 2, displaySize / 2);
-    ctx.rotate((rotation * Math.PI) / 180);
-
-    // Apply zoom and pan (scale pan from OUTPUT_SIZE to displaySize)
-    const scaledPanX = pan.x * (displaySize / OUTPUT_SIZE);
-    const scaledPanY = pan.y * (displaySize / OUTPUT_SIZE);
-    ctx.translate(scaledPanX, scaledPanY);
-    ctx.scale(zoom, zoom);
-
-    // Apply brightness via temp canvas
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = img.width;
-    tempCanvas.height = img.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(img, 0, 0);
-
-    if (brightness !== 0) {
-      const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
-      const data = imageData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        data[i] = Math.max(0, Math.min(255, data[i] + brightness));       // R
-        data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + brightness)); // G
-        data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + brightness)); // B
-      }
-      tempCtx.putImageData(imageData, 0, 0);
-    }
-
-    // Determine drawing dimensions (rotated images swap width/height)
-    const isRotated = rotation === 90 || rotation === 270;
-    const imgWidth = isRotated ? img.height : img.width;
-    const imgHeight = isRotated ? img.width : img.height;
-
-    // Scale to fill canvas (crop to square)
-    const scale = Math.max(displaySize / imgWidth, displaySize / imgHeight);
-    const drawWidth = imgWidth * scale;
-    const drawHeight = imgHeight * scale;
-
-    ctx.drawImage(
-      tempCanvas,
-      -drawWidth / 2,
-      -drawHeight / 2,
-      drawWidth,
-      drawHeight
-    );
-
-    ctx.restore(); // ← Back to screen space — watermark draws below this, always fixed
-
-    // Draw watermark preview if enabled
-    // NOTE: Watermark is drawn in screen space (after ctx.restore) so its position
-    // is ALWAYS fixed at top-left of the canvas, regardless of pan/zoom/rotation.
-    // This accurately reflects where it will appear on the final exported image.
-    if (showWatermark) {
-      if (watermarkLogoRef.current || watermarkContactRef.current) {
-        drawWatermarkPreview(ctx, displaySize);
-      } else {
-        console.warn('⚠️ Watermark enabled but images not loaded');
-      }
-    }
-
+    ctx.fillRect(0, 0, DISPLAY_SIZE, DISPLAY_SIZE);
+    drawImageToCtx(ctx, editImageRef.current, DISPLAY_SIZE, rotation, zoom, pan, brightness);
+    if (showWatermark) drawWatermarkPreview(ctx, DISPLAY_SIZE);
   }, [rotation, brightness, zoom, pan, showWatermark, imageLoadId]);
 
-  // Draw watermark preview (semi-transparent, NOT saved to export)
-  // FIX: Logo size increased from 22% → 32% of canvas width for better visibility
-  function drawWatermarkPreview(ctx, canvasSize) {
+  function drawWatermarkPreview(ctx, size) {
     ctx.save();
-
-    // LOGO: top-left corner, 32% width, 20px padding from edges
     if (watermarkLogoRef.current) {
       const logo = watermarkLogoRef.current;
-      const logoWidth = Math.round(canvasSize * 0.32);  // FIX: was 0.22
-      const logoHeight = Math.round(logoWidth * (logo.height / logo.width));
-
-      ctx.globalAlpha = 0.6; // Slightly more opaque so it's easier to preview
-      ctx.drawImage(logo, 20, 20, logoWidth, logoHeight);
+      const w = Math.round(size * 0.32);
+      const h = Math.round(w * (logo.height / logo.width));
+      ctx.globalAlpha = 0.6;
+      ctx.drawImage(logo, 20, 20, w, h);
     }
-
-    // CONTACT INFO: pre-rendered PNG at full canvas size
     if (watermarkContactRef.current) {
       ctx.globalAlpha = 0.6;
-      ctx.drawImage(watermarkContactRef.current, 0, 0, canvasSize, canvasSize);
+      ctx.drawImage(watermarkContactRef.current, 0, 0, size, size);
     }
-
     ctx.restore();
   }
 
-  // Mouse event handlers for panning
   const handleMouseDown = (e) => {
     if (!displayCanvasRef.current) return;
     setIsDragging(true);
-    const rect = displayCanvasRef.current.getBoundingClientRect();
-    setDragStart({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
+    const r = displayCanvasRef.current.getBoundingClientRect();
+    setDragStart({ x: e.clientX - r.left, y: e.clientY - r.top });
   };
-
   const handleMouseMove = (e) => {
     if (!isDragging || !displayCanvasRef.current) return;
-
-    const rect = displayCanvasRef.current.getBoundingClientRect();
-    const currentX = e.clientX - rect.left;
-    const currentY = e.clientY - rect.top;
-
-    const deltaX = currentX - dragStart.x;
-    const deltaY = currentY - dragStart.y;
-
-    // Scale delta from display size (500) to export size (OUTPUT_SIZE)
-    const scale = OUTPUT_SIZE / 500;
-    setPan(prev => ({
-      x: prev.x + deltaX * scale,
-      y: prev.y + deltaY * scale
-    }));
-
-    setDragStart({ x: currentX, y: currentY });
+    const r = displayCanvasRef.current.getBoundingClientRect();
+    const cx = e.clientX - r.left;
+    const cy = e.clientY - r.top;
+    setPan(prev => ({ x: prev.x + cx - dragStart.x, y: prev.y + cy - dragStart.y }));
+    setDragStart({ x: cx, y: cy });
   };
+  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseLeave = () => setIsDragging(false);
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  // Touch event handlers for mobile panning
   const handleTouchStart = (e) => {
     if (e.touches.length !== 1 || !displayCanvasRef.current) return;
-    const touch = e.touches[0];
-    const rect = displayCanvasRef.current.getBoundingClientRect();
+    e.preventDefault();
+    const t = e.touches[0];
+    const r = displayCanvasRef.current.getBoundingClientRect();
     setIsDragging(true);
-    setDragStart({
-      x: touch.clientX - rect.left,
-      y: touch.clientY - rect.top
-    });
+    setDragStart({ x: t.clientX - r.left, y: t.clientY - r.top });
   };
-
   const handleTouchMove = (e) => {
     if (!isDragging || e.touches.length !== 1 || !displayCanvasRef.current) return;
     e.preventDefault();
-    const touch = e.touches[0];
-    const rect = displayCanvasRef.current.getBoundingClientRect();
-    const currentX = touch.clientX - rect.left;
-    const currentY = touch.clientY - rect.top;
-
-    const deltaX = currentX - dragStart.x;
-    const deltaY = currentY - dragStart.y;
-
-    const scale = OUTPUT_SIZE / 500;
-    setPan(prev => ({
-      x: prev.x + deltaX * scale,
-      y: prev.y + deltaY * scale
-    }));
-
-    setDragStart({ x: currentX, y: currentY });
+    const t = e.touches[0];
+    const r = displayCanvasRef.current.getBoundingClientRect();
+    const cx = t.clientX - r.left;
+    const cy = t.clientY - r.top;
+    setPan(prev => ({ x: prev.x + cx - dragStart.x, y: prev.y + cy - dragStart.y }));
+    setDragStart({ x: cx, y: cy });
   };
+  const handleTouchEnd = () => setIsDragging(false);
 
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-  };
-
-  // Remove background
   const handleRemoveBg = async () => {
     if (!editImageRef.current) return;
     setIsRemovingBg(true);
     setShowBgOptions(false);
-
     try {
-      console.log('Removing background with options:', {
-        background: selectedBg,
-        autoCrop: autoCropCenter,
-        scale: productScale
-      });
-
-      // Convert current canvas to base64
-      const tempCanvas = document.createElement('canvas');
       const img = editImageRef.current;
-      tempCanvas.width = img.width;
-      tempCanvas.height = img.height;
-      const ctx = tempCanvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-
-      const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.95);
-      const base64 = dataUrl.split(',')[1];
-
-      const response = await fetch('/api/photos/remove-bg', {
+      const tmp = document.createElement('canvas');
+      tmp.width = img.width; tmp.height = img.height;
+      tmp.getContext('2d').drawImage(img, 0, 0);
+      const base64 = tmp.toDataURL('image/jpeg', 0.95).split(',')[1];
+      const res = await fetch('/api/photos/remove-bg', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: base64,
-          view: viewName,
-          background: selectedBg,
-          autoCrop: autoCropCenter,
-          scale: productScale
-        })
+        body: JSON.stringify({ imageBase64: base64, view: viewName, background: selectedBg, autoCrop: autoCropCenter, scale: productScale })
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Background removal failed');
-      }
-
-      const data = await response.json();
-      console.log('✅ Background removed successfully');
-
-      // Update the image — this triggers a new load cycle which resets zoom/pan cleanly
+      if (!res.ok) throw new Error(`Background removal failed: ${res.status}`);
+      const data = await res.json();
       setCurrentPhotoUrl(data.dataUrl);
-
-      // Reset transformations for new image
-      setRotation(0);
-      setBrightness(0);
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
-
     } catch (err) {
-      console.error('Remove bg error:', err);
       alert('Background removal failed: ' + err.message);
     } finally {
       setIsRemovingBg(false);
     }
   };
 
-  // Sharpen image after scaling to recover quality
-  const sharpenImage = (ctx, width, height, amount = 0.2) => {
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-    const copy = new Uint8ClampedArray(data);
-
-    const w = width;
-    for (let y = 1; y < height - 1; y++) {
+  function sharpenImage(ctx, w, h, amount = 0.2) {
+    const id = ctx.getImageData(0, 0, w, h);
+    const d = id.data;
+    const copy = new Uint8ClampedArray(d);
+    for (let y = 1; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
         const i = (y * w + x) * 4;
         for (let c = 0; c < 3; c++) {
-          const center = copy[i + c] * (1 + 4 * amount);
-          const neighbors = (
-            copy[((y - 1) * w + x) * 4 + c] +
-            copy[((y + 1) * w + x) * 4 + c] +
-            copy[(y * w + x - 1) * 4 + c] +
-            copy[(y * w + x + 1) * 4 + c]
-          ) * amount;
-          data[i + c] = Math.min(255, Math.max(0, center - neighbors));
+          const center = copy[i+c] * (1 + 4 * amount);
+          const nbrs = (copy[((y-1)*w+x)*4+c] + copy[((y+1)*w+x)*4+c] + copy[(y*w+x-1)*4+c] + copy[(y*w+x+1)*4+c]) * amount;
+          d[i+c] = Math.min(255, Math.max(0, center - nbrs));
         }
       }
     }
-    ctx.putImageData(imageData, 0, 0);
-  };
+    ctx.putImageData(id, 0, 0);
+  }
 
-  // Save edited photo (OUTPUT_SIZE x OUTPUT_SIZE, NO watermark baked in)
   const handleSave = async () => {
     if (!editImageRef.current) return;
     setIsSaving(true);
-
     try {
       const img = editImageRef.current;
-
       const exportCanvas = document.createElement('canvas');
       exportCanvas.width = OUTPUT_SIZE;
       exportCanvas.height = OUTPUT_SIZE;
       const ctx = exportCanvas.getContext('2d');
-
-      // White background
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
-
-      ctx.save();
-      ctx.translate(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2);
-      ctx.rotate((rotation * Math.PI) / 180);
-      ctx.translate(pan.x, pan.y);
-      ctx.scale(zoom, zoom);
-
-      // Apply brightness
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = img.width;
-      tempCanvas.height = img.height;
-      const tempCtx = tempCanvas.getContext('2d');
-      tempCtx.drawImage(img, 0, 0);
-
-      if (brightness !== 0) {
-        const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
-        const data = imageData.data;
-        for (let i = 0; i < data.length; i += 4) {
-          data[i] = Math.max(0, Math.min(255, data[i] + brightness));
-          data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + brightness));
-          data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + brightness));
-        }
-        tempCtx.putImageData(imageData, 0, 0);
-      }
-
-      const isRotated = rotation === 90 || rotation === 270;
-      const imgWidth = isRotated ? img.height : img.width;
-      const imgHeight = isRotated ? img.width : img.height;
-      const scale = Math.max(OUTPUT_SIZE / imgWidth, OUTPUT_SIZE / imgHeight);
-      const drawWidth = imgWidth * scale;
-      const drawHeight = imgHeight * scale;
-
-      ctx.drawImage(tempCanvas, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-      ctx.restore();
-
-      // Apply subtle sharpening to recover scaling quality
+      const exportPan = { x: pan.x * PAN_SCALE, y: pan.y * PAN_SCALE };
+      drawImageToCtx(ctx, img, OUTPUT_SIZE, rotation, zoom, exportPan, brightness);
       sharpenImage(ctx, OUTPUT_SIZE, OUTPUT_SIZE, 0.2);
-
-      // NOTE: Watermark NOT drawn on export canvas — applied server-side by watermark API
-
-      // Always export as JPEG — canvas already has white background applied,
-      // so PNG transparency is irrelevant and lossless PNG causes 413 errors (15MB+)
-      const mimeType = 'image/jpeg';
-      const quality = 0.92;
-
-      console.log(`Exporting as JPEG quality ${quality} (2000x2000 = ~1-3MB)`);
-
-      const blob = await new Promise(resolve => {
-        exportCanvas.toBlob(resolve, mimeType, quality);
-      });
-
-      const base64 = await new Promise((resolve) => {
+      const blob = await new Promise(r => exportCanvas.toBlob(r, 'image/jpeg', 0.92));
+      const base64 = await new Promise(r => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onloadend = () => r(reader.result.split(',')[1]);
         reader.readAsDataURL(blob);
       });
-
-      console.log(`Uploading edited photo: ${sku} / ${viewName}`);
-
-      const response = await fetch('/api/photos/upload-simple', {
+      const res = await fetch('/api/photos/upload-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sku: sku,
-          view: `${viewName}_edited`,
-          imageData: base64,
-          contentType: 'image/jpeg'
-        })
+        body: JSON.stringify({ sku, view: `${viewName}_edited`, imageData: base64, contentType: 'image/jpeg' })
       });
-
-      if (!response.ok) {
-        // Handle non-JSON error responses (e.g. 413 Request Entity Too Large from Vercel)
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Upload failed (${response.status})`);
-        } else {
-          throw new Error(`Upload failed: ${response.status} ${response.statusText} — file may be too large`);
+      if (!res.ok) {
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const e = await res.json();
+          throw new Error(e.error || `Upload failed (${res.status})`);
         }
+        throw new Error(`Upload failed: ${res.status} ${res.statusText}`);
       }
-
-      const data = await response.json();
-      console.log(`Edited photo uploaded: ${data.url}`);
-
+      const data = await res.json();
       onSave(data.url);
-
     } catch (error) {
-      console.error('Save photo error:', error);
       alert('Failed to save photo: ' + error.message);
     } finally {
       setIsSaving(false);
@@ -505,164 +267,88 @@ export default function PhotoEditor({
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] overflow-y-auto">
 
-        {/* Header */}
         <div className="px-6 py-4 border-b flex items-center justify-between">
-          <h2 className="text-xl font-bold">Edit Photo - {viewName}</h2>
-          <button
-            onClick={onCancel}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
-          >
-            ×
-          </button>
+          <h2 className="text-xl font-bold">Edit Photo — {viewName}</h2>
+          <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
         </div>
 
-        {/* Canvas Preview */}
         <div className="p-6 flex justify-center bg-gray-50">
           <canvas
             ref={displayCanvasRef}
-            width={500}
-            height={500}
+            width={DISPLAY_SIZE}
+            height={DISPLAY_SIZE}
             className="border-2 border-gray-300 rounded-lg shadow-lg"
             style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           />
         </div>
 
-        {/* Controls — FIX: Brightness moved to top so it's visible alongside the canvas */}
         <div className="px-6 py-4 space-y-4">
 
-          {/* === BRIGHTNESS — moved to top so user can adjust and see result without scrolling === */}
           <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
             <label className="block text-sm font-semibold mb-2">
               ☀️ Brightness: {brightness > 0 ? '+' : ''}{brightness}
             </label>
-            <input
-              type="range"
-              min="-50"
-              max="50"
-              value={brightness}
-              onChange={(e) => setBrightness(parseInt(e.target.value))}
-              className="w-full"
-            />
+            <input type="range" min="-50" max="50" value={brightness}
+              onChange={e => setBrightness(parseInt(e.target.value))} className="w-full" />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Darker</span>
-              <span>0 (no change)</span>
-              <span>Brighter</span>
+              <span>Darker</span><span>0</span><span>Brighter</span>
             </div>
           </div>
 
-          {/* === ZOOM / CROP === */}
           <div>
             <label className="block text-sm font-semibold mb-2">
-              🔍 Crop (Zoom): {zoom.toFixed(1)}x
+              🔍 Zoom: {zoom.toFixed(2)}x
+              <span className="font-normal text-gray-500 text-xs ml-2">(1.00 = fill frame · drag canvas to pan)</span>
             </label>
-            <input
-              type="range"
-              min="0.5"
-              max="3"
-              step="0.1"
-              value={zoom}
-              onChange={(e) => setZoom(parseFloat(e.target.value))}
-              className="w-full"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Drag on image to pan. Output: {OUTPUT_SIZE}×{OUTPUT_SIZE} square.
-            </p>
-            {/* Zoom presets */}
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => { setZoom(1.0); setPan({ x: 0, y: 0 }); }}
-                className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
-              >
-                Fit
-              </button>
-              <button
-                onClick={() => {
-                  if (editImageRef.current) {
-                    const img = editImageRef.current;
-                    const isRotated = Math.abs(rotation) % 180 !== 0;
-                    const imgW = isRotated ? img.height : img.width;
-                    const imgH = isRotated ? img.width : img.height;
-                    const fitScale = Math.min(OUTPUT_SIZE / imgW, OUTPUT_SIZE / imgH);
-                    const fillScale = Math.max(OUTPUT_SIZE / imgW, OUTPUT_SIZE / imgH);
-                    setZoom(fillScale / fitScale);
-                    setPan({ x: 0, y: 0 });
-                  }
-                }}
-                className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
-              >
-                Fill
-              </button>
-              <button
-                onClick={() => { setZoom(1.5); setPan({ x: 0, y: 0 }); }}
-                className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
-              >
-                1.5x
-              </button>
-              <button
-                onClick={() => { setZoom(2.0); setPan({ x: 0, y: 0 }); }}
-                className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
-              >
-                2x
-              </button>
-              <button
-                onClick={() => setPan({ x: 0, y: 0 })}
-                className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 font-medium"
-              >
-                Center
-              </button>
+            <input type="range" min="0.5" max="3" step="0.05" value={zoom}
+              onChange={e => setZoom(parseFloat(e.target.value))} className="w-full" />
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {[
+                { label: 'Reset', fn: () => { setZoom(1); setPan({ x: 0, y: 0 }); } },
+                { label: 'Center', fn: () => setPan({ x: 0, y: 0 }) },
+                { label: '1.5x', fn: () => setZoom(1.5) },
+                { label: '2x',   fn: () => setZoom(2) },
+                { label: '3x',   fn: () => setZoom(3) },
+              ].map(b => (
+                <button key={b.label} onClick={b.fn}
+                  className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium">
+                  {b.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* === ROTATE === */}
           <div>
-            <label className="block text-sm font-semibold mb-2">🔄 Rotate</label>
+            <label className="block text-sm font-semibold mb-2">🔄 Rotate <span className="font-normal text-gray-500 text-xs">({rotation}°)</span></label>
             <div className="flex gap-2">
-              <button
-                onClick={() => setRotation((rotation - 90 + 360) % 360)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                ↺ 90° Left
-              </button>
-              <button
-                onClick={() => setRotation((rotation + 90) % 360)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                ↻ 90° Right
-              </button>
+              <button onClick={() => setRotation(r => (r - 90 + 360) % 360)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">↺ 90° Left</button>
+              <button onClick={() => setRotation(r => (r + 90) % 360)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">↻ 90° Right</button>
               {rotation !== 0 && (
-                <button
-                  onClick={() => setRotation(0)}
-                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                >
-                  Reset
-                </button>
+                <button onClick={() => setRotation(0)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Reset</button>
               )}
             </div>
           </div>
 
-          {/* === REMOVE BACKGROUND === */}
           <div>
             <label className="block text-sm font-semibold mb-2">🖼️ Background</label>
-
             {!showBgOptions ? (
-              <button
-                onClick={() => setShowBgOptions(true)}
-                disabled={isRemovingBg}
-                className="w-full px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
+              <button onClick={() => setShowBgOptions(true)} disabled={isRemovingBg}
+                className="w-full px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 disabled:opacity-50 font-medium">
                 {isRemovingBg ? '⏳ Processing...' : '🖼️ Remove Background'}
               </button>
             ) : (
               <div className="border-2 border-green-300 rounded-lg p-4 bg-green-50">
                 <h4 className="font-medium mb-3 text-sm">Background Options</h4>
-
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   {[
                     { id: 'white', label: 'White', preview: '#ffffff' },
@@ -672,110 +358,59 @@ export default function PhotoEditor({
                     { id: 'studio', label: 'Studio', preview: '/bg-templates/studio-gradient.jpg' },
                     { id: 'industrial', label: 'Industrial', preview: '/bg-templates/industrial.jpg' },
                   ].map(bg => (
-                    <button
-                      key={bg.id}
-                      type="button"
-                      onClick={() => setSelectedBg(bg.id)}
-                      className={`p-2 rounded border-2 text-center text-xs transition ${
-                        selectedBg === bg.id
-                          ? 'border-green-500 bg-green-100 shadow-md'
-                          : 'border-gray-200 hover:border-gray-400 bg-white'
-                      }`}
-                    >
-                      <div
-                        className="w-full h-12 rounded mb-1 border border-gray-300"
-                        style={{
-                          background: bg.preview.startsWith('#')
-                            ? bg.preview
-                            : bg.preview === 'checkerboard'
-                            ? 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 16px 16px'
-                            : `url(${bg.preview}) center/cover`
-                        }}
-                      />
+                    <button key={bg.id} type="button" onClick={() => setSelectedBg(bg.id)}
+                      className={`p-2 rounded border-2 text-center text-xs transition ${selectedBg === bg.id ? 'border-green-500 bg-green-100 shadow-md' : 'border-gray-200 hover:border-gray-400 bg-white'}`}>
+                      <div className="w-full h-12 rounded mb-1 border border-gray-300" style={{
+                        background: bg.preview.startsWith('#') ? bg.preview
+                          : bg.preview === 'checkerboard' ? 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 16px 16px'
+                          : `url(${bg.preview}) center/cover`
+                      }} />
                       <span className="font-medium">{bg.label}</span>
                     </button>
                   ))}
                 </div>
-
                 <label className="flex items-center gap-2 mb-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoCropCenter}
-                    onChange={(e) => setAutoCropCenter(e.target.checked)}
-                    className="w-4 h-4 rounded"
-                  />
+                  <input type="checkbox" checked={autoCropCenter}
+                    onChange={e => setAutoCropCenter(e.target.checked)} className="w-4 h-4 rounded" />
                   <span className="text-sm font-medium">Auto-crop & center product</span>
                 </label>
-
                 {autoCropCenter && (
                   <div className="mb-4">
-                    <label className="text-sm text-gray-600 font-medium mb-1 block">
-                      Product scale: {productScale}%
-                    </label>
-                    <input
-                      type="range"
-                      min="50"
-                      max="95"
-                      step="5"
-                      value={productScale}
-                      onChange={(e) => setProductScale(parseInt(e.target.value))}
-                      className="w-full"
-                    />
+                    <label className="text-sm text-gray-600 font-medium mb-1 block">Product scale: {productScale}%</label>
+                    <input type="range" min="50" max="95" step="5" value={productScale}
+                      onChange={e => setProductScale(parseInt(e.target.value))} className="w-full" />
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>More whitespace</span>
-                      <span>Fills frame</span>
+                      <span>More whitespace</span><span>Fills frame</span>
                     </div>
                   </div>
                 )}
-
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleRemoveBg}
-                    disabled={isRemovingBg}
-                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                  >
+                  <button onClick={handleRemoveBg} disabled={isRemovingBg}
+                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium">
                     {isRemovingBg ? '⏳ Processing...' : '🖼️ Remove Background'}
                   </button>
-                  <button
-                    onClick={() => setShowBgOptions(false)}
-                    disabled={isRemovingBg}
-                    className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-medium"
-                  >
+                  <button onClick={() => setShowBgOptions(false)} disabled={isRemovingBg}
+                    className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-medium">
                     Cancel
                   </button>
                 </div>
+                <p className="text-xs text-gray-500 mt-2">💡 Silver/white parts work best against a blue or gray backdrop.</p>
               </div>
             )}
-
-            <p className="text-xs text-gray-500 mt-2">
-              {!showBgOptions
-                ? 'Tip: For silver/white parts, use a blue or gray backdrop for best results.'
-                : autoCropCenter
-                ? `Product will be centered and scaled to ${productScale}% of the frame.`
-                : 'Background removed without cropping or centering.'}
-            </p>
           </div>
 
-          {/* === WATERMARK PREVIEW === */}
           {showWatermarkOption && (
             <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="watermark-preview"
-                  checked={showWatermark}
-                  onChange={(e) => setShowWatermark(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <label htmlFor="watermark-preview" className="text-sm font-semibold text-blue-900">
+                <input type="checkbox" id="wm-preview" checked={showWatermark}
+                  onChange={e => setShowWatermark(e.target.checked)} className="w-4 h-4" />
+                <label htmlFor="wm-preview" className="text-sm font-semibold text-blue-900">
                   Preview Watermark (not saved to image)
                 </label>
               </div>
               {showWatermark && (
                 <p className="text-xs text-blue-700 mt-2">
-                  ℹ️ The watermark is always placed at the <strong>top-left corner</strong> of the final exported image.
-                  If you pan the product away from the top-left, the watermark will appear over empty space — this is
-                  correct. The watermark position does not move with the product.
+                  ℹ️ Watermark is always at the <strong>top-left corner</strong> of the exported image, regardless of pan position.
                 </p>
               )}
             </div>
@@ -783,20 +418,13 @@ export default function PhotoEditor({
 
         </div>
 
-        {/* Actions */}
         <div className="px-6 py-4 border-t flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            disabled={isSaving}
-            className="px-6 py-2 border rounded hover:bg-gray-100 disabled:opacity-50"
-          >
+          <button onClick={onCancel} disabled={isSaving}
+            className="px-6 py-2 border rounded hover:bg-gray-100 disabled:opacity-50">
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-          >
+          <button onClick={handleSave} disabled={isSaving}
+            className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
             {isSaving ? 'Saving...' : 'Save Photo'}
           </button>
         </div>
