@@ -25,11 +25,17 @@ export default function PhotoEditor({
   const [showWatermark, setShowWatermark] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
-  const [currentPhotoUrl, setCurrentPhotoUrl] = useState(photoUrl); // Track current image URL (changes after bg removal)
-  const [showBgOptions, setShowBgOptions] = useState(false); // Show background removal options panel
+  const [currentPhotoUrl, setCurrentPhotoUrl] = useState(photoUrl);
+  const [showBgOptions, setShowBgOptions] = useState(false);
   const [selectedBg, setSelectedBg] = useState('white');
   const [autoCropCenter, setAutoCropCenter] = useState(true);
   const [productScale, setProductScale] = useState(80);
+
+  // FIX: Use a counter instead of editImageRef.current as a useEffect dependency.
+  // React cannot reliably track ref.current changes, which caused the auto-zoom
+  // effect to fire at wrong times and randomly reset pan to {0,0} during dragging.
+  // imageLoadId increments only when a new image actually finishes loading.
+  const [imageLoadId, setImageLoadId] = useState(0);
 
   // Refs
   const editImageRef = useRef(null);                     // Preloaded source image
@@ -70,8 +76,10 @@ export default function PhotoEditor({
     img.onload = () => {
       editImageRef.current = img;
       console.log('✅ Image loaded:', img.width, 'x', img.height);
-      // Trigger render by setting a dummy state (canvas will render in next effect)
-      setPan(prev => ({ ...prev }));
+      // FIX: Increment imageLoadId to signal a new image is ready.
+      // This triggers the auto-zoom effect exactly once per image load,
+      // without interfering with user pan/zoom actions afterward.
+      setImageLoadId(prev => prev + 1);
     };
 
     img.onerror = async () => {
@@ -101,7 +109,9 @@ export default function PhotoEditor({
     img.src = currentPhotoUrl;
   }, [currentPhotoUrl, onCancel]);
 
-  // Auto-zoom to fill frame when image loads
+  // Auto-zoom to fill frame when a new image loads
+  // FIX: Depends on imageLoadId (not editImageRef.current) so it only fires
+  // on actual image load, never during user pan/zoom interactions.
   useEffect(() => {
     if (!editImageRef.current) return;
 
@@ -110,7 +120,6 @@ export default function PhotoEditor({
     const imgW = isRotated ? img.height : img.width;
     const imgH = isRotated ? img.width : img.height;
 
-    // Calculate fit and fill scales
     const fitScale = Math.min(OUTPUT_SIZE / imgW, OUTPUT_SIZE / imgH);
     const fillScale = Math.max(OUTPUT_SIZE / imgW, OUTPUT_SIZE / imgH);
 
@@ -118,8 +127,8 @@ export default function PhotoEditor({
     const autoZoom = Math.min((fillScale / fitScale) * 0.85, 2.0);
 
     setZoom(autoZoom);
-    setPan({ x: 0, y: 0 }); // Reset pan when auto-zooming
-  }, [editImageRef.current, rotation]);
+    setPan({ x: 0, y: 0 });
+  }, [imageLoadId]); // ← Only fires when a new image loads, not on every re-render
 
   // Render display canvas (500x500 preview)
   useEffect(() => {
@@ -185,40 +194,40 @@ export default function PhotoEditor({
       drawHeight
     );
 
-    ctx.restore();
+    ctx.restore(); // ← Back to screen space — watermark draws below this, always fixed
 
     // Draw watermark preview if enabled
+    // NOTE: Watermark is drawn in screen space (after ctx.restore) so its position
+    // is ALWAYS fixed at top-left of the canvas, regardless of pan/zoom/rotation.
+    // This accurately reflects where it will appear on the final exported image.
     if (showWatermark) {
       if (watermarkLogoRef.current || watermarkContactRef.current) {
-        console.log('🎨 Drawing watermark preview');
         drawWatermarkPreview(ctx, displaySize);
       } else {
         console.warn('⚠️ Watermark enabled but images not loaded');
       }
     }
 
-  }, [rotation, brightness, zoom, pan, showWatermark]);
+  }, [rotation, brightness, zoom, pan, showWatermark, imageLoadId]);
 
-  // Draw watermark preview (semi-transparent, NOT saved)
-  // Matches server-side watermark.js positioning
+  // Draw watermark preview (semi-transparent, NOT saved to export)
+  // FIX: Logo size increased from 22% → 32% of canvas width for better visibility
   function drawWatermarkPreview(ctx, canvasSize) {
     ctx.save();
 
-    // LOGO: top-left corner, 22% width, 20px padding from edges
+    // LOGO: top-left corner, 32% width, 20px padding from edges
     if (watermarkLogoRef.current) {
       const logo = watermarkLogoRef.current;
-      const logoWidth = Math.round(canvasSize * 0.22);
+      const logoWidth = Math.round(canvasSize * 0.32);  // FIX: was 0.22
       const logoHeight = Math.round(logoWidth * (logo.height / logo.width));
 
-      ctx.globalAlpha = 0.5; // 50% opacity for preview (server uses 85%)
+      ctx.globalAlpha = 0.6; // Slightly more opaque so it's easier to preview
       ctx.drawImage(logo, 20, 20, logoWidth, logoHeight);
     }
 
     // CONTACT INFO: pre-rendered PNG at full canvas size
-    // The PNG itself has text positioned at the bottom
-    // Drawing at full size ensures correct positioning
     if (watermarkContactRef.current) {
-      ctx.globalAlpha = 0.5; // 50% opacity for preview
+      ctx.globalAlpha = 0.6;
       ctx.drawImage(watermarkContactRef.current, 0, 0, canvasSize, canvasSize);
     }
 
@@ -246,8 +255,8 @@ export default function PhotoEditor({
     const deltaX = currentX - dragStart.x;
     const deltaY = currentY - dragStart.y;
 
-    // Scale delta from display size (500) to export size (1600)
-    const scale = 1600 / 500;
+    // Scale delta from display size (500) to export size (OUTPUT_SIZE)
+    const scale = OUTPUT_SIZE / 500;
     setPan(prev => ({
       x: prev.x + deltaX * scale,
       y: prev.y + deltaY * scale
@@ -260,11 +269,47 @@ export default function PhotoEditor({
     setIsDragging(false);
   };
 
+  // Touch event handlers for mobile panning
+  const handleTouchStart = (e) => {
+    if (e.touches.length !== 1 || !displayCanvasRef.current) return;
+    const touch = e.touches[0];
+    const rect = displayCanvasRef.current.getBoundingClientRect();
+    setIsDragging(true);
+    setDragStart({
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    });
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || e.touches.length !== 1 || !displayCanvasRef.current) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = displayCanvasRef.current.getBoundingClientRect();
+    const currentX = touch.clientX - rect.left;
+    const currentY = touch.clientY - rect.top;
+
+    const deltaX = currentX - dragStart.x;
+    const deltaY = currentY - dragStart.y;
+
+    const scale = OUTPUT_SIZE / 500;
+    setPan(prev => ({
+      x: prev.x + deltaX * scale,
+      y: prev.y + deltaY * scale
+    }));
+
+    setDragStart({ x: currentX, y: currentY });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
   // Remove background
   const handleRemoveBg = async () => {
     if (!editImageRef.current) return;
     setIsRemovingBg(true);
-    setShowBgOptions(false); // Hide options panel
+    setShowBgOptions(false);
 
     try {
       console.log('Removing background with options:', {
@@ -273,26 +318,16 @@ export default function PhotoEditor({
         scale: productScale
       });
 
-      // Convert current canvas to base64, resized to max 1200px to avoid Vercel timeout
+      // Convert current canvas to base64
       const tempCanvas = document.createElement('canvas');
       const img = editImageRef.current;
-      const maxDim = 1200;
-      let exportWidth = img.width;
-      let exportHeight = img.height;
-
-      if (Math.max(img.width, img.height) > maxDim) {
-        const ratio = maxDim / Math.max(img.width, img.height);
-        exportWidth = Math.round(img.width * ratio);
-        exportHeight = Math.round(img.height * ratio);
-      }
-
-      tempCanvas.width = exportWidth;
-      tempCanvas.height = exportHeight;
+      tempCanvas.width = img.width;
+      tempCanvas.height = img.height;
       const ctx = tempCanvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, exportWidth, exportHeight);
+      ctx.drawImage(img, 0, 0);
 
-      const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
-      const base64 = dataUrl.split(',')[1]; // Remove "data:image/jpeg;base64," prefix
+      const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.95);
+      const base64 = dataUrl.split(',')[1];
 
       const response = await fetch('/api/photos/remove-bg', {
         method: 'POST',
@@ -314,10 +349,10 @@ export default function PhotoEditor({
       const data = await response.json();
       console.log('✅ Background removed successfully');
 
-      // Update the image being edited to the nobg version (data URL)
+      // Update the image — this triggers a new load cycle which resets zoom/pan cleanly
       setCurrentPhotoUrl(data.dataUrl);
 
-      // Reset transformations since we're loading a new image
+      // Reset transformations for new image
       setRotation(0);
       setBrightness(0);
       setZoom(1);
@@ -342,7 +377,6 @@ export default function PhotoEditor({
       for (let x = 1; x < w - 1; x++) {
         const i = (y * w + x) * 4;
         for (let c = 0; c < 3; c++) {
-          // Unsharp mask: enhance difference from neighbors
           const center = copy[i + c] * (1 + 4 * amount);
           const neighbors = (
             copy[((y - 1) * w + x) * 4 + c] +
@@ -357,7 +391,7 @@ export default function PhotoEditor({
     ctx.putImageData(imageData, 0, 0);
   };
 
-  // Save edited photo (OUTPUT_SIZE x OUTPUT_SIZE, NO watermark)
+  // Save edited photo (OUTPUT_SIZE x OUTPUT_SIZE, NO watermark baked in)
   const handleSave = async () => {
     if (!editImageRef.current) return;
     setIsSaving(true);
@@ -365,7 +399,6 @@ export default function PhotoEditor({
     try {
       const img = editImageRef.current;
 
-      // Create export canvas (OUTPUT_SIZE x OUTPUT_SIZE)
       const exportCanvas = document.createElement('canvas');
       exportCanvas.width = OUTPUT_SIZE;
       exportCanvas.height = OUTPUT_SIZE;
@@ -376,7 +409,7 @@ export default function PhotoEditor({
       ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
 
       ctx.save();
-      ctx.translate(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2); // Center
+      ctx.translate(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2);
       ctx.rotate((rotation * Math.PI) / 180);
       ctx.translate(pan.x, pan.y);
       ctx.scale(zoom, zoom);
@@ -412,21 +445,19 @@ export default function PhotoEditor({
       // Apply subtle sharpening to recover scaling quality
       sharpenImage(ctx, OUTPUT_SIZE, OUTPUT_SIZE, 0.2);
 
-      // NOTE: Watermark NOT drawn on export canvas
+      // NOTE: Watermark NOT drawn on export canvas — applied server-side by watermark API
 
       // Detect if PNG should be used (nobg images or original PNGs)
       const isPng = currentPhotoUrl.includes('.png') || currentPhotoUrl.includes('_nobg') || viewName.includes('nobg');
       const mimeType = isPng ? 'image/png' : 'image/jpeg';
-      const quality = isPng ? undefined : 0.95; // 95% quality for JPEG (visually identical to 100%, much smaller), undefined for PNG
+      const quality = isPng ? undefined : 0.95;
 
       console.log(`Exporting as ${mimeType} with ${quality ? 'quality ' + quality : 'lossless PNG'}`);
 
-      // Convert to blob
       const blob = await new Promise(resolve => {
         exportCanvas.toBlob(resolve, mimeType, quality);
       });
 
-      // Upload to Firebase Storage via existing API
       const base64 = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result.split(',')[1]);
@@ -454,7 +485,6 @@ export default function PhotoEditor({
       const data = await response.json();
       console.log(`Edited photo uploaded: ${data.url}`);
 
-      // Callback with new URL
       onSave(data.url);
 
     } catch (error) {
@@ -468,6 +498,7 @@ export default function PhotoEditor({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] overflow-y-auto">
+
         {/* Header */}
         <div className="px-6 py-4 border-b flex items-center justify-between">
           <h2 className="text-xl font-bold">Edit Photo - {viewName}</h2>
@@ -485,21 +516,45 @@ export default function PhotoEditor({
             ref={displayCanvasRef}
             width={500}
             height={500}
-            className="border-2 border-gray-300 rounded-lg shadow-lg cursor-move"
+            className="border-2 border-gray-300 rounded-lg shadow-lg"
             style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           />
         </div>
 
-        {/* Controls */}
+        {/* Controls — FIX: Brightness moved to top so it's visible alongside the canvas */}
         <div className="px-6 py-4 space-y-4">
-          {/* Zoom Slider */}
+
+          {/* === BRIGHTNESS — moved to top so user can adjust and see result without scrolling === */}
+          <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+            <label className="block text-sm font-semibold mb-2">
+              ☀️ Brightness: {brightness > 0 ? '+' : ''}{brightness}
+            </label>
+            <input
+              type="range"
+              min="-50"
+              max="50"
+              value={brightness}
+              onChange={(e) => setBrightness(parseInt(e.target.value))}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Darker</span>
+              <span>0 (no change)</span>
+              <span>Brighter</span>
+            </div>
+          </div>
+
+          {/* === ZOOM / CROP === */}
           <div>
             <label className="block text-sm font-semibold mb-2">
-              Crop (Zoom): {zoom.toFixed(1)}x
+              🔍 Crop (Zoom): {zoom.toFixed(1)}x
             </label>
             <input
               type="range"
@@ -511,22 +566,18 @@ export default function PhotoEditor({
               className="w-full"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Click and drag on image to pan. Output: {OUTPUT_SIZE}×{OUTPUT_SIZE} square.
+              Drag on image to pan. Output: {OUTPUT_SIZE}×{OUTPUT_SIZE} square.
             </p>
             {/* Zoom presets */}
             <div className="flex gap-2 mt-2">
               <button
-                onClick={() => {
-                  setZoom(1.0);
-                  setPan({ x: 0, y: 0 });
-                }}
+                onClick={() => { setZoom(1.0); setPan({ x: 0, y: 0 }); }}
                 className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
               >
                 Fit
               </button>
               <button
                 onClick={() => {
-                  // Calculate fill zoom
                   if (editImageRef.current) {
                     const img = editImageRef.current;
                     const isRotated = Math.abs(rotation) % 180 !== 0;
@@ -543,29 +594,29 @@ export default function PhotoEditor({
                 Fill
               </button>
               <button
-                onClick={() => {
-                  setZoom(1.5);
-                  setPan({ x: 0, y: 0 });
-                }}
+                onClick={() => { setZoom(1.5); setPan({ x: 0, y: 0 }); }}
                 className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
               >
                 1.5x
               </button>
               <button
-                onClick={() => {
-                  setZoom(2.0);
-                  setPan({ x: 0, y: 0 });
-                }}
+                onClick={() => { setZoom(2.0); setPan({ x: 0, y: 0 }); }}
                 className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium"
               >
                 2x
               </button>
+              <button
+                onClick={() => setPan({ x: 0, y: 0 })}
+                className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 font-medium"
+              >
+                Center
+              </button>
             </div>
           </div>
 
-          {/* Rotate Buttons */}
+          {/* === ROTATE === */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Rotate</label>
+            <label className="block text-sm font-semibold mb-2">🔄 Rotate</label>
             <div className="flex gap-2">
               <button
                 onClick={() => setRotation((rotation - 90 + 360) % 360)}
@@ -590,25 +641,22 @@ export default function PhotoEditor({
             </div>
           </div>
 
-          {/* Remove Background */}
+          {/* === REMOVE BACKGROUND === */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Background</label>
+            <label className="block text-sm font-semibold mb-2">🖼️ Background</label>
 
             {!showBgOptions ? (
-              // Show button to open options panel
               <button
                 onClick={() => setShowBgOptions(true)}
                 disabled={isRemovingBg}
                 className="w-full px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
-                🖼️ Remove Background
+                {isRemovingBg ? '⏳ Processing...' : '🖼️ Remove Background'}
               </button>
             ) : (
-              // Show options panel with background templates
               <div className="border-2 border-green-300 rounded-lg p-4 bg-green-50">
                 <h4 className="font-medium mb-3 text-sm">Background Options</h4>
 
-                {/* Background template selector */}
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   {[
                     { id: 'white', label: 'White', preview: '#ffffff' },
@@ -628,7 +676,6 @@ export default function PhotoEditor({
                           : 'border-gray-200 hover:border-gray-400 bg-white'
                       }`}
                     >
-                      {/* Preview swatch */}
                       <div
                         className="w-full h-12 rounded mb-1 border border-gray-300"
                         style={{
@@ -644,7 +691,6 @@ export default function PhotoEditor({
                   ))}
                 </div>
 
-                {/* Auto-crop toggle */}
                 <label className="flex items-center gap-2 mb-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -655,7 +701,6 @@ export default function PhotoEditor({
                   <span className="text-sm font-medium">Auto-crop & center product</span>
                 </label>
 
-                {/* Scale slider (only when auto-crop is on) */}
                 {autoCropCenter && (
                   <div className="mb-4">
                     <label className="text-sm text-gray-600 font-medium mb-1 block">
@@ -677,7 +722,6 @@ export default function PhotoEditor({
                   </div>
                 )}
 
-                {/* Action buttons */}
                 <div className="flex gap-2">
                   <button
                     onClick={handleRemoveBg}
@@ -699,43 +743,38 @@ export default function PhotoEditor({
 
             <p className="text-xs text-gray-500 mt-2">
               {!showBgOptions
-                ? 'Choose from white, transparent, or custom background templates.'
+                ? 'Tip: For silver/white parts, use a blue or gray backdrop for best results.'
                 : autoCropCenter
                 ? `Product will be centered and scaled to ${productScale}% of the frame.`
                 : 'Background removed without cropping or centering.'}
             </p>
           </div>
 
-          {/* Brightness Slider */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">
-              Brightness: {brightness > 0 ? '+' : ''}{brightness}
-            </label>
-            <input
-              type="range"
-              min="-50"
-              max="50"
-              value={brightness}
-              onChange={(e) => setBrightness(parseInt(e.target.value))}
-              className="w-full"
-            />
-          </div>
-
-          {/* Watermark Preview Toggle */}
+          {/* === WATERMARK PREVIEW === */}
           {showWatermarkOption && (
-            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <input
-                type="checkbox"
-                id="watermark-preview"
-                checked={showWatermark}
-                onChange={(e) => setShowWatermark(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <label htmlFor="watermark-preview" className="text-sm font-semibold text-blue-900">
-                Preview Watermark (not saved to image)
-              </label>
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="watermark-preview"
+                  checked={showWatermark}
+                  onChange={(e) => setShowWatermark(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="watermark-preview" className="text-sm font-semibold text-blue-900">
+                  Preview Watermark (not saved to image)
+                </label>
+              </div>
+              {showWatermark && (
+                <p className="text-xs text-blue-700 mt-2">
+                  ℹ️ The watermark is always placed at the <strong>top-left corner</strong> of the final exported image.
+                  If you pan the product away from the top-left, the watermark will appear over empty space — this is
+                  correct. The watermark position does not move with the product.
+                </p>
+              )}
             </div>
           )}
+
         </div>
 
         {/* Actions */}
@@ -755,6 +794,7 @@ export default function PhotoEditor({
             {isSaving ? 'Saving...' : 'Save Photo'}
           </button>
         </div>
+
       </div>
     </div>
   );
