@@ -5788,17 +5788,24 @@ export default function ProListingBuilder() {
             sku={editingPhoto.sku}
             viewName={editingPhoto.viewName}
             onSave={async (newUrl) => {
-              // Update photos array in Firestore
               const item = queue.find(q => q.id === editingPhoto.itemId);
               if (item && item.photos) {
                 const updatedPhotos = [...item.photos];
                 updatedPhotos[editingPhoto.originalIdx] = newUrl;
 
+                // Update Firestore
                 await updateDoc(doc(db, 'products', editingPhoto.itemId), {
                   photos: updatedPhotos
                 });
 
-                console.log(`Photo array updated at index ${editingPhoto.originalIdx}`);
+                // Update local queue state so the UI reflects the new photo
+                // immediately without needing a page refresh
+                setQueue(prev => prev.map(q => {
+                  if (q.id !== editingPhoto.itemId) return q;
+                  return { ...q, photos: updatedPhotos };
+                }));
+
+                console.log(`Photo updated at index ${editingPhoto.originalIdx}: ${newUrl}`);
               }
 
               setEditingPhoto(null);
