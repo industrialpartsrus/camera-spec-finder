@@ -447,12 +447,12 @@ export default function PhotoEditor({
 
       // NOTE: Watermark NOT drawn on export canvas — applied server-side by watermark API
 
-      // Detect if PNG should be used (nobg images or original PNGs)
-      const isPng = currentPhotoUrl.includes('.png') || currentPhotoUrl.includes('_nobg') || viewName.includes('nobg');
-      const mimeType = isPng ? 'image/png' : 'image/jpeg';
-      const quality = isPng ? undefined : 0.95;
+      // Always export as JPEG — canvas already has white background applied,
+      // so PNG transparency is irrelevant and lossless PNG causes 413 errors (15MB+)
+      const mimeType = 'image/jpeg';
+      const quality = 0.92;
 
-      console.log(`Exporting as ${mimeType} with ${quality ? 'quality ' + quality : 'lossless PNG'}`);
+      console.log(`Exporting as JPEG quality ${quality} (2000x2000 = ~1-3MB)`);
 
       const blob = await new Promise(resolve => {
         exportCanvas.toBlob(resolve, mimeType, quality);
@@ -478,8 +478,14 @@ export default function PhotoEditor({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        // Handle non-JSON error responses (e.g. 413 Request Entity Too Large from Vercel)
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Upload failed (${response.status})`);
+        } else {
+          throw new Error(`Upload failed: ${response.status} ${response.statusText} — file may be too large`);
+        }
       }
 
       const data = await response.json();
