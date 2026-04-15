@@ -6,7 +6,7 @@ import { db } from '../firebase';
 export default function PrintMonitor() {
   const [status, setStatus] = useState('connecting');
   const [printLog, setPrintLog] = useState([]);
-  const [printerIp, setPrinterIp] = useState('10.0.0.46');
+  const [printerIp, setPrinterIp] = useState('10.0.0.21');
   const [isListening, setIsListening] = useState(true);
   const printedRef = useRef(new Set());
 
