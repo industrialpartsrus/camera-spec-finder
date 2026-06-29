@@ -7,6 +7,7 @@ import { db } from '../../firebase';
 import { doc, updateDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { getSureDoneCredentials } from '../../lib/suredone-config';
 const { generateAltText } = require('../../lib/generate-alt-text-templates');
+const { toSureDoneCondition } = require('../../lib/condition-map');
 
 // 30-day warranty text
 const WARRANTY_TEXT = `We warranty all items for 30 days from date of purchase. If you experience any issues with your item within this period, please contact us and we will work with you to resolve the problem. This warranty covers defects in functionality but does not cover damage caused by misuse, improper installation, or normal wear and tear.`;
@@ -1301,21 +1302,8 @@ export default async function handler(req, res) {
     console.log('UserType field set:', userType);
 
     // === CONDITION ===
-    let suredoneCondition = 'Used';
-    let isForParts = false;
-    if (product.condition) {
-      const condLower = product.condition.toLowerCase();
-      if (condLower.includes('new in box') || condLower.includes('nib')) {
-        suredoneCondition = 'New';
-      } else if (condLower.includes('new') && condLower.includes('open')) {
-        suredoneCondition = 'New Other';
-      } else if (condLower.includes('refurbished')) {
-        suredoneCondition = 'Manufacturer Refurbished';
-      } else if (condLower.includes('parts') || condLower.includes('not working')) {
-        suredoneCondition = 'For Parts or Not Working';
-        isForParts = true;
-      }
-    }
+    const suredoneCondition = toSureDoneCondition(product.condition);
+    const isForParts = suredoneCondition === 'For Parts';
     formData.append('condition', suredoneCondition);
     if (product.conditionNotes) formData.append('notes', product.conditionNotes);
 

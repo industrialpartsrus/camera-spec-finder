@@ -33,7 +33,7 @@ const CONDITION_CONFIG = {
   },
   'refurbished': {
     label: 'Manufacturer Refurbished',
-    suredoneValue: 'Manufacturer Refurbished',
+    suredoneValue: 'Refurbished',
     descriptionNote: 'This item has been professionally refurbished by the manufacturer or an authorized service center. It has been tested and is fully functional.',
     shortNote: 'Manufacturer Refurbished'
   },
@@ -57,7 +57,7 @@ const CONDITION_CONFIG = {
   },
   'for_parts': {
     label: 'For Parts or Not Working',
-    suredoneValue: 'For Parts or Not Working',
+    suredoneValue: 'For Parts',
     descriptionNote: 'This item is being sold FOR PARTS OR NOT WORKING. It may be damaged, incomplete, or non-functional. Sold AS-IS with no warranty or returns.',
     shortNote: 'For Parts Only'
   }

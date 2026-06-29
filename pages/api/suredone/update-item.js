@@ -3,6 +3,7 @@
 // MUST use form-encoded POST to /editor/items/edit (NOT JSON PUT)
 
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
+const { toSureDoneCondition } = require('../../../lib/condition-map');
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -57,21 +58,7 @@ export default async function handler(req, res) {
     appendIfValue('mpn', updateData.mpn);
     appendIfValue('model', updateData.model);
 
-    // === CONDITION MAPPING (same as create flow) ===
-    // Map user-facing condition labels to SureDone condition codes
-    let suredoneCondition = 'Used';
-    if (updateData.condition) {
-      const condLower = updateData.condition.toLowerCase();
-      if (condLower.includes('new in box') || condLower.includes('nib')) {
-        suredoneCondition = 'New';
-      } else if (condLower.includes('new') && condLower.includes('open')) {
-        suredoneCondition = 'New Other';
-      } else if (condLower.includes('refurbished')) {
-        suredoneCondition = 'Manufacturer Refurbished';
-      } else if (condLower.includes('parts') || condLower.includes('not working')) {
-        suredoneCondition = 'For Parts or Not Working';
-      }
-    }
+    const suredoneCondition = toSureDoneCondition(updateData.condition);
     appendIfValue('condition', suredoneCondition);
     appendIfValue('notes', updateData.conditionNotes);
 
