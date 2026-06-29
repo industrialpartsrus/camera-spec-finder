@@ -64,13 +64,18 @@ export default async function handler(req, res) {
           ebayUrl = `https://www.ebay.com/itm/${ebayId}`;
         }
 
-        const slug = item.bigcommercecustomurl || item.customurl || item.slug || '';
-        if (slug) {
-          const cleanSlug = slug.replace(/^\/|\/$/g, '');
-          bigcommerceUrl = `https://industrialpartsrus.com/${cleanSlug}/`;
+        // BigCommerce: build from SureDone's actual fields
+        const bcListingId = parseInt(item.bigcommercelistingid) || 0;
+        const bcPath = (item.bigcommercepath || 'https://industrialpartsrus.com').replace(/\/+$/, '');
+        const bcSlug = item.bigcommerceurl || item.bigcommercecustomurl || item.customurl || item.slug || '';
+        if (bcListingId > 0 && bcSlug) {
+          const cleanSlug = bcSlug.replace(/^\/+|\/+$/g, '');
+          bigcommerceUrl = `${bcPath}/${cleanSlug}/`;
+        } else {
+          bigcommerceUrl = null;
         }
 
-        console.log(`URLs for ${sku}: ebay=${ebayId || 'none'}, bc=${bcId || 'none'}, slug=${slug || 'none'}, bcCustomUrl=${item.bigcommercecustomurl || 'none'}`);
+        console.log(`URLs for ${sku}: ebay=${ebayId || 'none'}, bcListingId=${bcListingId}, bcSlug=${bcSlug || 'none'}, bigcommerceUrl=${bigcommerceUrl || 'none'}`);
       } else {
         console.log(`No SureDone item found for SKU: ${sku}`);
       }
