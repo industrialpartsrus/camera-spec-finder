@@ -64,16 +64,10 @@ export default async function handler(req, res) {
           ebayUrl = `https://www.ebay.com/itm/${ebayId}`;
         }
 
-        // Build BigCommerce URL from slug or product ID
-        // SureDone stores BC custom URL in bigcommercecustomurl, customurl, or slug
         const slug = item.bigcommercecustomurl || item.customurl || item.slug || '';
-        const bcId = item.bigcommerceid || item.bigcommerceproductid || '';
         if (slug) {
-          // Remove leading/trailing slashes
           const cleanSlug = slug.replace(/^\/|\/$/g, '');
-          bigcommerceUrl = `https://www.industrialpartsrus.com/${cleanSlug}/`;
-        } else if (bcId && bcId.toString().length > 0) {
-          bigcommerceUrl = `https://www.industrialpartsrus.com/?id=${bcId}`;
+          bigcommerceUrl = `https://industrialpartsrus.com/${cleanSlug}/`;
         }
 
         console.log(`URLs for ${sku}: ebay=${ebayId || 'none'}, bc=${bcId || 'none'}, slug=${slug || 'none'}, bcCustomUrl=${item.bigcommercecustomurl || 'none'}`);
