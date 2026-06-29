@@ -2,7 +2,7 @@
 
 **Project:** Industrial Equipment Listing Builder
 **Stack:** Next.js 16.1.4 / React 18 / Tailwind CSS / Firebase Firestore / SureDone API
-**AI:** Anthropic Claude (claude-sonnet-4-20250514) with web search
+**AI:** Anthropic Claude (claude-sonnet-4-6) with web search
 **Last updated:** 2026-02-09
 
 ---

@@ -433,7 +433,7 @@ async function callClaudeWithRetry(client, params, maxRetries = 3) {
 
 ### Claude Model Used
 
-All 6 Claude API endpoints use `claude-sonnet-4-20250514`. Several enable the `web_search_20250305` tool.
+All 6 Claude API endpoints use `claude-sonnet-4-6`. Several enable the `web_search_20250305` tool.
 
 ### Firebase SDK Split
 

@@ -156,7 +156,7 @@ Respond with ONLY valid JSON object (no markdown, no backticks), mapping each eB
     const startTime = Date.now();
 
     const response = await callClaudeWithRetry(client, {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       // Enable web search so AI can look up actual product specifications
       tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],

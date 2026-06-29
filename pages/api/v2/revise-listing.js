@@ -147,7 +147,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
 }`;
 
     const response = await callClaudeWithRetry(client, {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8192,
       messages: [{ role: 'user', content: prompt }]
     });
@@ -197,7 +197,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
         originalTitle: title
       },
       _meta: {
-        aiModel: 'claude-sonnet-4-20250514',
+        aiModel: 'claude-sonnet-4-6',
         specsConsidered: Object.keys(meaningfulSpecs).length,
         timestamp: new Date().toISOString()
       }

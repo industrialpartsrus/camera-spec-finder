@@ -1109,7 +1109,7 @@ export default async function handler(req, res) {
     const prompt = buildProductIdentificationPrompt(brand, partNumber);
 
     const response = await callClaudeWithRetry(client, {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       // =====================================================================
       // ⚠️  CRITICAL: DO NOT REMOVE WEB SEARCH

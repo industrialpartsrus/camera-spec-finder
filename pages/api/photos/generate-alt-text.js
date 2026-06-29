@@ -93,7 +93,7 @@ export default async function handler(req, res) {
       });
 
       const message = await callClaudeWithRetry(anthropic, {
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 100,
         messages: [{
           role: 'user',

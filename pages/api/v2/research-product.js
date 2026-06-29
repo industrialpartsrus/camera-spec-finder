@@ -207,7 +207,7 @@ CRITICAL REQUIREMENTS:
 6. Research thoroughly - Baldor M3211T is a 3HP 1800RPM 182T frame TEFC 3-phase motor`;
 
     const response = await callClaudeWithRetry(client, {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4500,
       messages: [{ role: 'user', content: prompt }],
       tools: [{ type: 'web_search_20250305', name: 'web_search' }]
@@ -251,7 +251,7 @@ CRITICAL REQUIREMENTS:
       _meta: {
         brand: brand,
         partNumber: partNumber,
-        aiModel: 'claude-sonnet-4-20250514',
+        aiModel: 'claude-sonnet-4-6',
         timestamp: new Date().toISOString()
       }
     });
