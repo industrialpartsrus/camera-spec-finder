@@ -5,7 +5,7 @@
 // COORDINATE SYSTEM:
 // - pan is stored in DISPLAY pixels (canvas is 500x500)
 // - pan is applied BEFORE rotation so dragging right always moves image right on screen
-// - zoom=1.0 means "fill the frame" (image fills canvas edge-to-edge)
+// - zoom=1.0 means "fit the whole image in the frame" (contain, with a small margin)
 // - Export canvas is 2000x2000 — pan is scaled up by 4x (2000/500) for export
 
 import { useState, useRef, useEffect } from 'react';
@@ -14,11 +14,13 @@ const OUTPUT_SIZE = 2000;
 const DISPLAY_SIZE = 500;
 const PAN_SCALE = OUTPUT_SIZE / DISPLAY_SIZE; // 4
 
+const FIT_MARGIN = 0.92; // leave ~8% border so the whole image is visible at zoom=1
 function getFillScale(imgW, imgH, rotDeg, canvasSize) {
   const isRotated = rotDeg === 90 || rotDeg === 270;
   const effectiveW = isRotated ? imgH : imgW;
   const effectiveH = isRotated ? imgW : imgH;
-  return Math.max(canvasSize / effectiveW, canvasSize / effectiveH);
+  // CONTAIN (fit whole image), not COVER — prevents overrun/crop; makes Save match what you see
+  return Math.min(canvasSize / effectiveW, canvasSize / effectiveH) * FIT_MARGIN;
 }
 
 function drawImageToCtx(ctx, img, canvasSize, rotDeg, zoomMultiplier, panPx, brightnessDelta) {
@@ -305,9 +307,9 @@ export default function PhotoEditor({
           <div>
             <label className="block text-sm font-semibold mb-2">
               🔍 Zoom: {zoom.toFixed(2)}x
-              <span className="font-normal text-gray-500 text-xs ml-2">(1.00 = fill frame · drag canvas to pan)</span>
+              <span className="font-normal text-gray-500 text-xs ml-2">(1.00 = fit whole image · drag canvas to pan)</span>
             </label>
-            <input type="range" min="0.5" max="3" step="0.05" value={zoom}
+            <input type="range" min="0.3" max="3" step="0.05" value={zoom}
               onChange={e => setZoom(parseFloat(e.target.value))} className="w-full" />
             <div className="flex gap-2 mt-2 flex-wrap">
               {[
