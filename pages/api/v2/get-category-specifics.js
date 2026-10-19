@@ -3,6 +3,14 @@
 // FIXED: Using correct eBay category IDs from master-fields.js CATEGORY_CONFIG
 
 // ============================================================================
+// DEPRECATED (2026-10-19): Only called by the abandoned pages/pro-v2.js.
+// NOT in the live listing path. Contains a HARDCODED product-type→eBay-category
+// table that is stale/incorrect (e.g. sensors → 183089, but live listings use
+// 65459 from SureDone/eBay). Do not trust this table. The live path
+// (search-product-v2.js) pulls the correct category + aspects from the eBay API.
+// ============================================================================
+
+// ============================================================================
 // PRODUCT TYPE TO EBAY CATEGORY MAPPING - FROM YOUR master-fields.js
 // ============================================================================
 

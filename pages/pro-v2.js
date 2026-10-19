@@ -1,6 +1,14 @@
 // pages/pro-v2.js
 // PRO LISTING BUILDER V2 - FIXED: Correct shipping profiles, price moved to later stage
 
+// ============================================================================
+// DEPRECATED (2026-10-19): Abandoned "v2" rebuild of the Pro Listing Builder.
+// NOT used in production. The live builder is pages/pro.js.
+// Kept for reference only — see get-category-specifics.js note below.
+// Future direction: category item specifics should be pulled live from the
+// eBay Taxonomy API (as search-product-v2.js already does), never hardcoded.
+// ============================================================================
+
 import { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
