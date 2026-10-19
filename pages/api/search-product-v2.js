@@ -6,6 +6,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { resolveSpecsObject } from '../../lib/field-name-resolver.js';
 import { callClaudeWithRetry } from '../../lib/claude-retry';
+import { getCategoryAspects } from '../../lib/ebay-aspects';
 
 // ============================================================================
 // SPEC FIELD EXCLUSION LIST
@@ -1242,18 +1243,9 @@ export default async function handler(req, res) {
     let ebayAspects = null;
     if (ebayCategoryId) {
       try {
-        const baseUrl = req.headers.host?.includes('localhost') 
-          ? `http://${req.headers.host}` 
-          : `https://${req.headers.host}`;
-        
-        // Note: The endpoint is /api/ebay-category-aspects (NOT /api/ebay/get-category-aspects)
-        const aspectsResponse = await fetch(`${baseUrl}/api/ebay-category-aspects?categoryId=${ebayCategoryId}`);
-        if (aspectsResponse.ok) {
-          ebayAspects = await aspectsResponse.json();
-          console.log('eBay Aspects Loaded:', ebayAspects?.totalAspects || 0, 'aspects');
-        } else {
-          console.log('eBay Aspects API returned:', aspectsResponse.status);
-        }
+        // In-process call (no self-HTTP), with built-in retry — see lib/ebay-aspects.js
+        ebayAspects = await getCategoryAspects(ebayCategoryId);
+        console.log('eBay Aspects Loaded:', ebayAspects?.totalAspects || 0, 'aspects');
       } catch (error) {
         console.log('Failed to fetch eBay aspects:', error.message);
       }
