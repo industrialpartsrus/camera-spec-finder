@@ -24,6 +24,13 @@ const SKIP_FIELDS = new Set([
   'Item Height', 'Item Width', 'Item Length', 'Item Weight', 'Item Depth'
 ]);
 
+// Never advertise a factory warranty/guarantee — we sell new-surplus and used.
+// Optional warranty/guarantee aspects are left blank; required ones get "None".
+function isWarrantyAspect(name) {
+  const n = (name || '').toLowerCase();
+  return n.includes('warranty') || n.includes('guarantee');
+}
+
 // Fields the AI should aggressively fill with standard industry values
 const AGGRESSIVE_FILL_HINTS = {
   // Motor fields
@@ -94,7 +101,7 @@ export default async function handler(req, res) {
 
     // Build the eBay fields list for the AI prompt
     // Include requirement status + allowed values for guidance
-    const fieldsList = relevantAspects.slice(0, 50).map(aspect => {
+    const fieldsList = relevantAspects.filter(a => !isWarrantyAspect(a.ebayName)).slice(0, 50).map(aspect => {
       let line = `- "${aspect.ebayName}"`;
       if (aspect.required) line += ' [REQUIRED]';
       else if (aspect.usage === 'RECOMMENDED') line += ' [RECOMMENDED]';
@@ -207,6 +214,30 @@ Respond with ONLY valid JSON object (no markdown, no backticks), mapping each eB
     let filledCount = 0;
 
     for (const aspect of relevantAspects) {
+      // Warranty/guarantee policy: blank if optional, "None" if required.
+      if (isWarrantyAspect(aspect.ebayName)) {
+        const forced = aspect.required ? 'None' : '';
+        specificsForUI.push({
+          ebayName: aspect.ebayName,
+          suredoneInlineField: aspect.suredoneInlineField,
+          suredoneDynamicField: aspect.suredoneDynamicField,
+          required: aspect.required || false,
+          usage: aspect.usage || 'OPTIONAL',
+          mode: aspect.mode || 'FREE_TEXT',
+          value: forced,
+          allowedValues: aspect.allowedValues || [],
+          multiValue: aspect.multiValue || false
+        });
+        if (aspect.required) {
+          specificsForSuredone[resolveFieldName(aspect.ebayName)] = 'None';
+          filledCount++;
+          console.log(`  ⚠ ${aspect.ebayName} → "None" (required warranty/guarantee field)`);
+        } else {
+          console.log(`  ⊘ ${aspect.ebayName} left blank (warranty/guarantee policy)`);
+        }
+        continue;
+      }
+
       const ebayName = aspect.ebayName;
       const value = filledValues[ebayName] || null;
       const isValid = value && value !== 'null' && value !== null && value !== 'N/A';
