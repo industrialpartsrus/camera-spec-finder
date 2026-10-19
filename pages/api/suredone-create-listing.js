@@ -6,6 +6,8 @@ import brandsDb from '../../data/bigcommerce_brands.json';
 import { db } from '../../firebase';
 import { doc, updateDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { getSureDoneCredentials } from '../../lib/suredone-config';
+import { resolveSpecFieldName } from '../../lib/field-name-resolver';
+import { SUREDONE_FIELD_NAMES, SUREDONE_EBAY_ONLY_FIELDS } from '../../data/suredone-field-names';
 const { generateAltText } = require('../../lib/generate-alt-text-templates');
 const { toSureDoneCondition } = require('../../lib/condition-map');
 
@@ -1523,10 +1525,16 @@ export default async function handler(req, res) {
       console.log('No Pass 2 eBay item specifics provided');
     }
 
-    // === SPEC_TO_EBAY_FIELD FALLBACK (LOWEST PRIORITY) ===
-    // Only fills fields that Pass 2 didn't already cover
-    // This is a generic motor-centric mapping — Pass 2 is category-specific and more accurate
-    console.log('=== PROCESSING SPECIFICATIONS (FALLBACK MAPPING) ===');
+    // === SPEC FALLBACK (LOWEST PRIORITY — only fills what Pass 2 didn't cover) ===
+    // SPEC_TO_EBAY_FIELD is a MOTOR-ONLY table. Generic keys ("type","current",
+    // "voltage","torque") map to motor-only eBay fields, which stamps WRONG data
+    // on non-motors (a sensor showing "AC Motor Type: Inductive Proximity Sensor").
+    // So: motors use the motor table (unchanged). Everything else routes leftover
+    // specs through the canonical resolver — known field -> canonical (no sprawl),
+    // unknown -> dynamic eBay specific + UNMAPPED_DYNAMIC_FIELD log (consolidation
+    // feedback loop). Never a wrong motor field; nothing dropped.
+    const isMotor = /motor/i.test(userType || '');
+    console.log(`=== PROCESSING SPECIFICATIONS (FALLBACK, isMotor=${isMotor}) ===`);
     console.log('product.specifications:', JSON.stringify(product.specifications, null, 2));
 
     if (product.specifications && typeof product.specifications === 'object') {
@@ -1538,22 +1546,40 @@ export default async function handler(req, res) {
           continue;
         }
 
-        const keyLower = key.toLowerCase().replace(/\s+/g, '_');
-        const keyClean = key.toLowerCase().replace(/[_\s]+/g, '');
-
-        // Find the SHORT eBay field name from our mapping (NO PREFIX)
-        const ebayField = SPEC_TO_EBAY_FIELD[key] ||
-                          SPEC_TO_EBAY_FIELD[keyLower] ||
-                          SPEC_TO_EBAY_FIELD[keyClean];
-
-        if (ebayField && !ebayFieldsSet.has(ebayField)) {
-          formData.append(ebayField, value);
-          ebayFieldsSet.add(ebayField);
-          console.log(`  INLINE: ${ebayField} = ${value}`);
-        } else if (ebayField) {
-          console.log(`  SKIP (already set): ${ebayField}`);
+        if (isMotor) {
+          // --- MOTOR PATH: existing motor-centric short-name mapping (unchanged) ---
+          const keyLower = key.toLowerCase().replace(/\s+/g, '_');
+          const keyClean = key.toLowerCase().replace(/[_\s]+/g, '');
+          const ebayField = SPEC_TO_EBAY_FIELD[key] ||
+                            SPEC_TO_EBAY_FIELD[keyLower] ||
+                            SPEC_TO_EBAY_FIELD[keyClean];
+          if (ebayField && !ebayFieldsSet.has(ebayField)) {
+            formData.append(ebayField, value);
+            ebayFieldsSet.add(ebayField);
+            console.log(`  INLINE: ${ebayField} = ${value}`);
+          } else if (ebayField) {
+            console.log(`  SKIP (already set): ${ebayField}`);
+          } else {
+            console.log(`  NO mapping for: "${key}"`);
+          }
         } else {
-          console.log(`  NO mapping for: "${key}"`);
+          // --- NON-MOTOR PATH: canonical resolver, no wrong-field risk ---
+          const resolved = resolveSpecFieldName(key);
+          const isMultiChannel = SUREDONE_FIELD_NAMES.has(resolved);
+          const isEbayOnly = SUREDONE_EBAY_ONLY_FIELDS.has(resolved);
+          const known = isMultiChannel || isEbayOnly;
+          const fieldToSend = isMultiChannel ? resolved : ('ebayitemspecifics' + resolved);
+          if (!ebayFieldsSet.has(resolved) && !ebayFieldsSet.has(fieldToSend)) {
+            formData.append(fieldToSend, value);
+            ebayFieldsSet.add(resolved);
+            if (known) {
+              console.log(`  CANONICAL: ${fieldToSend} = ${value}`);
+            } else {
+              console.log(`  UNMAPPED_DYNAMIC_FIELD: ${fieldToSend} = ${value} (product: ${userType})`);
+            }
+          } else {
+            console.log(`  SKIP (already covered): ${resolved}`);
+          }
         }
       }
     } else {
