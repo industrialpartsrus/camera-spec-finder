@@ -267,160 +267,163 @@ export default function PhotoEditor({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[92vh] flex flex-col">
 
-        <div className="px-6 py-4 border-b flex items-center justify-between">
+        <div className="px-6 py-4 border-b flex items-center justify-between shrink-0">
           <h2 className="text-xl font-bold">Edit Photo — {viewName}</h2>
           <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
         </div>
 
-        <div className="p-6 flex justify-center bg-gray-50">
-          <canvas
-            ref={displayCanvasRef}
-            width={DISPLAY_SIZE}
-            height={DISPLAY_SIZE}
-            className="border-2 border-gray-300 rounded-lg shadow-lg"
-            style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          />
-        </div>
+        <div className="flex flex-col md:flex-row flex-1 min-h-0">
 
-        <div className="px-6 py-4 space-y-4">
-
-          <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-            <label className="block text-sm font-semibold mb-2">
-              ☀️ Brightness: {brightness > 0 ? '+' : ''}{brightness}
-            </label>
-            <input type="range" min="-50" max="50" value={brightness}
-              onChange={e => setBrightness(parseInt(e.target.value))} className="w-full" />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Darker</span><span>0</span><span>Brighter</span>
+          <div className="flex flex-col items-center p-4 bg-gray-50 shrink-0">
+            <canvas
+              ref={displayCanvasRef}
+              width={DISPLAY_SIZE}
+              height={DISPLAY_SIZE}
+              className="border-2 border-gray-300 rounded-lg shadow-lg"
+              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            />
+            <div className="w-full max-w-[500px] mt-3">
+              <label className="block text-sm font-semibold mb-1">
+                🔍 Zoom: {zoom.toFixed(2)}x
+                <span className="font-normal text-gray-500 text-xs ml-2">(1.00 = fit whole image · drag to pan)</span>
+              </label>
+              <input type="range" min="0.3" max="3" step="0.05" value={zoom}
+                onChange={e => setZoom(parseFloat(e.target.value))} className="w-full" />
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {[
+                  { label: 'Reset', fn: () => { setZoom(1); setPan({ x: 0, y: 0 }); } },
+                  { label: 'Center', fn: () => setPan({ x: 0, y: 0 }) },
+                  { label: '1.5x', fn: () => setZoom(1.5) },
+                  { label: '2x',   fn: () => setZoom(2) },
+                  { label: '3x',   fn: () => setZoom(3) },
+                ].map(b => (
+                  <button key={b.label} onClick={b.fn}
+                    className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium">
+                    {b.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-2">
-              🔍 Zoom: {zoom.toFixed(2)}x
-              <span className="font-normal text-gray-500 text-xs ml-2">(1.00 = fit whole image · drag canvas to pan)</span>
-            </label>
-            <input type="range" min="0.3" max="3" step="0.05" value={zoom}
-              onChange={e => setZoom(parseFloat(e.target.value))} className="w-full" />
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {[
-                { label: 'Reset', fn: () => { setZoom(1); setPan({ x: 0, y: 0 }); } },
-                { label: 'Center', fn: () => setPan({ x: 0, y: 0 }) },
-                { label: '1.5x', fn: () => setZoom(1.5) },
-                { label: '2x',   fn: () => setZoom(2) },
-                { label: '3x',   fn: () => setZoom(3) },
-              ].map(b => (
-                <button key={b.label} onClick={b.fn}
-                  className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium">
-                  {b.label}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 border-t md:border-t-0 md:border-l">
+
+            <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+              <label className="block text-sm font-semibold mb-2">
+                ☀️ Brightness: {brightness > 0 ? '+' : ''}{brightness}
+              </label>
+              <input type="range" min="-50" max="50" value={brightness}
+                onChange={e => setBrightness(parseInt(e.target.value))} className="w-full" />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Darker</span><span>0</span><span>Brighter</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2">🔄 Rotate <span className="font-normal text-gray-500 text-xs">({rotation}°)</span></label>
+              <div className="flex gap-2">
+                <button onClick={() => setRotation(r => (r - 90 + 360) % 360)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">↺ 90° Left</button>
+                <button onClick={() => setRotation(r => (r + 90) % 360)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">↻ 90° Right</button>
+                {rotation !== 0 && (
+                  <button onClick={() => setRotation(0)}
+                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Reset</button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2">🖼️ Background</label>
+              {!showBgOptions ? (
+                <button onClick={() => setShowBgOptions(true)} disabled={isRemovingBg}
+                  className="w-full px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 disabled:opacity-50 font-medium">
+                  {isRemovingBg ? '⏳ Processing...' : '🖼️ Remove Background'}
                 </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-2">🔄 Rotate <span className="font-normal text-gray-500 text-xs">({rotation}°)</span></label>
-            <div className="flex gap-2">
-              <button onClick={() => setRotation(r => (r - 90 + 360) % 360)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">↺ 90° Left</button>
-              <button onClick={() => setRotation(r => (r + 90) % 360)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">↻ 90° Right</button>
-              {rotation !== 0 && (
-                <button onClick={() => setRotation(0)}
-                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Reset</button>
+              ) : (
+                <div className="border-2 border-green-300 rounded-lg p-4 bg-green-50">
+                  <h4 className="font-medium mb-3 text-sm">Background Options</h4>
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {[
+                      { id: 'white', label: 'White', preview: '#ffffff' },
+                      { id: 'transparent', label: 'Transparent', preview: 'checkerboard' },
+                      { id: 'lightgray', label: 'Light Gray', preview: '#f5f5f5' },
+                      { id: 'warehouse', label: 'Warehouse', preview: '/bg-templates/warehouse-floor.jpg' },
+                      { id: 'studio', label: 'Studio', preview: '/bg-templates/studio-gradient.jpg' },
+                      { id: 'industrial', label: 'Industrial', preview: '/bg-templates/industrial.jpg' },
+                    ].map(bg => (
+                      <button key={bg.id} type="button" onClick={() => setSelectedBg(bg.id)}
+                        className={`p-2 rounded border-2 text-center text-xs transition ${selectedBg === bg.id ? 'border-green-500 bg-green-100 shadow-md' : 'border-gray-200 hover:border-gray-400 bg-white'}`}>
+                        <div className="w-full h-12 rounded mb-1 border border-gray-300" style={{
+                          background: bg.preview.startsWith('#') ? bg.preview
+                            : bg.preview === 'checkerboard' ? 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 16px 16px'
+                            : `url(${bg.preview}) center/cover`
+                        }} />
+                        <span className="font-medium">{bg.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                    <input type="checkbox" checked={autoCropCenter}
+                      onChange={e => setAutoCropCenter(e.target.checked)} className="w-4 h-4 rounded" />
+                    <span className="text-sm font-medium">Auto-crop & center product</span>
+                  </label>
+                  {autoCropCenter && (
+                    <div className="mb-4">
+                      <label className="text-sm text-gray-600 font-medium mb-1 block">Product scale: {productScale}%</label>
+                      <input type="range" min="50" max="95" step="5" value={productScale}
+                        onChange={e => setProductScale(parseInt(e.target.value))} className="w-full" />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>More whitespace</span><span>Fills frame</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button onClick={handleRemoveBg} disabled={isRemovingBg}
+                      className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium">
+                      {isRemovingBg ? '⏳ Processing...' : '🖼️ Remove Background'}
+                    </button>
+                    <button onClick={() => setShowBgOptions(false)} disabled={isRemovingBg}
+                      className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-medium">
+                      Cancel
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">💡 Silver/white parts work best against a blue or gray backdrop.</p>
+                </div>
               )}
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-2">🖼️ Background</label>
-            {!showBgOptions ? (
-              <button onClick={() => setShowBgOptions(true)} disabled={isRemovingBg}
-                className="w-full px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 disabled:opacity-50 font-medium">
-                {isRemovingBg ? '⏳ Processing...' : '🖼️ Remove Background'}
-              </button>
-            ) : (
-              <div className="border-2 border-green-300 rounded-lg p-4 bg-green-50">
-                <h4 className="font-medium mb-3 text-sm">Background Options</h4>
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {[
-                    { id: 'white', label: 'White', preview: '#ffffff' },
-                    { id: 'transparent', label: 'Transparent', preview: 'checkerboard' },
-                    { id: 'lightgray', label: 'Light Gray', preview: '#f5f5f5' },
-                    { id: 'warehouse', label: 'Warehouse', preview: '/bg-templates/warehouse-floor.jpg' },
-                    { id: 'studio', label: 'Studio', preview: '/bg-templates/studio-gradient.jpg' },
-                    { id: 'industrial', label: 'Industrial', preview: '/bg-templates/industrial.jpg' },
-                  ].map(bg => (
-                    <button key={bg.id} type="button" onClick={() => setSelectedBg(bg.id)}
-                      className={`p-2 rounded border-2 text-center text-xs transition ${selectedBg === bg.id ? 'border-green-500 bg-green-100 shadow-md' : 'border-gray-200 hover:border-gray-400 bg-white'}`}>
-                      <div className="w-full h-12 rounded mb-1 border border-gray-300" style={{
-                        background: bg.preview.startsWith('#') ? bg.preview
-                          : bg.preview === 'checkerboard' ? 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 16px 16px'
-                          : `url(${bg.preview}) center/cover`
-                      }} />
-                      <span className="font-medium">{bg.label}</span>
-                    </button>
-                  ))}
+            {showWatermarkOption && (
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="wm-preview" checked={showWatermark}
+                    onChange={e => setShowWatermark(e.target.checked)} className="w-4 h-4" />
+                  <label htmlFor="wm-preview" className="text-sm font-semibold text-blue-900">
+                    Preview Watermark (not saved to image)
+                  </label>
                 </div>
-                <label className="flex items-center gap-2 mb-3 cursor-pointer">
-                  <input type="checkbox" checked={autoCropCenter}
-                    onChange={e => setAutoCropCenter(e.target.checked)} className="w-4 h-4 rounded" />
-                  <span className="text-sm font-medium">Auto-crop & center product</span>
-                </label>
-                {autoCropCenter && (
-                  <div className="mb-4">
-                    <label className="text-sm text-gray-600 font-medium mb-1 block">Product scale: {productScale}%</label>
-                    <input type="range" min="50" max="95" step="5" value={productScale}
-                      onChange={e => setProductScale(parseInt(e.target.value))} className="w-full" />
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>More whitespace</span><span>Fills frame</span>
-                    </div>
-                  </div>
+                {showWatermark && (
+                  <p className="text-xs text-blue-700 mt-2">
+                    ℹ️ Watermark is always at the <strong>top-left corner</strong> of the exported image, regardless of pan position.
+                  </p>
                 )}
-                <div className="flex gap-2">
-                  <button onClick={handleRemoveBg} disabled={isRemovingBg}
-                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium">
-                    {isRemovingBg ? '⏳ Processing...' : '🖼️ Remove Background'}
-                  </button>
-                  <button onClick={() => setShowBgOptions(false)} disabled={isRemovingBg}
-                    className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-medium">
-                    Cancel
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">💡 Silver/white parts work best against a blue or gray backdrop.</p>
               </div>
             )}
-          </div>
 
-          {showWatermarkOption && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="wm-preview" checked={showWatermark}
-                  onChange={e => setShowWatermark(e.target.checked)} className="w-4 h-4" />
-                <label htmlFor="wm-preview" className="text-sm font-semibold text-blue-900">
-                  Preview Watermark (not saved to image)
-                </label>
-              </div>
-              {showWatermark && (
-                <p className="text-xs text-blue-700 mt-2">
-                  ℹ️ Watermark is always at the <strong>top-left corner</strong> of the exported image, regardless of pan position.
-                </p>
-              )}
-            </div>
-          )}
+          </div>
 
         </div>
 
-        <div className="px-6 py-4 border-t flex justify-end gap-3">
+        <div className="px-6 py-4 border-t flex justify-end gap-3 shrink-0">
           <button onClick={onCancel} disabled={isSaving}
             className="px-6 py-2 border rounded hover:bg-gray-100 disabled:opacity-50">
             Cancel
