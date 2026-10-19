@@ -1658,6 +1658,8 @@ export default function ProListingBuilder() {
   const [componentForm, setComponentForm] = useState({ brand: '', partNumber: '', description: '' });
   const [localSpecEdits, setLocalSpecEdits] = useState({});
   const specDebounceTimers = useRef({});
+  const [descEdits, setDescEdits] = useState({});
+  const descDebounceTimers = useRef({});
   const fileInputRef = useRef(null);
 
   // Inventory keyword search state
@@ -2012,6 +2014,8 @@ export default function ProListingBuilder() {
       Object.values(specDebounceTimers.current).forEach(clearTimeout);
     };
   }, []);
+
+  useEffect(() => { return () => { Object.values(descDebounceTimers.current).forEach(clearTimeout); }; }, []);
 
   // Helper: Get field value (local state if exists, otherwise from item)
   const getFieldValue = (item, fieldName) => {
@@ -2966,6 +2970,26 @@ export default function ProListingBuilder() {
       }
       delete specDebounceTimers.current[timerKey];
     }, 500);
+  };
+
+  const updateDescriptionBuffer = (itemId, shown, full) => {
+    setDescEdits(prev => ({ ...prev, [itemId]: { shown, full } }));
+    if (descDebounceTimers.current[itemId]) clearTimeout(descDebounceTimers.current[itemId]);
+    descDebounceTimers.current[itemId] = setTimeout(async () => {
+      try { await updateDoc(doc(db, 'products', itemId), { description: full, rawDescription: full }); }
+      catch (e) { console.error('Description update error:', e); }
+      delete descDebounceTimers.current[itemId];
+    }, 600);
+  };
+
+  const flushDescriptionBuffer = async (itemId) => {
+    const buf = descEdits[itemId];
+    if (descDebounceTimers.current[itemId]) { clearTimeout(descDebounceTimers.current[itemId]); delete descDebounceTimers.current[itemId]; }
+    if (buf) {
+      try { await updateDoc(doc(db, 'products', itemId), { description: buf.full, rawDescription: buf.full }); }
+      catch (e) { console.error('Description flush error:', e); }
+    }
+    setDescEdits(prev => { const n = { ...prev }; delete n[itemId]; return n; });
   };
 
   // Immediate spec write — for dropdowns, programmatic updates, normalizer buttons
@@ -5101,12 +5125,11 @@ export default function ProListingBuilder() {
                             <ReactQuill
                               key={selected.id + '-table'}
                               theme="snow"
-                              value={beforeTable}
+                              value={descEdits[selected.id]?.shown ?? beforeTable}
                               onChange={(content) => {
-                                const merged = mergeDescriptionParts(content, table, afterTable);
-                                updateField(selected.id, 'description', merged);
-                                updateField(selected.id, 'rawDescription', merged);
+                                updateDescriptionBuffer(selected.id, content, mergeDescriptionParts(content, table, afterTable));
                               }}
+                              onBlur={() => flushDescriptionBuffer(selected.id)}
                               modules={QUILL_MODULES}
                               formats={QUILL_FORMATS}
                               style={{ minHeight: '150px' }}
@@ -5144,11 +5167,11 @@ export default function ProListingBuilder() {
                           <ReactQuill
                             key={selected.id}
                             theme="snow"
-                            value={selected.description || ''}
+                            value={descEdits[selected.id]?.shown ?? (selected.description || '')}
                             onChange={(content) => {
-                              updateField(selected.id, 'description', content);
-                              updateField(selected.id, 'rawDescription', content);
+                              updateDescriptionBuffer(selected.id, content, content);
                             }}
+                            onBlur={() => flushDescriptionBuffer(selected.id)}
                             modules={QUILL_MODULES}
                             formats={QUILL_FORMATS}
                             style={{ minHeight: '300px' }}
@@ -5157,11 +5180,9 @@ export default function ProListingBuilder() {
                       })()
                     ) : (
                       <textarea
-                        value={selected.rawDescription || selected.description || ''}
-                        onChange={e => {
-                          updateField(selected.id, 'description', e.target.value);
-                          updateField(selected.id, 'rawDescription', e.target.value);
-                        }}
+                        value={descEdits[selected.id]?.shown ?? (selected.rawDescription || selected.description || '')}
+                        onChange={e => updateDescriptionBuffer(selected.id, e.target.value, e.target.value)}
+                        onBlur={() => flushDescriptionBuffer(selected.id)}
                         className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
                         style={{ minHeight: '300px' }}
                       />
