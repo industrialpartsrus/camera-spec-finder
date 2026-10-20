@@ -218,18 +218,38 @@ export default async function handler(req, res) {
       }
 
     } else if (action === 'start' || action === 'add') {
-      // Start: first-time publish for brand new items only
+      // Start: first-time publish for brand new items only.
+      // Fetch the item's title first — ebaytitle MUST be populated or /start fails with
+      // "title:62 - Title is a required field for adding items" (same gotcha as relist).
+      const checkUrl = `https://api.suredone.com/v1/search/items/${encodeURIComponent('guid:=' + sku)}`;
+      let itemTitle = '';
+      try {
+        const checkRes = await fetch(checkUrl, { headers: jsonHeaders });
+        const checkData = await checkRes.json();
+        for (const key of Object.keys(checkData)) {
+          if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
+            itemTitle = checkData[key].title || '';
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn(`[listing-action] Could not fetch title for ${sku}: ${e.message}`);
+      }
+
       const clearForm = makeForm(sku);
       clearForm.append('rule', '');
       clearForm.append('rulestate', '');
       clearForm.append('ebayprice', '');
-      clearForm.append('ebaytitle', '');
+      // CRITICAL: set ebaytitle to the REAL title, not empty (empty → error 62 at /start)
+      if (itemTitle) {
+        clearForm.append('ebaytitle', itemTitle);
+      }
       clearForm.append('ebaypaymentprofileid', '0');
       clearForm.append('paymentprofileidebay', '0');
       clearForm.append('ebay2skip', '1');
       clearForm.append('googleskip', '1');
 
-      console.log(`[listing-action] Clearing rule/rulestate/overrides for ${sku}`);
+      console.log(`[listing-action] Clearing overrides for ${sku}, ebaytitle="${itemTitle.substring(0, 60)}"`);
       await suredonePost(formHeaders, 'edit', clearForm);
       await new Promise(r => setTimeout(r, 3000));
 
