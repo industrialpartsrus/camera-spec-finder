@@ -186,11 +186,11 @@ const PRODUCT_TYPE_TO_EBAY_CATEGORY = {
   'LVDT': { ebayCategoryId: '181744', ebayCategoryName: 'Sensors' },
   
   // ==================== SAFETY DEVICES ====================
-  'Light Curtain': { ebayCategoryId: '65465', ebayCategoryName: 'Light Curtains' },
-  'Safety Light Curtain': { ebayCategoryId: '65465', ebayCategoryName: 'Light Curtains' },
-  'Safety Barrier': { ebayCategoryId: '65465', ebayCategoryName: 'Light Curtains' },
-  'Safety Scanner': { ebayCategoryId: '65465', ebayCategoryName: 'Light Curtains' },
-  'Area Scanner': { ebayCategoryId: '65465', ebayCategoryName: 'Light Curtains' },
+  'Light Curtain': { ebayCategoryId: '57520', ebayCategoryName: 'Other Sensors' },
+  'Safety Light Curtain': { ebayCategoryId: '57520', ebayCategoryName: 'Other Sensors' },
+  'Safety Barrier': { ebayCategoryId: '57520', ebayCategoryName: 'Other Sensors' },
+  'Safety Scanner': { ebayCategoryId: '57520', ebayCategoryName: 'Other Sensors' },
+  'Area Scanner': { ebayCategoryId: '57520', ebayCategoryName: 'Other Sensors' },
   'E-Stop': { ebayCategoryId: '181677', ebayCategoryName: 'Pushbutton Switches' },
   'Emergency Stop': { ebayCategoryId: '181677', ebayCategoryName: 'Pushbutton Switches' },
   'Safety Interlock': { ebayCategoryId: '65464', ebayCategoryName: 'Safety Relays' },
