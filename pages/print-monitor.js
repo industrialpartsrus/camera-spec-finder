@@ -6,7 +6,7 @@ import { db } from '../firebase';
 export default function PrintMonitor() {
   const [status, setStatus] = useState('connecting');
   const [printLog, setPrintLog] = useState([]);
-  const [printerIp, setPrinterIp] = useState('10.0.0.21');
+  const [printerIp, setPrinterIp] = useState('10.0.0.27');
   const [isListening, setIsListening] = useState(true);
   const printedRef = useRef(new Set());
 
@@ -37,7 +37,7 @@ export default function PrintMonitor() {
             window.postMessage({
               type: 'zebra_print_label',
               zpl: label.zpl,
-              url: `http://${label.printerIp || printerIp}/pstprnt`
+              url: `http://${printerIp}/pstprnt`
             }, '*');
 
             // Mark as printed in Firebase

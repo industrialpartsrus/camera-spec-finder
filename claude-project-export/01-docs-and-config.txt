@@ -1,0 +1,1869 @@
+# CAMERA-SPEC-FINDER — DOCS & CONFIG
+# Exported 2026-06-29 12:05
+
+========================================
+FILE: ./docs/PROJECT_KNOWLEDGE_UPDATE_2026-06-29.md
+========================================
+# Project Knowledge Update — 2026-06-29
+
+**Session summary:** Claire reported the Pro Listing Builder failing with
+"Error processing item: API returned 500." Root cause was a retired Anthropic
+model string hardcoded across the API layer. Fixed repo-wide and deployed.
+This session also confirmed the **true** state of two subsystems (alt-text
+generation and background removal) that the Project Knowledge doc had listed as
+"pending" but are actually **already complete**. Corrections below.
+
+---
+
+## 1. COMPLETED THIS SESSION — Retired model string fix
+
+### Root cause
+Every Claude API call used the model string `claude-sonnet-4-20250514`
+(Claude Sonnet 4, May 2025). Anthropic has **retired** that model, so the API
+now returns `404 not_found_error: model: claude-sonnet-4-20250514`. The
+frontend only surfaced the generic status, which is why users saw
+"API returned 500" instead of the real 404.
+
+### The fix
+Global find-and-replace, identical everywhere:
+
+```
+claude-sonnet-4-20250514   →   claude-sonnet-4-6
+```
+
+`claude-sonnet-4-6` = **Claude Sonnet 4.6**, the current production Sonnet
+(supports web search + vision, verified against Anthropic's official model docs
+on 2026-06-29). No logic changed — only the model identifier.
+
+### Files changed (19 replacements across 18 files)
+
+**Active API endpoints (these were broken / would have broken):**
+
+| File | Line(s) | Purpose |
+|------|---------|---------|
+| `pages/api/search-product-v2.js` | 1112 | Pass 1 — AI product research (the one Claire hit) |
+| `pages/api/v2/auto-fill-ebay-specifics.js` | 159 | Pass 2 — eBay item specifics |
+| `pages/api/v2/fill-specifics.js` | 202 | Item specifics fill |
+| `pages/api/v2/research-product.js` | 210, 254 | Product research (254 = `aiModel` log field) |
+| `pages/api/v2/revise-listing.js` | 150, 200 | Revise existing listing (200 = `aiModel` log field) |
+| `pages/api/search-product.js` | 889 | Legacy v1 product search |
+| `pages/api/match-categories.js` | 35 | Category matching |
+| `pages/api/ai/extract-specs.js` | 29 | Spec extraction |
+| `pages/api/price-research.js` | 19 | Price research |
+| `pages/api/process-image.js` | 18 | Image processing (vision) |
+| `pages/api/photos/generate-alt-text.js` | 96 | **DORMANT** — see note below |
+
+**Non-active (updated for consistency only):**
+`archive/search-product-old.js`, `archive/search-product-old-2-7-25.js`,
+`archive/search-product-old-2-7-26.js`, `archive/search-product-v2-old-2-7-26.js`,
+`docs/SYSTEM_SPEC.md`, `SYSTEM-AUDIT.md`.
+
+### Deploy
+Done via Claude Code: `git add .` → `git commit` → `git push` → Vercel
+auto-deploy.
+
+### Post-deploy check
+Spot-check the first 1–2 listings (title / specs / description). Sonnet 4.6 may
+word things slightly differently than the retired model; web-search and
+text-block parsing logic are unchanged.
+
+---
+
+## 2. CORRECTIONS TO PROJECT KNOWLEDGE (these were marked pending — they're DONE)
+
+### 2a. Alt-text template system — ✅ INTEGRATED (was listed as "ready to deploy")
+The local template generator (`lib/generate-alt-text-templates.js`) is **fully
+wired in**. There are **zero** `fetch('/api/photos/generate-alt-text')` calls
+remaining. No Claude Vision API calls happen for alt-text.
+
+- `pages/pro.js` → imports `generateAltText` (line 26); uses it in the manual
+  "Generate Alt Text" button handler (~L2279) and in the auto-generate-on-publish
+  path (~L3222).
+- `pages/api/suredone-create-listing.js` → imports the template module (line 9);
+  flow checks **cached Firebase alt-text first**, falls back to template
+  generation, then caches the result to Firebase for reuse (~L1391–1428).
+
+**Implication:** No alt-text API costs. Do not re-introduce a `fetch` to the
+alt-text endpoint without an explicit decision.
+
+### 2b. Background removal 800px pre-resize — ✅ DEPLOYED (was listed as "on the horizon")
+`pages/api/photos/remove-bg.js` (141 lines) current pipeline:
+
+1. Pre-resize to **800px max with `sharp`** (L38–55) — *this is the fix that was
+   pending; it's in place.*
+2. POST raw bytes to `http://104.131.11.17:7000/remove-bg-raw` (L59–63) — rembg
+   droplet is **primary**.
+3. Upscale result to 1600px PNG (L80–83).
+4. JPEG fallback if result > 3MB (L87–97).
+5. **Remove.bg fallback** only if rembg throws AND `REMOVE_BG_API_KEY` exists
+   (L108–134).
+
+**We did NOT revert to Remove.bg.** The droplet is primary; Remove.bg is an
+error-only catch-all. The Vercel 30-second timeout on large images should be
+resolved by the 800px pre-resize.
+
+### 2c. Claude endpoint count was wrong
+`SYSTEM-AUDIT.md` said "All 6 Claude API endpoints." Actual count is **10
+actively-called** Claude endpoints (plus 1 dormant: `generate-alt-text.js`).
+All now on `claude-sonnet-4-6`.
+
+---
+
+## 3. HOUSEKEEPING NOTES
+
+- **Dormant file:** `pages/api/photos/generate-alt-text.js` still exists but
+  nothing calls it (alt-text is now template-based). Its model string was
+  updated along with the rest — harmless. **Optional cleanup:** delete this file
+  later so no one accidentally re-wires a call to the paid endpoint.
+- **Stale snapshot reminder:** The Project Knowledge file copies loaded into the
+  Claude.ai project were ~3–4 months old this session (line numbers and file
+  paths had drifted; several files were missing). When in doubt, confirm against
+  the live repo via Claude Code rather than the project snapshot.
+- **Uncommitted-but-harmless:** `.DS_Store` (macOS Finder junk) and `HANDOFF.md`
+  were the only uncommitted local changes. `.DS_Store` should ideally be added to
+  `.gitignore` so it stops getting tracked.
+
+---
+
+## 4. OPEN / ON THE HORIZON (still genuinely pending)
+
+- **Verify first listings post-deploy** look correct on Sonnet 4.6 (title, specs,
+  description wording).
+- **Background removal — confirm the original pain point is resolved.** If the
+  remembered "issues" were the Vercel large-image timeout, the 800px pre-resize
+  should cover it — confirm in real use. The silver/white-on-white limitation is
+  a photography fix (colored backdrop), not code.
+- **`.DS_Store` → `.gitignore`** (minor cleanup).
+- **Optional:** delete dormant `generate-alt-text.js`.
+- **Future model retirements:** all Claude model strings live in the `pages/api/`
+  endpoints listed in §1. Next retirement is a known one-step find-and-replace
+  of the model string — not a mystery 500.
+- Carried over from prior notes (not addressed this session): Firebase App Check
+  hardening; FCM push-notification integration; item specifics not reloading from
+  SureDone when an existing listing is reopened in PLB.
+
+
+========================================
+FILE: ./docs/SYSTEM_SPEC.md
+========================================
+# System Specification
+
+**Project:** Industrial Equipment Listing Builder
+**Stack:** Next.js 16.1.4 / React 18 / Tailwind CSS / Firebase Firestore / SureDone API
+**AI:** Anthropic Claude (claude-sonnet-4-6) with web search
+**Last updated:** 2026-02-09
+
+---
+
+## Architecture Overview
+
+This is a Next.js application that helps create eBay and BigCommerce product listings for industrial equipment (motors, PLCs, sensors, drives, bearings, etc.). It uses AI to research products, detect categories, fill eBay item specifics, and generate titles/descriptions. Listings are submitted to SureDone, which syndicates to eBay and BigCommerce.
+
+### External Services
+
+| Service | Purpose |
+|---|---|
+| **Firebase Firestore** | Persistent queue/state for listing items |
+| **Anthropic API** | Product research, spec extraction, title/description generation |
+| **SureDone API** | Listing creation/updates, syndicates to eBay + BigCommerce |
+| **eBay Taxonomy API** | Category aspect definitions (item specifics schema) |
+| **eBay Browse/Trading API** | Token management, listing validation |
+
+---
+
+## Frontend Pages
+
+### /pro (Primary — `pages/pro.js`, 2,646 lines)
+
+The production listing builder. Full-featured single-page app.
+
+**Capabilities:**
+- Camera/image OCR for brand+part extraction (`/api/process-image`)
+- Brand/part number manual entry with real-time duplicate detection (`InventoryCheckAlert`)
+- SKU Lookup to search existing SureDone listings (`SkuLookup` component)
+- Comparison Panel for side-by-side existing vs new data (160+ spec fields)
+- AI product research (Pass 1) with auto Pass 2 eBay specifics fill
+- Full eBay item specifics editing UI (Required/Recommended/Optional sections)
+- 309 embedded eBay marketplace categories with manual override dropdown
+- Hierarchical eBay store category selectors
+- BigCommerce category tracking
+- Condition selection (8 options)
+- Create new listings AND edit existing ones
+- Quality flag system (STRONG / NEEDS_REVIEW / EDITING)
+- Keyword generation
+
+**State:** Firebase `products` collection
+**Search API:** `/api/search-product-v2`
+**Listing API:** `/api/suredone-create-listing` (create) + `/api/suredone/update-item` (edit)
+
+### /pro-v2 (Experimental — `pages/pro-v2.js`, 913 lines)
+
+Clean rewrite with server-delegated architecture. Not yet feature-complete.
+
+**Capabilities:**
+- 5-stage pipeline with human confirmation gates
+- Condition selection (9 options, adds Manufacturer Refurbished)
+- Shipping profile selector
+- Description HTML/Preview toggle
+- Categories determined server-side (no embedded lookup tables)
+
+**Missing vs /pro:** No camera OCR, no SKU lookup, no comparison panel, no edit-existing, no BigCommerce, no manual category override, no keyword generation.
+
+**State:** Firebase `products-v2` collection
+**Search API:** `/api/v2/research-product`
+**Listing API:** `/api/v2/submit-listing`
+
+### /tools/* (Utility Pages)
+
+| Route | Component | Purpose |
+|---|---|---|
+| `/tools/ai-autofix` | `AIAutoFix` | AI-powered listing issue fixer |
+| `/tools/bulk-audit` | `BulkAuditTool` | Batch audit existing listings |
+| `/tools/category-health` | `CategoryHealthCheck` | Verify category assignments |
+| `/tools/listing-manager` | `UnifiedListingManager` | Browse/manage SureDone inventory |
+| `/tools/listing-quality` | `ListingQualityEditor` | Edit and improve listing quality |
+
+---
+
+## API Endpoints
+
+### Product Research
+
+#### `/api/search-product-v2` (1,025 lines) — Used by /pro
+
+The primary research endpoint. Single AI call with web search, then maps results to eBay + store categories.
+
+**Input:** `{ brand, partNumber }`
+**Process:**
+1. AI researches product with web search tool
+2. AI returns `productType` (e.g., "AC Motor", "PLC", "Proximity Sensor")
+3. Server maps productType → eBay Category ID (413+ entries in `PRODUCT_TYPE_TO_EBAY_CATEGORY`)
+4. Server maps productType → eBay Store Category ID (400+ entries in `PRODUCT_TYPE_TO_STORE_CATEGORY`)
+5. Server fetches eBay aspects via `/api/ebay-category-aspects?categoryId=...`
+
+**Output:**
+```json
+{
+  "content": [ /* AI response blocks */ ],
+  "_metadata": {
+    "productType": "AC Motor",
+    "detectedCategory": "Electric Motors",
+    "detectedCategoryId": "181732",
+    "ebayStoreCategoryId": "2242358015",
+    "ebayStoreCategoryId2": "23399313015",
+    "ebayAspectsLoaded": true,
+    "totalAspects": 45
+  },
+  "_ebayAspects": {
+    "categoryId": "181732",
+    "required": [...],
+    "recommended": [...],
+    "optional": [...],
+    "all": [...],
+    "fieldMapping": {...}
+  }
+}
+```
+
+## Critical Configuration — DO NOT CHANGE
+- search-product-v2.js MUST have web search enabled:
+  `tools: [{ type: 'web_search_20250305', name: 'web_search' }]`
+- Response parsing MUST use the LAST text block pattern (not join, not first)
+- Removing web search causes AI to fail on obscure industrial parts
+- This was a confirmed regression on 2/9/2026 — do not repeat it
+
+#### `/api/search-product` (912 lines) — Legacy v1
+
+Original research endpoint. Still exists but no longer called by /pro (was switched to v2).
+
+**Key differences from v2:**
+- Returns `product.productCategory` (not `productType`)
+- Returns `product.ebayCategory.id` (nested, not flat)
+- Has no `_metadata`, no `_ebayAspects`
+- Has 15 hardcoded category definitions in `CATEGORY_FIELD_DEFINITIONS`
+- Includes `_categoryDefinitions` and `_countryOfOriginValues` in response
+
+#### `/api/v2/research-product` (266 lines) — Used by /pro-v2
+
+Separate v2 architecture endpoint. Uses Anthropic SDK (not raw fetch).
+
+**Input:** `{ brand, partNumber, condition }`
+**Output:** `{ success, stage, data: { title, productType, description, specifications, condition } }`
+
+### eBay Category Aspects
+
+#### `/api/ebay-category-aspects` (151 lines)
+
+Fetches real-time item specifics schema from eBay Taxonomy API for a given category.
+
+**Input:** `GET ?categoryId=181732`
+**Output:** `{ categoryId, totalAspects, required, recommended, optional, all, fieldMapping }`
+**Caching:** In-memory Map, 24-hour TTL
+
+### Pass 2 — eBay Item Specifics
+
+#### `/api/v2/auto-fill-ebay-specifics` (266 lines) — Used by /pro
+
+Called automatically after Pass 1. Takes eBay aspects + Pass 1 specs, AI fills all fields.
+
+**Input:** `{ brand, partNumber, productType, ebayAspects, pass1Specs, title }`
+**Output:** `{ success, data: { specificsForUI, specificsForSuredone, filledCount, totalCount } }`
+
+Returns both UI format (for editing) and SureDone-ready format (field name → value).
+
+#### `/api/v2/fill-specifics` (277 lines) — Used by /pro-v2
+
+Alternative Pass 2 endpoint with explicit `EBAY_TO_SUREDONE_FIELD_MAP` (107 mappings).
+
+**Input:** `{ brand, partNumber, productType, itemSpecifics, knownSpecs }`
+
+#### `/api/v2/get-category-specifics` (376 lines) — Used by /pro-v2
+
+Maps productType to eBay category, then fetches aspects. Combines lookup + fetch in one call.
+
+### Pass 3 — Listing Revision
+
+#### `/api/v2/revise-listing` (228 lines)
+
+Compares filled item specifics against existing title/description and enriches them.
+
+**Input:** `{ brand, partNumber, productType, title, description, shortDescription, filledSpecifics, condition }`
+**Output:** `{ success, data: { title, description, shortDescription, keywords, changes } }`
+
+**Note:** Not yet wired into either /pro or /pro-v2 frontend.
+
+### Listing Submission
+
+#### `/api/suredone-create-listing` (915 lines) — Used by /pro
+
+Full-featured SureDone submission with UPC assignment, BigCommerce multi-categories, and comprehensive eBay item specifics.
+
+**Key features:**
+- UPC pool assignment from `data/upc_pool.json`
+- Brand ID lookup: `bigcommerce_brands.json` (2,556 brands) → fallback to hardcoded `BRAND_IDS`
+- BigCommerce categories: `BIGCOMMERCE_CATEGORY_MAP` (200+ product type → category array mappings)
+- Format: `JSON.stringify(['26', '30'])` → `'["26","30"]'`
+- `SPEC_TO_EBAY_FIELD` mapping for eBay item specifics (motor-centric, applied to all types)
+- `generateUserType()` for SureDone usertype field
+- Condition notes injected into description HTML
+- Shipping profile: `69077991015` (default)
+- Return profile: `61860297015` (default)
+
+**SureDone API:** POST to `https://api.suredone.com/v1/editor/items/add`
+**Auth:** `X-Auth-User` + `X-Auth-Token` headers from env vars
+
+#### `/api/v2/submit-listing` (484 lines) — Used by /pro-v2
+
+Cleaner submission endpoint. BigCommerce categories as pre-formatted JSON strings.
+
+**Key differences from v1:**
+- Categories stored as string literals: `'["26","30"]'` (not computed at runtime)
+- Simpler field mapping
+- No SPEC_TO_EBAY_FIELD (relies on Pass 2 output)
+
+### Supporting APIs
+
+| Endpoint | Purpose |
+|---|---|
+| `/api/process-image` | OCR extraction of brand/part from photos |
+| `/api/check-inventory` | Duplicate SKU detection |
+| `/api/suredone-check-sku` | Check if SKU exists in SureDone |
+| `/api/suredone/get-item` | Fetch existing SureDone listing by SKU |
+| `/api/suredone/update-item` | Update existing SureDone listing |
+| `/api/assign-upc` | Get next available UPC from pool |
+| `/api/match-brand` | Fuzzy brand name matching |
+| `/api/match-categories` | Category matching helper |
+| `/api/price-research` | Price comparison research |
+| `/api/ebay-token` | eBay OAuth token management |
+| `/api/ebay/get-access-token` | eBay token refresh |
+| `/api/ebay/check-category` | Validate eBay category ID |
+| `/api/ebay/validate-listing` | Pre-submission listing validation |
+| `/api/ai/extract-specs` | AI-based spec extraction |
+| `/api/debug-suredone` | Debug SureDone connection |
+| `/api/v2/debug-suredone` | Debug SureDone connection (v2) |
+| `/api/ebay-field-options` | eBay field allowed values |
+
+---
+
+## Data Files
+
+| File | Contents |
+|---|---|
+| `data/bigcommerce_brands.json` | 2,556 brands with BigCommerce IDs |
+| `data/bigcommerce_categories.json` | BigCommerce category tree |
+| `data/ebay_store_categories.json` | eBay store category hierarchy |
+| `data/ebay-category-aspects.json` | Cached eBay category aspect definitions |
+| `data/condition_options.json` | Item condition presets |
+| `data/shipping_profiles.json` | eBay shipping profile IDs |
+| `data/upc_pool.json` | Available UPC codes for assignment |
+
+---
+
+## Components
+
+| Component | Used By | Purpose |
+|---|---|---|
+| `InventoryCheckAlert` | /pro | Real-time duplicate warning on brand/part entry |
+| `SkuLookup` | /pro | Search existing SureDone listings by SKU |
+| `ExistingListingPanel` | /pro | Display/compare existing listing data |
+| `AIAutoFix` | /tools/ai-autofix | AI-powered listing fixer |
+| `BulkAuditTool` | /tools/bulk-audit | Batch listing audit |
+| `CategoryHealthCheck` | /tools/category-health | Category assignment verification |
+| `UnifiedListingManager` | /tools/listing-manager | Inventory browser |
+| `ListingQualityEditor` | /tools/listing-quality | Quality editing tool |
+
+---
+
+## Data Flow: /pro Listing Creation
+
+```
+User enters Brand + Part Number
+         │
+         ▼
+┌─────────────────────────────────┐
+│  PASS 1: /api/search-product-v2 │
+│  • AI researches product (web)  │
+│  • Detects productType          │
+│  • Maps → eBay Category ID      │
+│  • Maps → Store Category ID     │
+│  • Fetches eBay aspects          │
+└─────────────┬───────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────┐
+│  PASS 2: /api/v2/auto-fill-ebay-specifics│
+│  • Takes eBay aspects + Pass 1 specs    │
+│  • AI fills all item specifics          │
+│  • Returns UI format + SureDone format  │
+│  (auto-fires if _ebayAspects present)   │
+└─────────────┬───────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────┐
+│  User reviews/edits in UI           │
+│  • Title, description, specs        │
+│  • eBay item specifics (dropdowns)  │
+│  • Condition, price, shipping       │
+│  • Category overrides if needed     │
+└─────────────┬───────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────┐
+│  SUBMIT: /api/suredone-create-listing    │
+│  • Formats all fields for SureDone API  │
+│  • Assigns UPC from pool                │
+│  • Maps BigCommerce categories          │
+│  • Resolves brand ID                    │
+│  • Builds URLSearchParams POST body     │
+│  • POSTs to SureDone /v1/editor/items   │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## Known Issues & Gaps
+
+1. **Pass 3 not wired up.** `/api/v2/revise-listing` exists but neither /pro nor /pro-v2 calls it. Title/description revision after Pass 2 does not happen.
+
+2. **ebayItemSpecificsForSuredone not consumed.** Pass 2 output (`specificsForSuredone`) is stored in Firebase but neither `suredone-create-listing` nor `v2/submit-listing` reads it from the submitted payload. The listing endpoints use their own `SPEC_TO_EBAY_FIELD` mapping instead.
+
+3. **SPEC_TO_EBAY_FIELD is motor-centric.** In `suredone-create-listing`, the spec-to-eBay field mapping (e.g., `type` → `acmotortype`, `voltage` → `nominalratedinputvoltage`) is applied to ALL product types, not just motors.
+
+4. **BigCommerce category format uncertainty.** Categories changed from comma-separated (`'23,26,30'`) to JSON array (`'["26","30"]'`). Whether SureDone accepts this format has not been verified in production.
+
+5. **Two parallel listing systems.** /pro and /pro-v2 use different Firebase collections (`products` vs `products-v2`), different API endpoints, and different submission flows. They do not share state.
+
+---
+
+## Environment Variables
+
+```
+ANTHROPIC_API_KEY          — Anthropic API key for Claude
+SUREDONE_API_USER          — SureDone API username
+SUREDONE_API_TOKEN         — SureDone API token
+EBAY_CLIENT_ID             — eBay OAuth client ID
+EBAY_CLIENT_SECRET         — eBay OAuth client secret
+EBAY_REFRESH_TOKEN         — eBay OAuth refresh token
+```
+
+Firebase config is hardcoded in `firebase.js` (project: `camera-spec-finder`).
+
+---
+
+## File Structure
+
+```
+camera-spec-finder/
+├── pages/
+│   ├── pro.js                          # Primary listing builder (2,646 lines)
+│   ├── pro-v2.js                       # Experimental rewrite (913 lines)
+│   ├── index.js                        # Landing page
+│   ├── _app.js                         # Next.js app wrapper
+│   ├── tools/
+│   │   ├── ai-autofix.js
+│   │   ├── bulk-audit.js
+│   │   ├── category-health.js
+│   │   ├── listing-manager.js
+│   │   └── listing-quality.js
+│   └── api/
+│       ├── search-product.js           # v1 research (legacy, still exists)
+│       ├── search-product-v2.js        # v2 research (used by /pro)
+│       ├── suredone-create-listing.js  # Listing submission (used by /pro)
+│       ├── ebay-category-aspects.js    # eBay Taxonomy API proxy
+│       ├── ebay-token.js               # eBay OAuth token
+│       ├── process-image.js            # OCR
+│       ├── check-inventory.js          # Duplicate detection
+│       ├── assign-upc.js              # UPC pool
+│       ├── match-brand.js             # Brand matching
+│       ├── match-categories.js        # Category matching
+│       ├── price-research.js          # Price research
+│       ├── suredone-check-sku.js      # SKU check
+│       ├── debug-suredone.js          # Debug
+│       ├── ebay-field-options.js      # Field options
+│       ├── ai/
+│       │   └── extract-specs.js       # AI spec extraction
+│       ├── ebay/
+│       │   ├── get-access-token.js
+│       │   ├── check-category.js
+│       │   ├── get-category-aspects.js
+│       │   └── validate-listing.js
+│       ├── suredone/
+│       │   ├── get-item.js
+│       │   ├── update-item.js
+│       │   └── debug-get-item.js
+│       └── v2/
+│           ├── research-product.js     # Pass 1 (used by /pro-v2)
+│           ├── get-category-specifics.js
+│           ├── auto-fill-ebay-specifics.js  # Pass 2 (used by /pro)
+│           ├── fill-specifics.js       # Pass 2 alt (used by /pro-v2)
+│           ├── revise-listing.js       # Pass 3 (not wired up)
+│           ├── submit-listing.js       # Submission (used by /pro-v2)
+│           └── debug-suredone.js
+├── components/
+│   ├── InventoryCheckAlert.js
+│   ├── SkuLookup.js
+│   ├── ExistingListingPanel.js
+│   ├── AIAutoFix.js
+│   ├── BulkAuditTool.js
+│   ├── CategoryHealthCheck.js
+│   ├── UnifiedListingManager.js
+│   └── ListingQualityEditor.js
+├── data/
+│   ├── bigcommerce_brands.json        # 2,556 brands
+│   ├── bigcommerce_categories.json
+│   ├── ebay_store_categories.json
+│   ├── ebay-category-aspects.json
+│   ├── condition_options.json
+│   ├── shipping_profiles.json
+│   └── upc_pool.json
+├── archive/                            # Old/backup files moved out of pages/
+├── firebase.js                         # Firebase singleton init
+├── package.json
+├── tailwind.config.js
+├── postcss.config.js
+└── next.config.js
+```
+
+
+========================================
+FILE: ./docs/ALT_TEXT_TEMPLATE_INTEGRATION.md
+========================================
+# ALT-TEXT TEMPLATE INTEGRATION
+
+Replace AI-generated alt-text (Claude Vision API calls) with instant
+template-based alt-text generation. This eliminates API costs and load
+from photo processing while producing equally good SEO results.
+
+## STEP 1: Add the new module
+
+Create the file lib/generate-alt-text-templates.js using the code from
+the attached generate-alt-text-templates.js file that Scott will provide.
+
+This module exports three functions:
+
+1. generateAltText({ brand, partNumber, viewType, condition, productType, photoIndex })
+   Returns a single alt-text string for one photo.
+
+2. generateAllAltTexts({ brand, partNumber, condition, productType, photos })
+   Takes an array of photo objects, returns them with altText added.
+
+3. mapPhotosToSureDoneFields({ brand, partNumber, condition, productType, photos })
+   Returns a flat object like { media1: url, media1alttext: alt, media2: url, ... }
+
+## STEP 2: Update Photo Station (pages/photos.js)
+
+Find where photos.js calls the /api/photos/generate-alt-text endpoint.
+This is the Claude Vision API call that we are replacing.
+
+It probably looks something like:
+
+  const altResponse = await fetch('/api/photos/generate-alt-text', {
+    method: 'POST',
+    body: JSON.stringify({ imageData, brand, partNumber, viewType })
+  });
+  const altData = await altResponse.json();
+  const altText = altData.altText;
+
+Replace the API call with a local function call:
+
+  import { generateAltText } from '../lib/generate-alt-text-templates';
+
+  const altText = generateAltText({
+    brand: currentItem.brand,
+    partNumber: currentItem.partNumber,
+    viewType: currentStep.id,
+    condition: currentItem.condition,
+    productType: currentItem.productCategory || currentItem.title || '',
+    photoIndex: photoOrder,
+  });
+
+This runs instantly on the client with zero API calls.
+
+If the product type is not available yet (AI research has not run), the
+template gracefully omits it and still produces good alt-text.
+
+## STEP 3: Update Photo Station completion flow
+
+When Photo Station completes a session and writes the photos array to
+Firebase, each photo object should include the template-generated altText:
+
+  import { generateAllAltTexts } from '../lib/generate-alt-text-templates';
+
+  const photosWithAlt = generateAllAltTexts({
+    brand: currentItem.brand,
+    partNumber: currentItem.partNumber,
+    condition: currentItem.condition,
+    productType: currentItem.productCategory || '',
+    photos: capturedPhotos,
+  });
+
+  // Write photosWithAlt to Firebase instead of capturedPhotos
+
+## STEP 4: Update Pro Builder photo upload from computer
+
+When photos are uploaded directly through Pro Builder, generate alt-text
+immediately instead of calling the API:
+
+  import { generateAltText } from '../lib/generate-alt-text-templates';
+
+  const altText = generateAltText({
+    brand: currentItem?.brand || brandName,
+    partNumber: currentItem?.partNumber || partNumber,
+    viewType: 'extra_' + photoIndex,
+    condition: currentItem?.condition || condition,
+    productType: currentItem?.productCategory || currentItem?.title || '',
+    photoIndex: photoIndex,
+  });
+
+## STEP 5: Update SureDone listing creation
+
+In pages/api/suredone-create-listing.js, when photos are mapped to
+media1-media12 fields, use the template mapper if alt-text is missing:
+
+  const { mapPhotosToSureDoneFields } = require('../../lib/generate-alt-text-templates');
+
+  const photosNeedAlt = photos.some(p => !p.altText);
+
+  if (photosNeedAlt) {
+    const mediaFields = mapPhotosToSureDoneFields({
+      brand, partNumber, condition,
+      productType: title || productCategory || '',
+      photos,
+    });
+    Object.assign(payload, mediaFields);
+  } else {
+    photos.forEach((photo, i) => {
+      if (i >= 12) return;
+      payload['media' + (i + 1)] = photo.url;
+      payload['media' + (i + 1) + 'alttext'] = photo.altText;
+    });
+  }
+
+## STEP 6: Keep the AI endpoint (do NOT delete)
+
+Do NOT delete pages/api/photos/generate-alt-text.js.
+It can serve as an optional premium alt-text option later.
+Just stop calling it by default from Photo Station and Pro Builder.
+
+## STEP 7: Verify with example output
+
+After integration the system should produce alt-text like this for
+Allen-Bradley 1756-L72 ControlLogix PLC Processor, Used Good Condition:
+
+  media1alttext: Allen-Bradley 1756-L72 ControlLogix PLC Processor - Front View - Used Good Condition
+  media2alttext: Allen-Bradley 1756-L72 ControlLogix PLC Processor Left Side View Used Good Condition
+  media3alttext: Right Side Allen-Bradley 1756-L72 ControlLogix PLC Processor - Used Good Condition
+  media4alttext: Allen-Bradley 1756-L72 Nameplate Showing Model Number and Specifications
+  media5alttext: Allen-Bradley 1756-L72 ControlLogix PLC Processor Close-Up Detail View - Used Good Condition
+
+Each line has different word order but targets the same keywords.
+
+Build and deploy.
+
+
+========================================
+FILE: ./HANDOFF.md
+========================================
+# Handoff Document — Recent Changes & System State
+
+**Last Updated**: March 17, 2026
+**System**: IPRU Warehouse Inventory Management
+**Codebase**: camera-spec-finder
+
+---
+
+## Table of Contents
+
+1. [Recent Changes (March 2026)](#recent-changes-march-2026)
+2. [Recent Changes (February 2026)](#recent-changes-february-2026)
+3. [Current Known Issues](#current-known-issues)
+4. [Critical System Notes](#critical-system-notes)
+5. [Architecture Quick Reference](#architecture-quick-reference)
+
+---
+
+## Recent Changes (March 2026)
+
+### 1. SureDone Relist & Action Routing Fixes (c6f5ffc1)
+**Files:** `pages/api/suredone/listing-action.js`, `pages/api/scanner/update-stock.js`, `pages/api/suredone/update-item.js`, `pages/api/suredone-create-listing.js`
+
+**Problem:** Relisting items on eBay was failing for two reasons:
+- Using `/start` endpoint for existing items → SureDone error 55 (SKU already exists)
+- Missing `ebaytitle` field → SureDone error 62 (relist requires ebaytitle)
+
+**Fix:**
+- `listing-action.js` now ALWAYS uses POST `/relist` for existing items (never `/start`)
+- Before every `/relist`, fetches item title from SureDone and sets `ebaytitle` (REQUIRED — error 62 if blank)
+- Edit/revise action: checks for eBay ID → if present, uses `/edit`; if not, falls through to `/relist` (not `/start`)
+- Added `googleskip=1` to ALL SureDone API calls in ALL files
+- Added `ebay2skip=1` everywhere (skip secondary eBay account)
+- Auto-fix for payment profile errors: clears `ebaypaymentprofileid` + `paymentprofileidebay` and retries
+
+**SureDone API rules (CRITICAL):**
+- POST form-urlencoded to `/v1/editor/items/{action}` (NOT JSON PUT)
+- Always include `identifier=guid` + `guid={sku}` in form data
+- Endpoints: `/edit` (update fields), `/relist` (re-list ended item), `/start` (first-time publish ONLY), `/end`, `/delete`
+- NEVER send `sku` as an editable field when using `identifier=guid` (triggers error 51)
+- Both `ebaypaymentprofileid` and `paymentprofileidebay` field patterns exist — clear both
+- `/relist` REQUIRES `ebaytitle` to be populated (error 62 if blank)
+- `/start` REJECTS existing SKUs (error 55) — use `/relist` instead
+
+---
+
+### 2. Background Removal: Remove.bg → Self-Hosted rembg (abbdbf12 through 90552c53)
+**Files:** `pages/api/photos/remove-bg.js`, `components/PhotoEditor.js`
+
+**What changed:** Replaced paid Remove.bg API (~$500/month) with self-hosted rembg server on DigitalOcean. Remove.bg kept as fallback.
+
+**Server details:**
+- URL: `http://104.131.11.17:7000` (env var: `REMBG_SERVER_URL`)
+- Model: birefnet-general
+- Endpoint: POST `/remove-bg-raw` with `Content-Type: application/octet-stream` (raw image bytes)
+- Response: `{ success: true, image_base64: "...", format: "png", width: N, height: N }`
+- Health check: GET `/health`
+
+**Current pipeline (after 7 iterations of fixes):**
+1. **Client-side (PhotoEditor.js):** Resize image to max 1200px, export as JPEG quality 0.85
+2. **API receives base64**, decodes to buffer
+3. **Pre-resize to 800px max** using sharp (CRITICAL — rembg times out on larger images)
+4. Send raw bytes to rembg `/remove-bg-raw`
+5. **Upscale result to 1600px** using sharp (eBay listing quality)
+6. Output as PNG; if >3MB, compress to JPEG quality 90
+7. **Fallback:** If rembg fails AND `REMOVE_BG_API_KEY` env var exists, falls back to Remove.bg API
+
+**Why this pipeline matters:**
+- rembg processes 95KB images in ~1.6s but 516KB images cause 30s+ timeouts
+- Pre-resizing to 800px keeps processing fast
+- Upscaling to 1600px after ensures eBay-quality images
+- Vercel has 4.5MB response limit, so JPEG compression fallback is needed
+- `maxDuration: 30` set in API config
+
+**Previous iterations that failed:**
+1. URL-encoded base64 → too large for form body
+2. Multipart file upload → server parsing issues
+3. Raw bytes worked but response too large → Vercel crash
+4. Added sharp resize after → sharp autoCrop/scale caused timeouts
+5. Stripped autoCrop/scale → still timing out on large inputs
+6. Added pre-resize to 800px before rembg → **WORKING** (current)
+
+---
+
+### 3. Scanner Lookup Case-Sensitivity Fix (b40adb0c)
+**File:** `pages/api/scanner/lookup.js`
+
+**Problem:** Desktop scanner stopped finding existing listings:
+1. Firebase brand matching was case-sensitive — `data.brand?.toUpperCase().includes(brand)` broke because `brand` was no longer pre-uppercased
+2. Firebase queries only searched lowercase partNumber
+
+**Fix:**
+- Changed brand matching to use existing `verifyBrand()` function (normalized soft matching)
+- Added uppercase `partNumber` variant to Firebase queries
+
+---
+
+### 4. Shipping Measurements in Scanner (e15c8af5)
+**Files:** `pages/scanner.js`, `pages/api/scanner/update-stock.js`
+
+Added shipping measurement fields (boxlength, boxwidth, boxheight, weight) to scanner stock updates. Queue badge shows on lookup matches.
+
+**Note:** Collapsible UI for shipping fields in add-stock/new-item screens was planned but NOT built yet. The API support exists.
+
+---
+
+### 5. Additional SureDone Fixes (various commits)
+- `93dc2f81` — Verify stock before auto-relist + skip ebay2
+- `d3bc204b` — Smart edit/revise: detect no eBay ID and use /start instead
+- `63c545f9` — Clear eBay channel overrides (ebayprice/ebaytitle) that block listings
+
+---
+
+## Recent Changes (February 2026)
+
+### Photo Upload Size Limit Increase
+- Increased API body size to 20MB in `pages/api/photos/upload-simple.js`
+- Reduced JPEG quality to 0.95 (smaller files, no visible quality loss)
+
+### Photo Station File Upload
+- Added single-slot and bulk upload modes to `pages/photos.js`
+- Drag & drop for multiple files, auto-assigns to empty slots
+
+### Unified Login System
+- Replaced 3 separate PIN-based auth systems with single UserPicker
+- `lib/users.js` is the single source of truth
+- `ipru_current_user` localStorage key shared across all tools
+
+### Claude API Retry Logic
+- Exponential backoff for 529/503/429 errors (2s → 4s → 8s, 3 retries)
+- Frontend auto-retry after 5s
+- Applied to all 6 AI research endpoints
+
+### Firebase Print Queue
+- `cfef6209` — Firebase-based print queue for mobile Zebra label printing
+- Chrome extension integration via postMessage API
+
+---
+
+## Current Known Issues
+
+### 1. SKU Counter Reset (Manual Fix Needed)
+**Status:** Needs manual Firestore fix
+**File:** `lib/sku-generator.js`
+
+Firestore document `counters/sku_counter` had its `currentNumber` reset to 0. New SKUs started over at AI0001.
+
+**Fix:** Go to Firebase Console → Firestore → `counters/sku_counter` → set `currentNumber` to the highest existing SKU number (e.g., if last SKU was AI0847, set to 847).
+
+This is NOT a code bug — the sku-generator.js logic is correct.
+
+### 2. Background Removal May Need Testing
+The rembg pipeline went through 7 iterations. Current version (commit `90552c53`) should work but watch for:
+- Timeout errors (should be fixed by pre-resize to 800px)
+- Response size errors (should be fixed by JPEG compression fallback)
+- Quality concerns (upscale from 800px to 1600px may lose fine detail)
+
+### 3. Shipping Measurements UI Incomplete
+Scanner add-stock and new-item screens need a collapsible shipping fields UI. API/state support exists, frontend UI not built.
+
+---
+
+## Critical System Notes
+
+### SureDone API (NEVER FORGET)
+- POST form-urlencoded (NOT JSON PUT) to `/v1/editor/items/{action}`
+- Always: `identifier=guid`, `guid={sku}`, `ebay2skip=1`, `googleskip=1`
+- `/relist` requires `ebaytitle` populated (error 62)
+- `/start` rejects existing SKUs (error 55) — use `/relist`
+- Clear both `ebaypaymentprofileid` AND `paymentprofileidebay`
+
+### Web Search in AI Research (NEVER REMOVE)
+**File**: `pages/api/search-product-v2.js`
+
+Web search is essential for identifying obscure industrial parts. Removing it caused a major regression on 2/9/2026. The `tools: [{ type: 'web_search_20250305', name: 'web_search' }]` line must stay.
+
+### Last Text Block Parsing (CRITICAL)
+When web search is enabled, Claude returns multiple content blocks. Always parse the LAST text block:
+```javascript
+const textBlocks = response.content.filter(b => b.type === 'text' && b.text);
+const text = textBlocks[textBlocks.length - 1].text;
+```
+Using `response.content?.[0]?.text` gets the search query, not the answer.
+
+### Condition Field Mapping
+- `new_in_box` → "New"
+- `new_open_box` → "New Other"
+- `like_new_excellent` / `used_good` → "Used"
+- `for_parts` → "For parts or not working"
+- `refurbished` → "Seller refurbished"
+
+---
+
+## Architecture Quick Reference
+
+- **Framework:** Next.js (pages router) deployed on Vercel
+- **Database:** Firebase Firestore (product data, SKU counter, print queue)
+- **Inventory:** SureDone (multi-channel listing management)
+- **Channels:** eBay (primary), BigCommerce, Google Shopping (skipped)
+- **Image processing:** Sharp (Node.js), self-hosted rembg (DigitalOcean)
+- **Label printing:** Zebra printer via Chrome extension (postMessage API)
+- **AI:** Anthropic Claude with web search for product research
+
+### Key Environment Variables
+- `ANTHROPIC_API_KEY` — Claude API
+- `SUREDONE_USER`, `SUREDONE_TOKEN` — SureDone API
+- `REMBG_SERVER_URL` — Self-hosted rembg (fallback: `http://104.131.11.17:7000`)
+- `REMOVE_BG_API_KEY` — Remove.bg fallback (optional)
+- Firebase config vars (client + admin SDK)
+
+### Key Files
+- `pages/api/suredone/listing-action.js` — Central listing action router (start/relist/end/revise/delete)
+- `pages/api/suredone/update-item.js` — Pro Builder item updates
+- `pages/api/suredone-create-listing.js` — New listing creation
+- `pages/api/scanner/update-stock.js` — Stock updates + auto-relist
+- `pages/api/scanner/lookup.js` — Scanner barcode/model lookup
+- `pages/api/photos/remove-bg.js` — Background removal API
+- `components/PhotoEditor.js` — Photo editing UI (crop, bg removal, etc.)
+- `pages/api/search-product-v2.js` — Main AI product research
+- `lib/suredone-config.js` — SureDone credentials helper
+- `lib/sku-generator.js` — SKU generation (AI0001-AI9999)
+- `lib/users.js` — Unified user management
+- `lib/field-name-resolver.js` — AI field name → SureDone mapping
+
+---
+
+**End of Handoff Document**
+*Generated: March 17, 2026*
+*Recent sessions: relist routing fixes, rembg migration, scanner lookup fix*
+
+
+========================================
+FILE: ./SYSTEM-AUDIT.md
+========================================
+# SYSTEM AUDIT — IPRU (Industrial Parts Resale Utility)
+
+> Generated: 2026-02-24
+> Purpose: Full codebase state for external Claude review. Do not fix — report only.
+
+---
+
+## 1. File Inventory
+
+### Pages (`pages/`)
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `_app.js` | 5 | Next.js app wrapper — imports global CSS |
+| `index.js` | 559 | Original camera spec finder app — image upload queue with Claude AI analysis |
+| `scanner.js` | 1,036 | Warehouse barcode scanner — lookup parts, manage stock, shelf return queue |
+| `photos.js` | 1,365 | Photo Station — guided 4-view capture, Remove.bg, watermark, upload to Firebase |
+| `pro.js` | 4,875 | Pro Listing Builder — main listing editor, AI research, send to SureDone/eBay |
+| `pro-v2.js` | 913 | Alternate Pro Builder (v2) — streamlined listing builder with Firebase |
+| `dashboard.js` | 1,117 | Admin dashboard — daily stats, worker status, inventory health |
+| `admin.js` | 1,217 | Admin panel — SureDone config, team management, system tools |
+| `scanner-test.js` | 200 | Diagnostic tool — test SureDone lookups by SKU/part number/brand |
+| `tools/ai-autofix.js` | 9 | Page wrapper → `<AIAutoFix />` |
+| `tools/bulk-audit.js` | 10 | Page wrapper → `<BulkAuditTool />` |
+| `tools/category-health.js` | 9 | Page wrapper → `<CategoryHealthCheck />` |
+| `tools/listing-manager.js` | 9 | Page wrapper → `<UnifiedListingManager />` |
+| `tools/listing-quality.js` | 10 | Page wrapper → `<ListingQualityEditor />` |
+
+### API Routes (`pages/api/`)
+
+#### Scanner APIs
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `scanner/lookup.js` | 329 | Search SureDone by SKU, part number, or brand — returns matches |
+| `scanner/update-stock.js` | 248 | Create new product or update stock in Firebase + SureDone |
+| `scanner/check-duplicate.js` | 129 | Check if part number already exists across Firebase products |
+| `scanner/diagnose.js` | 185 | Debug SureDone item lookups with detailed response info |
+
+#### Photo APIs
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `photos/queue.js` | 141 | Get photo queue — items with `photoCount == 0` or `status == 'needs_photos'` |
+| `photos/remove-bg.js` | 166 | Remove.bg API proxy — removes background, auto-crops, applies templates |
+| `photos/watermark.js` | 175 | Apply logo/contact watermark to product photos (2000×2000 eBay format) |
+| `photos/generate-alt-text.js` | 201 | Claude AI generates SEO alt text for product images |
+| `photos/upload.js` | 144 | Upload photo to Firebase Storage (server-side) |
+| `photos/upload-simple.js` | 71 | Simplified photo upload endpoint |
+| `photos/proxy-image.js` | 43 | CORS proxy for fetching external images |
+
+#### AI / Research APIs
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `search-product-v2.js` | 1,229 | Main AI product research — Claude with web search, specs extraction |
+| `search-product.js` | 912 | Original product research (v1) |
+| `auto-research.js` | 264 | Fire-and-forget AI research trigger for newly scanned items |
+| `match-categories.js` | 117 | Claude AI matches product to eBay category |
+| `match-brand.js` | 197 | Fuzzy brand matching against SureDone brand ID database |
+| `price-research.js` | 112 | Claude AI for market price estimation |
+| `process-image.js` | 34 | Image processing utility endpoint |
+| `ai/extract-specs.js` | 209 | Claude AI extracts specifications from product title/description |
+
+#### SureDone APIs
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `suredone-create-listing.js` | 1,690 | Full listing creation — photos, watermarks, alt text, eBay specifics, UPC |
+| `suredone-check-sku.js` | 31 | Check if SKU exists in SureDone |
+| `suredone/get-item.js` | 461 | Get full item data from SureDone by SKU |
+| `suredone/update-item.js` | 199 | Update existing SureDone listing |
+| `suredone/search.js` | 96 | Search SureDone inventory |
+| `suredone/get-field-list.js` | 357 | Get SureDone custom field definitions |
+| `suredone/get-listing-urls.js` | 117 | Get eBay/BigCommerce URLs for a listing |
+| `suredone/listing-action.js` | 246 | Relist/end/revise eBay listings via SureDone |
+| `suredone/debug-get-item.js` | 156 | Debug version of get-item with raw response |
+
+#### eBay APIs
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `ebay-token.js` | 86 | Get eBay OAuth access token |
+| `ebay-category-aspects.js` | 151 | Get required item specifics for an eBay category |
+| `ebay-field-options.js` | 184 | Get allowed values for eBay category fields |
+| `ebay/get-access-token.js` | 65 | eBay OAuth token (v2 endpoint) |
+| `ebay/check-category.js` | 63 | Verify if an eBay category ID is valid |
+| `ebay/get-category-aspects.js` | 126 | Get eBay category aspects (v2 endpoint) |
+| `ebay/taxonomy-search.js` | 79 | Search eBay taxonomy for category by keyword |
+| `ebay/validate-listing.js` | 200 | Validate listing data against eBay requirements |
+
+#### V2 API Routes
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `v2/research-product.js` | 295 | Product research with Claude retry logic |
+| `v2/revise-listing.js` | 257 | Revise existing listing via Claude AI |
+| `v2/fill-specifics.js` | 306 | AI fills missing eBay item specifics |
+| `v2/auto-fill-ebay-specifics.js` | 294 | Auto-populate eBay category-specific fields |
+| `v2/get-category-specifics.js` | 376 | Get eBay category specifics with caching |
+| `v2/submit-listing.js` | 484 | Submit listing to SureDone (v2 flow) |
+| `v2/debug-suredone.js` | 126 | Debug SureDone API calls |
+
+#### Task / Cron APIs
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `tasks/escalate.js` | 202 | Cron: escalate unacknowledged part requests every 2 min |
+| `tasks/morning-reminder.js` | 85 | Cron: 8:15 AM EST morning scanning reminder |
+| `tasks/daily-summary.js` | 181 | Cron: 5:00 PM EST daily activity summary |
+| `tasks/complete.js` | 173 | Mark part request task as completed |
+| `tasks/snooze.js` | 73 | Snooze a part request alert |
+| `tasks/clear-all.js` | 67 | Clear all pending part requests |
+
+#### Inventory APIs
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `inventory/crawl.js` | 339 | Cron: daily 6 AM EST — crawl all SureDone items, score quality, queue refreshes |
+| `inventory/weekly-report.js` | 149 | Cron: Saturday 8 PM EST — weekly listing quality report |
+
+#### Other APIs
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `notify.js` | 267 | Send FCM push notifications to users by ID or role |
+| `devices/remove.js` | 55 | Remove FCM device token from user |
+| `generate-sku.js` | 30 | Generate next AI#### SKU via atomic Firestore counter |
+| `assign-upc.js` | 80 | Assign next available UPC from pre-loaded pool |
+| `check-inventory.js` | 322 | Check SureDone inventory for duplicate/existing parts |
+| `debug-suredone.js` | 62 | Debug SureDone API connectivity |
+| `brand-ids-update.js` | 306 | **Not an endpoint** — exports a constant brand ID mapping object |
+
+### Components (`components/`)
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `UserPicker.jsx` | 59 | Shared login modal — groups team members by role, writes to localStorage |
+| `NotificationCenter.jsx` | 519 | Push notification UI — FCM registration, permission prompts, alert history |
+| `PartRequestModal.jsx` | 174 | "Request Part" modal — sends push notifications to warehouse workers |
+| `PhotoEditor.js` | 751 | Photo editor — zoom, pan, rotate, brightness, crop to 2000×2000 eBay format |
+| `ExistingListingPanel.js` | 326 | Side panel showing current SureDone listing for comparison |
+| `InventoryCheckAlert.js` | 473 | Displays existing inventory matches during scanning |
+| `SkuLookup.js` | 128 | SKU lookup input for loading existing listings |
+| `AIAutoFix.js` | 632 | AI auto-fix tool — extracts specs from titles, populates missing fields |
+| `BulkAuditTool.js` | 582 | Bulk audit — scans multiple SKUs against eBay category requirements |
+| `CategoryHealthCheck.js` | 526 | Scans listings for invalid/outdated eBay category IDs |
+| `ListingQualityEditor.js` | 1,041 | Listing quality analyzer — scores against eBay requirements, suggests improvements |
+| `UnifiedListingManager.js` | 913 | All-in-one listing manager — lookup, AI specs, SureDone updates |
+
+### Libraries (`lib/`)
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `users.js` | 66 | User identity — TEAM_MEMBERS array, localStorage get/set/clear, role checks |
+| `auth.js` | 77 | **DEAD CODE** — old Firestore PIN-based auth, no longer imported anywhere |
+| `sku-generator.js` | 98 | SKU generation — atomic Firestore counter, format AI0001-AI9999 |
+| `item-specifics-mapping.js` | 769 | Maps AI-extracted specs → eBay item specifics + website standardized fields |
+| `field-name-resolver.js` | 214 | Three-tier field resolution: eBay aspect names → SureDone field names |
+| `listingScorer.js` | 222 | Quality scoring engine — returns 0-100 based on title, description, photos, fields |
+| `notificationService.js` | 209 | Client-side FCM service — token management, permission prompts, foreground handling |
+| `coil-voltage-normalizer.js` | 75 | Normalizes voltage values (e.g., "24vdc" → "24V DC") for consistent filtering |
+
+### Config Files (root)
+
+| File | Lines | Description |
+|------|------:|-------------|
+| `firebase.js` | 27 | Firebase client SDK init — Firestore, Storage, Auth (hardcoded config) |
+| `next.config.js` | 5 | Next.js config — default settings |
+| `vercel.json` | 53 | Vercel config — 5 cron job schedules, function maxDuration settings |
+| `package.json` | 26 | Dependencies and scripts |
+| `styles/globals.css` | 2 | Tailwind CSS imports |
+
+### Public Assets (`public/`)
+
+| File/Dir | Description |
+|----------|-------------|
+| `firebase-messaging-sw.js` (189 lines) | FCM service worker — notification display, click/close handlers, vibration patterns, action buttons |
+| `favicon-*.svg` (5 files) | Page-specific favicons: admin, dashboard, photos, pro, scanner |
+| `bg-templates/` (3 JPGs) | Remove.bg background templates: industrial, studio-gradient, warehouse-floor |
+| `watermarks/` (2 PNGs + README) | Watermark overlays: logo.png, contact-info.png |
+
+### Project Totals
+
+| Category | Files | Lines |
+|----------|------:|------:|
+| Pages | 14 | 10,324 |
+| API Routes | 43 | 12,542 |
+| Components | 12 | 6,124 |
+| Libraries | 8 | 1,730 |
+| Config | 5 | 113 |
+| Public JS | 1 | 189 |
+| **TOTAL** | **83** | **31,022** |
+
+---
+
+## 2. Authentication / User System
+
+### Architecture
+
+**There is no real authentication.** The system uses a localStorage-based name picker. No passwords, tokens, sessions, or server-side validation exist.
+
+### Core Files
+
+**`lib/users.js`** — The identity module:
+
+```javascript
+export const TEAM_MEMBERS = [
+  { id: 'scott',   name: 'Scott',   role: 'admin',     capabilities: ['admin', 'warehouse', 'listing', 'photos'], color: '#3b82f6' },
+  { id: 'mikayla', name: 'Mikayla', role: 'admin',     capabilities: ['admin', 'warehouse', 'listing', 'photos'], color: '#f97316' },
+  { id: 'dade',    name: 'Dade',    role: 'warehouse', capabilities: ['warehouse'],                               color: '#10b981' },
+  { id: 'gavin',   name: 'Gavin',   role: 'warehouse', capabilities: ['warehouse'],                               color: '#f59e0b' },
+  { id: 'donald',  name: 'Donald',  role: 'warehouse', capabilities: ['warehouse'],                               color: '#ef4444' },
+  { id: 'doug',    name: 'Doug',    role: 'warehouse', capabilities: ['warehouse'],                               color: '#6b7280' },
+  { id: 'austin',  name: 'Austin',  role: 'warehouse', capabilities: ['warehouse', 'listing'],                    color: '#06b6d4' },
+  { id: 'beth',    name: 'Beth',    role: 'listing',   capabilities: ['listing'],                                 color: '#8b5cf6' },
+  { id: 'bean',    name: 'Bean',    role: 'listing',   capabilities: ['listing'],                                 color: '#ec4899' },
+  { id: 'claire',  name: 'Claire',  role: 'photos',    capabilities: ['photos'],                                  color: '#14b8a6' },
+];
+```
+
+10 team members, 4 roles. **No `username` property exists** — only `id` and `name`.
+
+### Exported Functions
+
+| Function | Signature | Description |
+|---|---|---|
+| `getCurrentUser()` | `() → object \| null` | Reads `ipru_current_user` from localStorage; SSR-safe |
+| `setCurrentUser(user)` | `(user) → void` | Writes full user object to localStorage |
+| `clearCurrentUser()` | `() → void` | Removes `ipru_current_user` from localStorage |
+| `getTeamMemberById(id)` | `(id) → object \| null` | Finds member by `id` in hardcoded array |
+| `isAdmin(user)` | `(user) → boolean` | Returns `user?.role === 'admin'` |
+| `hasCapability(user, cap)` | `(user, cap) → boolean` | Returns true if admin (bypass) or has capability |
+| `getWarehouseWorkers()` | `() → array` | Returns members with `role === 'warehouse'` OR `role === 'admin'` |
+| `getMembersByRole(role)` | `(role) → array` | Filters by exact role match |
+
+### `components/UserPicker.jsx` — The Login Modal
+
+Props: `onSelect` (callback), `title`, `subtitle`
+
+Behavior:
+1. Renders full-screen dark backdrop with centered card
+2. Groups members by `ROLE_GROUPS` (Admin, Warehouse, Listing, Photos)
+3. Each member button shows colored dot + name
+4. On click: calls `setCurrentUser(member)` then `onSelect(member)`
+
+### Per-Page Login Patterns
+
+| Page | Login Gate | User State | Switch User | Clears localStorage? |
+|------|-----------|-----------|-------------|---------------------|
+| `scanner.js` | `{!currentUser && <UserPicker />}` | Full user object | `handleSwitchUser()` | Yes — calls `clearCurrentUser()` |
+| `photos.js` | `{!currentUser && <UserPicker />}` | Full user object | `handleSwitchUser()` | Yes — calls `clearCurrentUser()` |
+| `pro.js` | `{!isNameSet && <UserPicker />}` | `userName` string + `isNameSet` bool | Resets state only | **NO — does NOT call `clearCurrentUser()`** |
+| `dashboard.js` | `{!currentUserState && <UserPicker />}` + `isAdmin()` check | Full user object | N/A | N/A |
+| `admin.js` | `{!user && <UserPicker />}` + `isAdmin()` check | Full user object | N/A | N/A |
+
+### Stored User Object Shape (localStorage `ipru_current_user`)
+
+```json
+{
+  "id": "scott",
+  "name": "Scott",
+  "role": "admin",
+  "capabilities": ["admin", "warehouse", "listing", "photos"],
+  "color": "#3b82f6"
+}
+```
+
+### All localStorage Keys
+
+| Key | Used By | Purpose | Status |
+|-----|---------|---------|--------|
+| `ipru_current_user` | `lib/users.js` | Full user object JSON | **Active — primary auth** |
+| `ipru_admin_api_key` | `pages/admin.js` | SureDone API key string | **Active** |
+| `fcm_device_info` | `NotificationCenter.jsx` | FCM device token | **Active** |
+| `scanner_user` | `pages/scanner.js` | Legacy login | **Cleaned up on mount** |
+| `scanner_name` | `pages/scanner.js` | Legacy login | **Cleaned up on mount** |
+| `scanner_pin` | `pages/scanner.js` | Legacy login | **Cleaned up on mount** |
+| `photos_user` | `pages/photos.js` | Legacy login | **Cleaned up on mount** |
+
+### Dead Code: `lib/auth.js`
+
+Still exists at `lib/auth.js`. Contains old Firestore-backed PIN auth (`verifyUser()`, `getActiveUsers()`) that queries `approved_users` collection. **No file imports it.** Safe to delete.
+
+---
+
+## 3. Firebase Collections (Firestore)
+
+### 16 Collections Identified
+
+| Collection | Read By | Written By | Primary Fields |
+|------------|---------|-----------|----------------|
+| `products` | pro.js, photos/queue.js, dashboard.js, crawl.js | scanner/update-stock.js, photos.js, pro.js, search-product-v2.js, crawl.js | sku, brand, partNumber, status, photos, specifications, photoCount |
+| `products-v2` | pro-v2.js | pro-v2.js | Same shape as products (alternate workflow) |
+| `inventory` | daily-summary.js | Unknown | scannedAt, photosCompletedAt, listedAt, status |
+| `activityLog` | dashboard.js, admin.js | dashboard.js, admin.js | action, userId, details, timestamp |
+| `activity_log` | None found | scanner/update-stock.js, photos.js | action, user, sku, details, timestamp |
+| `scan_log` | None found | scanner/update-stock.js | sku, partNumber, action, scannedBy, timestamp |
+| `approved_users` | lib/auth.js (dead code) | None | username, passcode, name |
+| `users` | notify.js, escalate.js, morning-reminder.js, daily-summary.js | NotificationCenter.jsx | Subcollection: `users/{userId}/devices` |
+| `users/{id}/devices` | notify.js, escalate.js | NotificationCenter.jsx, devices/remove.js | token, platform, subscribedAt |
+| `partRequests` | escalate.js, complete.js | PartRequestModal.jsx, escalate.js | sku, status, requestedBy, assignedTo, escalationCount |
+| `alertHistory` | daily-summary.js | complete.js | completedAt, responseTime, alertType |
+| `counters` | generate-sku.js, sku-generator.js | generate-sku.js, sku-generator.js | `counters/skuCounter` → `{ value: number }` |
+| `crawlHistory` | weekly-report.js | crawl.js | crawledAt, totalItems, averageScore, gradeDistribution |
+| `inventoryHealth` | weekly-report.js, crawl.js | crawl.js | sku, score, issues[], lastRefreshed |
+| `snoozedAlerts` | escalate.js | snooze.js | alertId, snoozedUntil |
+| `weeklyReports` | None found | weekly-report.js | weekOf, scores, refreshCount |
+| `dailySummaries` | None found | daily-summary.js | date, scanned, photographed, published |
+
+---
+
+## 4. Firebase Storage
+
+### Path Convention
+
+```
+photos/{SKU}/{view}.jpg                    — Original photo
+photos/{SKU}/{view}_nobg.png               — Background-removed version
+photos/{SKU}/{view}_watermarked_v{N}.jpg   — Cached watermarked version
+```
+
+### Views
+
+Required: `left`, `right`, `center`, `nameplate`
+Optional: `extra_1`, `extra_2`, etc.
+
+### Upload Methods
+
+| File | Method | Format |
+|------|--------|--------|
+| `photos.js` (client) | `uploadString()` | data URI (base64 JPEG/PNG) |
+| `photos/upload.js` (server) | `uploadBytes()` | Buffer from base64 |
+| `photos/upload-simple.js` (server) | `uploadBytes()` | Buffer from base64 |
+| `photos/watermark.js` (server) | `uploadBytes()` | Buffer from canvas |
+
+### Metadata
+
+Each upload includes custom metadata:
+```javascript
+{
+  sku: "AI00042",
+  view: "left",
+  uploadedBy: currentUser.username,  // BUG: undefined
+  uploadedAt: "2026-02-24T..."
+}
+```
+
+---
+
+## 5. Activity Tracking
+
+### CRITICAL BUG: Split Collections
+
+The codebase has **two different Firestore collections** for activity logging:
+
+| Collection | Written By | Read By |
+|------------|-----------|---------|
+| `activity_log` (underscore) | `scanner/update-stock.js`, `photos.js` | **Nothing** |
+| `activityLog` (camelCase) | `dashboard.js`, `admin.js` | `dashboard.js`, `admin.js` |
+
+**Impact:** Scanner and Photos activity (scans, stock updates, photo uploads) is written to `activity_log` but the Dashboard reads from `activityLog`. These are **different Firestore collections**. Worker status dots on the dashboard will never reflect scan/photo activity.
+
+### `scan_log` Collection
+
+Written by `scanner/update-stock.js` on every scan action. Contains:
+```javascript
+{
+  sku: "AI00042",
+  partNumber: "6ES7315-2AH14-0AB0",
+  action: "create_new",  // or "increase_stock", "update_shelf"
+  scannedBy: currentUser.username,  // BUG: undefined
+  timestamp: serverTimestamp()
+}
+```
+
+### `alertHistory` Collection
+
+Written by `tasks/complete.js` when a part request is fulfilled. Read by `tasks/daily-summary.js` for response time metrics.
+
+---
+
+## 6. API Endpoints — Full Inventory
+
+### Authentication Status
+
+**51 of 57 endpoints have NO authentication.**
+
+Only 6 endpoints check authorization:
+
+| Endpoint | Auth Method |
+|----------|-----------|
+| `tasks/escalate.js` | `CRON_SECRET` header check |
+| `tasks/daily-summary.js` | `CRON_SECRET` header check |
+| `tasks/morning-reminder.js` | `CRON_SECRET` header check |
+| `inventory/crawl.js` | `CRON_SECRET` header check |
+| `inventory/weekly-report.js` | `CRON_SECRET` header check |
+| `notify.js` | `INTERNAL_API_KEY` header check |
+
+All other endpoints (SureDone, eBay, Claude AI, photos, scanner) are completely open — anyone with the URL can call them.
+
+### `callClaudeWithRetry` — Duplicated 6 Times
+
+The exact same retry function (exponential backoff: 2s, 4s, 8s for HTTP 529/503/429) is copy-pasted into:
+
+1. `pages/api/search-product-v2.js`
+2. `pages/api/photos/generate-alt-text.js`
+3. `pages/api/v2/research-product.js`
+4. `pages/api/v2/revise-listing.js`
+5. `pages/api/v2/fill-specifics.js`
+6. `pages/api/v2/auto-fill-ebay-specifics.js`
+
+```javascript
+async function callClaudeWithRetry(client, params, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await client.messages.create(params);
+      return response;
+    } catch (error) {
+      const isOverloaded = error.status === 529 || error.status === 503 || error.status === 429;
+      if (isOverloaded && attempt < maxRetries - 1) {
+        const waitTime = Math.pow(2, attempt + 1) * 1000;
+        await new Promise(r => setTimeout(r, waitTime));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+```
+
+**Candidate for refactoring into `lib/claude-retry.js`.**
+
+### Claude Model Used
+
+All 6 Claude API endpoints use `claude-sonnet-4-6`. Several enable the `web_search_20250305` tool.
+
+### Firebase SDK Split
+
+| SDK | Used By | Init Method |
+|-----|---------|-------------|
+| **Client SDK** | scanner/, photos/, root endpoints | `import { db } from '../../firebase'` |
+| **Admin SDK** | tasks/, inventory/, notify, devices/ | `firebase-admin` with `FIREBASE_SERVICE_ACCOUNT_JSON` |
+
+### Non-Functional Endpoint
+
+`pages/api/brand-ids-update.js` (306 lines) — Only exports a constant mapping object. No handler function. Not an API endpoint.
+
+---
+
+## 7. Cron Jobs
+
+### Schedule Summary
+
+| Endpoint | Schedule (UTC) | Schedule (EST) | Max Duration |
+|----------|---------------|----------------|-------------|
+| `/api/tasks/escalate` | `*/2 * * * *` | Every 2 min, 24/7 | 30s |
+| `/api/tasks/morning-reminder` | `15 13 * * 1-5` | 8:15 AM Mon-Fri | 30s |
+| `/api/tasks/daily-summary` | `0 22 * * 1-5` | 5:00 PM Mon-Fri | 30s |
+| `/api/inventory/crawl` | `0 11 * * *` | 6:00 AM daily | 300s (5 min) |
+| `/api/inventory/weekly-report` | `0 1 * * 0` | 8:00 PM Saturday | 30s |
+
+### Cron 1: Task Escalation (`tasks/escalate.js`)
+
+Runs every 2 minutes. Checks `partRequests` for pending requests older than 10 minutes:
+- If escalated 3+ times → marks `status: 'expired'` with reason `max_escalations`
+- If older than 1 hour → marks `status: 'expired'` with reason `timeout_1h`
+- Otherwise → sends FCM push to assigned worker, increments `escalationCount`
+- Also checks `snoozedAlerts` for expired snoozes and reactivates them
+
+Collections: `partRequests`, `snoozedAlerts`, `users` (devices subcollection)
+
+### Cron 2: Morning Reminder (`tasks/morning-reminder.js`)
+
+Sends "Good morning! Time to start scanning" FCM notification to all warehouse + admin users.
+
+Collections: `users` (devices subcollection)
+
+### Cron 3: Daily Summary (`tasks/daily-summary.js`)
+
+Calculates today's activity from the `inventory` collection:
+- Items scanned (by `scannedAt`)
+- Items photographed (by `photosCompletedAt`)
+- Items published (by `listedAt` where `status == 'listed'`)
+- Alert performance from `alertHistory`
+
+Sends summary notification to admin users. Saves to `dailySummaries`.
+
+Collections: `inventory` (reads), `alertHistory` (reads), `users` (reads), `dailySummaries` (writes)
+
+**Issue:** Queries `inventory` collection, but the product workflow uses `products` collection. See Known Issues.
+
+### Cron 4: Inventory Crawl (`crawl.js`)
+
+Paginates ALL SureDone items (up to 8,000). Scores each with `listingScorer.js`. Writes worst items to `inventoryHealth`. Queues top 20 for refresh in `products` with `status: 'refresh'`. Has 4.5-minute safety timer.
+
+Collections: `inventoryHealth` (writes), `products` (reads/writes), `crawlHistory` (writes)
+External: SureDone `/editor/items` API
+
+### Cron 5: Weekly Report (`weekly-report.js`)
+
+Compares two most recent `crawlHistory` entries for week-over-week scoring changes. Saves to `weeklyReports`.
+
+Collections: `crawlHistory` (reads), `inventoryHealth` (reads), `products` (reads), `weeklyReports` (writes)
+
+---
+
+## 8. Environment Variables
+
+### Complete Inventory (16 Variables)
+
+| Variable | Files Using It | Purpose |
+|----------|---------------|---------|
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | 10 API files (tasks/*, inventory/*, notify, devices/remove) | Firebase Admin SDK service account (JSON string) |
+| `CRON_SECRET` | 5 cron endpoints | Vercel cron job authentication |
+| `INTERNAL_API_KEY` | 7 task/inventory endpoints + notify | Internal API-to-API authentication |
+| `ANTHROPIC_API_KEY` | 6 AI endpoints | Claude API key |
+| `SUREDONE_USER` | 12 SureDone endpoints | SureDone API username |
+| `SUREDONE_TOKEN` | 12 SureDone endpoints | SureDone API token |
+| `SUREDONE_URL` | 7 SureDone endpoints | SureDone API base URL (defaults to `https://api.suredone.com/v1`) |
+| `SUREDONE_PASS` | 1 file (`suredone-check-sku.js`) | SureDone password (legacy) |
+| `SUREDONE_API_USER` | 4 files (`search.js`, `crawl.js`, `get-listing-urls.js`, `listing-action.js`) | Alternative SureDone API user |
+| `SUREDONE_API_TOKEN` | Same 4 files | Alternative SureDone API token |
+| `EBAY_CLIENT_ID` | 2 eBay token endpoints | eBay OAuth client ID |
+| `EBAY_CLIENT_SECRET` | 2 eBay token endpoints | eBay OAuth client secret |
+| `REMOVE_BG_API_KEY` | 1 file (`photos/remove-bg.js`) | remove.bg API key |
+| `VERCEL_URL` | 2 files | Auto-set by Vercel, used for self-referencing API calls |
+| `NEXT_PUBLIC_VAPID_KEY` | 1 file (`lib/notificationService.js`) | Web Push VAPID key (client-side) |
+| `NEXT_PUBLIC_SITE_URL` | 3 files | App base URL (defaults to `https://camera-spec-finder.vercel.app`) |
+
+### Issues
+
+1. **Duplicate SureDone credentials:** Both `SUREDONE_USER`/`SUREDONE_TOKEN` and `SUREDONE_API_USER`/`SUREDONE_API_TOKEN` exist. Some files use one pair, some the other, some use fallback logic. If only one pair is configured, certain endpoints fail silently.
+
+2. **`SUREDONE_PASS` vs `SUREDONE_TOKEN`:** `suredone-check-sku.js` uses `SUREDONE_PASS` while all others use `SUREDONE_TOKEN`. Different auth mechanisms.
+
+3. **No `.env.example` file:** No documentation of required environment variables for new deployments.
+
+4. **Hardcoded Firebase client config:** `firebase.js` has API keys hardcoded (acceptable for client SDK, but worth noting).
+
+---
+
+## 9. Data Flow Diagrams
+
+### Workflow A: Scan → Firebase → Photo Queue
+
+```
+[Scanner App]
+    │
+    ├── POST /api/scanner/lookup        → SureDone search
+    ├── POST /api/scanner/check-duplicate → Firebase products query
+    ├── GET  /api/generate-sku          → Atomic counter (AI0001 format)
+    │
+    └── POST /api/scanner/update-stock
+            │
+            ├── Creates doc in `products` collection:
+            │     { sku, brand, partNumber, stock, shelf,
+            │       condition, scannedBy: currentUser.username,  ← BUG: undefined
+            │       photoCount: 0, status: 'needs_photos' }
+            │
+            ├── Creates doc in `scan_log`
+            ├── Creates doc in `activity_log`  ← Note: underscore
+            │
+            └── Fire-and-forget: POST /api/auto-research
+                    │
+                    └── POST /api/search-product-v2
+                            │
+                            └── Updates `products` doc:
+                                  { status: 'complete', title, description,
+                                    specifications, ebayCategoryId, ... }
+
+    [Photo Queue picks up items where photoCount == 0]
+```
+
+### Workflow B: Photos → Firebase Storage → Listing
+
+```
+[Photo Station]
+    │
+    ├── GET /api/photos/queue           → Items with photoCount == 0
+    │
+    ├── [Camera capture: left, right, center, nameplate + extras]
+    │     └── Client-side: compress to 1200px, 80% JPEG quality
+    │
+    ├── POST /api/photos/remove-bg      → remove.bg API
+    │     └── Returns transparent PNG, auto-cropped + template applied
+    │
+    └── [Upload to Firebase Storage]
+            │
+            ├── photos/{SKU}/{view}.jpg           (original)
+            ├── photos/{SKU}/{view}_nobg.png      (bg removed)
+            │
+            └── Updates `products` doc:
+                  { photos: [url1, url2, ...],
+                    photosNobg: { left: url, ... },
+                    photoCount: 5,
+                    photographedBy: currentUser.username,  ← BUG: undefined
+                    status: 'photos_complete' }
+            │
+            └── Creates doc in `activity_log`  ← Note: underscore
+```
+
+### Workflow C: Pro Builder → SureDone → eBay
+
+```
+[Pro Listing Builder]
+    │
+    ├── Loads from `products` collection (status: 'complete')
+    │
+    ├── User edits: title, description, price, condition, specs, photos
+    │
+    ├── POST /api/photos/watermark      → Apply logo overlay to photos
+    ├── POST /api/photos/generate-alt-text → Claude AI alt text
+    ├── GET  /api/assign-upc            → Next available UPC
+    │
+    └── POST /api/suredone-create-listing (new)
+        OR POST /api/suredone/update-item (existing)
+            │
+            ├── Maps photos → media1-media12
+            ├── Maps specs → eBay item specifics
+            ├── Maps condition → SureDone condition value
+            ├── Sets ebayskip=1, bigcommerceskip=1 (DRAFT mode)
+            │
+            └── SureDone API: POST /editor/items/add
+                  (x-www-form-urlencoded)
+                  Auth: X-Auth-User + X-Auth-Token headers
+
+    [No status change written back to Firebase `products`]
+    [Manual action in SureDone required to publish to eBay]
+```
+
+### Status Lifecycle
+
+```
+needs_photos      ← Created by Scanner
+     │
+     v
+searching         ← AI research in progress (auto-research)
+     │
+     v
+complete          ← AI research finished, ready for Pro Builder
+     │
+     v
+photos_complete   ← Photos uploaded (only if status wasn't already 'complete')
+     │
+     v
+[sent to SureDone] ← No status change — remains 'complete'
+     │
+     v
+refresh           ← Queued by inventory crawl for re-optimization
+```
+
+---
+
+## 10. Known Issues & Bugs
+
+### CRITICAL
+
+#### 1. `currentUser.username` is `undefined`
+
+**Impact:** Every Firestore document written by Scanner and Photos has `undefined` in user attribution fields.
+
+**Root cause:** `TEAM_MEMBERS` objects have `id` and `name` but no `username` property.
+
+**Scanner.js** (3 occurrences):
+```javascript
+scannedBy: currentUser.username,  // line ~349 — writes undefined
+scannedBy: currentUser.username,  // line ~426 — writes undefined
+shelvedBy: currentUser.username   // line ~489 — writes undefined
+```
+
+**Photos.js** (6 occurrences):
+```javascript
+uploadedBy: currentUser.username,       // writes undefined
+photographedBy: currentUser.username,   // writes undefined
+photoCompletedBy: currentUser.username  // writes undefined
+user: currentUser.username,             // activity_log — writes undefined
+```
+
+**Fix:** Change all `currentUser.username` to `currentUser.name` or `currentUser.id`.
+
+#### 2. `activityLog` vs `activity_log` — Split Collections
+
+**Impact:** Dashboard worker status dots never show scanner/photo activity.
+
+**Root cause:** Scanner and Photos write to `activity_log` (underscore). Dashboard and Admin read from `activityLog` (camelCase). These are different Firestore collections.
+
+**Fix:** Pick one name and use it everywhere.
+
+#### 3. `inventory` vs `products` — Collection Mismatch in Cron
+
+**Impact:** Daily summary (`tasks/daily-summary.js`) queries the `inventory` collection for `scannedAt`, `photosCompletedAt`, `listedAt`. But the product workflow writes to `products`. If `inventory` is empty, daily summaries show zero activity.
+
+**Fix:** Verify whether `inventory` collection exists and has data, or change the query to use `products`.
+
+### HIGH
+
+#### 4. No `listed` Status After SureDone Submission
+
+**Impact:** After a listing is sent to SureDone, the `products` document status remains `complete`. There is no `listed` status written back. The daily summary queries for `status == 'listed'` and `listedAt` which may never exist.
+
+#### 5. 51 of 57 API Endpoints Have No Authentication
+
+**Impact:** Any user with the API URL can call scanner, photo, SureDone, eBay, and Claude AI endpoints.
+
+#### 6. pro.js Does Not Call `clearCurrentUser()` on Switch
+
+**Impact:** When switching users in Pro Builder, localStorage retains the old user. Page refresh auto-logs in as the previous user. Other pages see the wrong user.
+
+### MEDIUM
+
+#### 7. `callClaudeWithRetry` Duplicated 6 Times
+
+Should be a shared `lib/claude-retry.js` module.
+
+#### 8. `hasCapability()` Defined But Never Enforced
+
+The capability-based access control system exists in `lib/users.js` but no page checks capabilities. A warehouse-only worker can access Photos. A photos-only worker can access Scanner.
+
+#### 9. Duplicate SureDone Credential Variables
+
+`SUREDONE_USER`/`SUREDONE_TOKEN` vs `SUREDONE_API_USER`/`SUREDONE_API_TOKEN` — some endpoints use one pair, some the other. If only one pair is configured, certain endpoints fail.
+
+#### 10. `lib/auth.js` Dead Code
+
+Old PIN-based auth file still exists. Never imported. Should be deleted.
+
+#### 11. `brand-ids-update.js` Is Not an API Endpoint
+
+306-line file that only exports a constant mapping object. No handler function. Misleading placement in `pages/api/`.
+
+### LOW
+
+#### 12. Firebase Admin Build Warnings
+
+10 API files that import `firebase-admin` show build warnings because the firebase-admin package isn't listed in `package.json` dependencies (it's available in Vercel's runtime but not locally).
+
+#### 13. No `.env.example` File
+
+No documentation of required environment variables.
+
+---
+
+*End of audit. This document reports the current deployed state. No fixes have been applied.*
+
+
+========================================
+FILE: ./package.json
+========================================
+{
+  "name": "camera-spec-finder",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.1",
+    "firebase": "^12.8.0",
+    "firebase-admin": "^13.6.1",
+    "lucide-react": "0.263.1",
+    "next": "^16.1.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-quill": "^2.0.0",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "autoprefixer": "10.4.16",
+    "postcss": "8.4.31",
+    "tailwindcss": "3.3.0"
+  }
+}
+
+
+========================================
+FILE: ./next.config.js
+========================================
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+}
+
+module.exports = nextConfig
+
+========================================
+FILE: ./vercel.json
+========================================
+{
+  "functions": {
+    "pages/api/photos/upload-simple.js": {
+      "maxDuration": 30
+    },
+    "pages/api/notify.js": {
+      "maxDuration": 30
+    },
+    "pages/api/tasks/escalate.js": {
+      "maxDuration": 30
+    },
+    "pages/api/tasks/morning-reminder.js": {
+      "maxDuration": 30
+    },
+    "pages/api/tasks/complete.js": {
+      "maxDuration": 10
+    },
+    "pages/api/tasks/snooze.js": {
+      "maxDuration": 10
+    },
+    "pages/api/tasks/daily-summary.js": {
+      "maxDuration": 30
+    },
+    "pages/api/inventory/crawl.js": {
+      "maxDuration": 300
+    },
+    "pages/api/inventory/weekly-report.js": {
+      "maxDuration": 30
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/tasks/escalate",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/tasks/morning-reminder",
+      "schedule": "15 13 * * 1-5"
+    },
+    {
+      "path": "/api/tasks/daily-summary",
+      "schedule": "0 22 * * 1-5"
+    },
+    {
+      "path": "/api/inventory/crawl",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/inventory/weekly-report",
+      "schedule": "0 1 * * 0"
+    }
+  ]
+}
+
+
+========================================
+FILE: ./firebase.json
+========================================
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}
+
+
+========================================
+FILE: ./firebase.js
+========================================
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB5irj-80rpE73sdDESmvpZ6_bTzlwNjdo",
+  authDomain: "camera-spec-finder.firebaseapp.com",
+  projectId: "camera-spec-finder",
+  storageBucket: "camera-spec-finder.firebasestorage.app",
+  messagingSenderId: "862939642767",
+  appId: "1:862939642767:web:7f056f12e67f7be5d329fa"
+};
+
+// Initialize Firebase (prevent duplicate app error during SSR/prerendering)
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+// Initialize Firestore
+export const db = getFirestore(app);
+
+// Initialize Auth
+export const auth = getAuth(app);
+
+// Initialize Storage
+export const storage = getStorage(app);
+
+export default app;
+
+
+========================================
+FILE: ./tailwind.config.js
+========================================
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+
+========================================
+FILE: ./postcss.config.js
+========================================
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+
+========================================
+FILE: ./pages/_app.js
+========================================
+import '../styles/globals.css'
+import 'react-quill/dist/quill.snow.css'
+
+export default function App({ Component, pageProps }) {
+  return <Component {...pageProps} />
+}
+
+========================================
+FILE: ./styles/globals.css
+========================================
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+

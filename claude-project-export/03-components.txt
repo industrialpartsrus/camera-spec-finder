@@ -1,0 +1,5901 @@
+# CAMERA-SPEC-FINDER — COMPONENTS
+# Exported 2026-06-29 12:06
+
+========================================
+FILE: ./components/AIAutoFix.js
+========================================
+import React, { useState, useCallback } from 'react';
+
+/**
+ * AIAutoFix Component
+ * 
+ * Uses AI to extract specs from titles and auto-populate missing fields.
+ * Allows review before pushing to SureDone.
+ */
+
+const styles = {
+  container: {
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    maxWidth: '1400px',
+    margin: '0 auto',
+    padding: '20px'
+  },
+  header: {
+    marginBottom: '20px',
+    paddingBottom: '15px',
+    borderBottom: '2px solid #e5e7eb'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: '600',
+    color: '#1f2937'
+  },
+  subtitle: {
+    color: '#6b7280',
+    marginTop: '5px'
+  },
+  inputSection: {
+    backgroundColor: '#f9fafb',
+    borderRadius: '8px',
+    padding: '20px',
+    marginBottom: '20px'
+  },
+  textarea: {
+    width: '100%',
+    minHeight: '100px',
+    padding: '12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontFamily: 'monospace'
+  },
+  buttonRow: {
+    display: 'flex',
+    gap: '10px',
+    marginTop: '15px',
+    alignItems: 'center'
+  },
+  button: {
+    padding: '10px 20px',
+    backgroundColor: '#2563eb',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500'
+  },
+  buttonGreen: {
+    padding: '10px 20px',
+    backgroundColor: '#16a34a',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500'
+  },
+  buttonOrange: {
+    padding: '10px 20px',
+    backgroundColor: '#ea580c',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500'
+  },
+  buttonSecondary: {
+    padding: '10px 20px',
+    backgroundColor: '#6b7280',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500'
+  },
+  progressBar: {
+    width: '100%',
+    height: '20px',
+    backgroundColor: '#e5e7eb',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    marginTop: '15px'
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#2563eb',
+    transition: 'width 0.3s ease'
+  },
+  statsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, 1fr)',
+    gap: '15px',
+    marginBottom: '20px'
+  },
+  statCard: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    padding: '15px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    textAlign: 'center'
+  },
+  statNumber: {
+    fontSize: '28px',
+    fontWeight: '700',
+    marginBottom: '5px'
+  },
+  statLabel: {
+    fontSize: '12px',
+    color: '#6b7280',
+    textTransform: 'uppercase'
+  },
+  itemCard: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    marginBottom: '15px',
+    overflow: 'hidden'
+  },
+  itemHeader: {
+    padding: '15px 20px',
+    backgroundColor: '#f9fafb',
+    borderBottom: '1px solid #e5e7eb',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  itemBody: {
+    padding: '20px'
+  },
+  specsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '15px'
+  },
+  specField: {
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  specLabel: {
+    fontSize: '12px',
+    color: '#6b7280',
+    marginBottom: '4px',
+    textTransform: 'uppercase'
+  },
+  specValue: {
+    padding: '8px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px',
+    backgroundColor: '#f0fdf4'
+  },
+  specValueEmpty: {
+    padding: '8px 12px',
+    border: '1px solid #fecaca',
+    borderRadius: '6px',
+    fontSize: '14px',
+    backgroundColor: '#fef2f2',
+    color: '#9ca3af',
+    fontStyle: 'italic'
+  },
+  specInput: {
+    padding: '8px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px'
+  },
+  badge: {
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '500'
+  },
+  badgeNew: {
+    backgroundColor: '#dbeafe',
+    color: '#2563eb'
+  },
+  badgeReviewed: {
+    backgroundColor: '#dcfce7',
+    color: '#16a34a'
+  },
+  badgePending: {
+    backgroundColor: '#fef3c7',
+    color: '#d97706'
+  },
+  actionButtons: {
+    display: 'flex',
+    gap: '10px',
+    marginTop: '15px',
+    paddingTop: '15px',
+    borderTop: '1px solid #e5e7eb'
+  },
+  smallButton: {
+    padding: '6px 12px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500'
+  }
+};
+
+export default function AIAutoFix() {
+  const [skuInput, setSkuInput] = useState('');
+  const [items, setItems] = useState([]);
+  const [processing, setProcessing] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0, phase: '' });
+
+  const parseSkus = (input) => {
+    return input.split(/[\n,\s]+/).map(s => s.trim()).filter(s => s.length > 0);
+  };
+
+  // Fetch items from SureDone
+  const fetchItems = async () => {
+    const skus = parseSkus(skuInput);
+    if (skus.length === 0) return;
+
+    setProcessing(true);
+    setProgress({ current: 0, total: skus.length, phase: 'Loading items...' });
+    
+    const loadedItems = [];
+
+    for (let i = 0; i < skus.length; i++) {
+      const sku = skus[i];
+      setProgress({ current: i + 1, total: skus.length, phase: 'Loading items...' });
+
+      try {
+        const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku)}`);
+        const data = await response.json();
+        
+        if (data.success && data.item) {
+          loadedItems.push({
+            ...data.item,
+            status: 'loaded',
+            extracted: null,
+            edited: {}
+          });
+        }
+      } catch (err) {
+        console.error(`Error loading ${sku}:`, err);
+      }
+
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+    setItems(loadedItems);
+    setProcessing(false);
+  };
+
+  // Extract specs using AI
+  const extractSpecs = async () => {
+    if (items.length === 0) return;
+
+    setExtracting(true);
+    const updatedItems = [...items];
+
+    for (let i = 0; i < updatedItems.length; i++) {
+      const item = updatedItems[i];
+      setProgress({ current: i + 1, total: items.length, phase: 'Extracting specs with AI...' });
+
+      try {
+        const response = await fetch('/api/ai/extract-specs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: item.title,
+            description: item.longdescription,
+            brand: item.brand,
+            categoryId: item.ebaycatid
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.success && data.extracted) {
+          updatedItems[i] = {
+            ...item,
+            extracted: data.extracted,
+            status: 'extracted'
+          };
+        } else {
+          updatedItems[i] = {
+            ...item,
+            status: 'error',
+            error: data.error
+          };
+        }
+      } catch (err) {
+        updatedItems[i] = {
+          ...item,
+          status: 'error',
+          error: err.message
+        };
+      }
+
+      setItems([...updatedItems]);
+      await new Promise(r => setTimeout(r, 500)); // Rate limit AI calls
+    }
+
+    setExtracting(false);
+  };
+
+  // Update a field value
+  const updateField = (index, field, value) => {
+    const updatedItems = [...items];
+    if (!updatedItems[index].edited) {
+      updatedItems[index].edited = {};
+    }
+    updatedItems[index].edited[field] = value;
+    updatedItems[index].status = 'reviewed';
+    setItems(updatedItems);
+  };
+
+  // Accept all AI suggestions for an item
+  const acceptAll = (index) => {
+    const item = items[index];
+    if (!item.extracted) return;
+
+    const updatedItems = [...items];
+    updatedItems[index].edited = { ...item.extracted };
+    updatedItems[index].status = 'reviewed';
+    setItems(updatedItems);
+  };
+
+  // Push changes to SureDone
+  const pushToSureDone = async () => {
+    const reviewedItems = items.filter(i => i.status === 'reviewed' && Object.keys(i.edited || {}).length > 0);
+    if (reviewedItems.length === 0) {
+      alert('No reviewed items to push. Accept AI suggestions or edit fields first.');
+      return;
+    }
+
+    setPushing(true);
+    setProgress({ current: 0, total: reviewedItems.length, phase: 'Pushing to SureDone...' });
+
+    for (let i = 0; i < reviewedItems.length; i++) {
+      const item = reviewedItems[i];
+      setProgress({ current: i + 1, total: reviewedItems.length, phase: 'Pushing to SureDone...' });
+
+      try {
+        // Build update payload - map extracted fields to SureDone fields
+        const updateData = {
+          guid: item.sku || item.guid
+        };
+
+        const fieldMap = {
+          'Brand': 'brand',
+          'MPN': 'mpn',
+          'Model': 'model',
+          'Voltage': 'voltage',
+          'Current': 'current',
+          'Type': 'usertype',
+          'Controller Platform': 'controllerplatform',
+          'Bore': 'bore',
+          'Stroke': 'stroke'
+        };
+
+        for (const [aiField, value] of Object.entries(item.edited)) {
+          if (value && value !== 'null' && fieldMap[aiField]) {
+            updateData[fieldMap[aiField]] = value;
+          }
+        }
+
+        // Call SureDone update API
+        const response = await fetch('/api/suredone/update-item', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData)
+        });
+
+        const data = await response.json();
+        
+        // Update item status
+        const itemIndex = items.findIndex(i => i.sku === item.sku);
+        if (itemIndex >= 0) {
+          const updatedItems = [...items];
+          updatedItems[itemIndex].status = data.success ? 'pushed' : 'error';
+          updatedItems[itemIndex].pushResult = data;
+          setItems(updatedItems);
+        }
+      } catch (err) {
+        console.error(`Error pushing ${item.sku}:`, err);
+      }
+
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    setPushing(false);
+  };
+
+  // Export results as CSV
+  const exportCSV = () => {
+    const headers = ['SKU', 'Title', 'Status', 'Brand', 'MPN', 'Model', 'Type', 'Voltage'];
+    const rows = items.map(item => {
+      const specs = item.edited || item.extracted || {};
+      return [
+        item.sku,
+        `"${(item.title || '').replace(/"/g, '""')}"`,
+        item.status,
+        specs.Brand || item.brand || '',
+        specs.MPN || item.mpn || '',
+        specs.Model || item.model || '',
+        specs.Type || item.usertype || '',
+        specs.Voltage || item.voltage || ''
+      ];
+    });
+
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-autofix-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  const stats = {
+    total: items.length,
+    loaded: items.filter(i => i.status === 'loaded').length,
+    extracted: items.filter(i => i.status === 'extracted').length,
+    reviewed: items.filter(i => i.status === 'reviewed').length,
+    pushed: items.filter(i => i.status === 'pushed').length
+  };
+
+  const isWorking = processing || extracting || pushing;
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>🤖 AI Auto-Fix</h1>
+        <p style={styles.subtitle}>
+          Use AI to extract specs from titles and auto-populate missing eBay fields
+        </p>
+      </div>
+
+      {/* Input Section */}
+      <div style={styles.inputSection}>
+        <label style={{ fontWeight: '500', marginBottom: '10px', display: 'block' }}>
+          Enter SKUs to fix (one per line):
+        </label>
+        <textarea
+          style={styles.textarea}
+          value={skuInput}
+          onChange={(e) => setSkuInput(e.target.value)}
+          placeholder="IP6388&#10;IP6389&#10;IP6390"
+          disabled={isWorking}
+        />
+        
+        <div style={styles.buttonRow}>
+          <button
+            style={styles.button}
+            onClick={fetchItems}
+            disabled={isWorking || !skuInput.trim()}
+          >
+            {processing ? '⏳ Loading...' : '1️⃣ Load Items'}
+          </button>
+          
+          <button
+            style={styles.buttonOrange}
+            onClick={extractSpecs}
+            disabled={isWorking || items.length === 0}
+          >
+            {extracting ? '🧠 Extracting...' : '2️⃣ Extract with AI'}
+          </button>
+          
+          <button
+            style={styles.buttonGreen}
+            onClick={pushToSureDone}
+            disabled={isWorking || stats.reviewed === 0}
+          >
+            {pushing ? '📤 Pushing...' : `3️⃣ Push to SureDone (${stats.reviewed})`}
+          </button>
+
+          {items.length > 0 && (
+            <button style={styles.buttonSecondary} onClick={exportCSV}>
+              📥 Export
+            </button>
+          )}
+        </div>
+
+        {isWorking && (
+          <>
+            <div style={styles.progressBar}>
+              <div style={{ ...styles.progressFill, width: `${(progress.current / progress.total) * 100}%` }} />
+            </div>
+            <p style={{ marginTop: '10px', color: '#6b7280', fontSize: '14px' }}>
+              {progress.phase} ({progress.current}/{progress.total})
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Stats */}
+      {items.length > 0 && (
+        <div style={styles.statsRow}>
+          <div style={styles.statCard}>
+            <div style={{ ...styles.statNumber, color: '#1f2937' }}>{stats.total}</div>
+            <div style={styles.statLabel}>Total</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={{ ...styles.statNumber, color: '#6b7280' }}>{stats.loaded}</div>
+            <div style={styles.statLabel}>Loaded</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={{ ...styles.statNumber, color: '#ea580c' }}>{stats.extracted}</div>
+            <div style={styles.statLabel}>AI Extracted</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={{ ...styles.statNumber, color: '#2563eb' }}>{stats.reviewed}</div>
+            <div style={styles.statLabel}>Reviewed</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={{ ...styles.statNumber, color: '#16a34a' }}>{stats.pushed}</div>
+            <div style={styles.statLabel}>Pushed</div>
+          </div>
+        </div>
+      )}
+
+      {/* Item Cards */}
+      {items.map((item, index) => (
+        <div key={item.sku} style={styles.itemCard}>
+          <div style={styles.itemHeader}>
+            <div>
+              <strong style={{ fontSize: '16px' }}>{item.sku}</strong>
+              <span style={{ marginLeft: '15px', color: '#6b7280' }}>
+                {item.title?.substring(0, 60)}...
+              </span>
+            </div>
+            <span style={{
+              ...styles.badge,
+              ...(item.status === 'pushed' ? styles.badgeReviewed :
+                  item.status === 'reviewed' ? styles.badgeNew :
+                  item.status === 'extracted' ? styles.badgePending :
+                  { backgroundColor: '#f3f4f6', color: '#6b7280' })
+            }}>
+              {item.status === 'pushed' ? '✓ Pushed' :
+               item.status === 'reviewed' ? '✓ Reviewed' :
+               item.status === 'extracted' ? 'AI Extracted' :
+               item.status === 'error' ? '✗ Error' : 'Loaded'}
+            </span>
+          </div>
+          
+          <div style={styles.itemBody}>
+            {/* Original Data */}
+            <div style={{ marginBottom: '15px' }}>
+              <h4 style={{ margin: '0 0 10px 0', color: '#6b7280', fontSize: '14px' }}>
+                Current Data:
+              </h4>
+              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', fontSize: '14px' }}>
+                <span><strong>Brand:</strong> {item.brand || <em style={{ color: '#9ca3af' }}>empty</em>}</span>
+                <span><strong>MPN:</strong> {item.mpn || item.model || <em style={{ color: '#9ca3af' }}>empty</em>}</span>
+                <span><strong>Type:</strong> {item.usertype || <em style={{ color: '#9ca3af' }}>empty</em>}</span>
+                <span><strong>Category:</strong> {item.ebaycatid || <em style={{ color: '#9ca3af' }}>empty</em>}</span>
+              </div>
+            </div>
+
+            {/* AI Extracted Data */}
+            {item.extracted && (
+              <div>
+                <h4 style={{ margin: '0 0 10px 0', color: '#ea580c', fontSize: '14px' }}>
+                  🤖 AI Extracted:
+                </h4>
+                <div style={styles.specsGrid}>
+                  {Object.entries(item.extracted).filter(([key]) => key !== 'confidence' && key !== 'error').map(([field, value]) => (
+                    <div key={field} style={styles.specField}>
+                      <label style={styles.specLabel}>{field}</label>
+                      <input
+                        type="text"
+                        style={styles.specInput}
+                        value={item.edited?.[field] ?? value ?? ''}
+                        onChange={(e) => updateField(index, field, e.target.value)}
+                        placeholder={value || 'Not found'}
+                      />
+                    </div>
+                  ))}
+                </div>
+                
+                <div style={styles.actionButtons}>
+                  <button
+                    style={{ ...styles.smallButton, backgroundColor: '#16a34a', color: 'white' }}
+                    onClick={() => acceptAll(index)}
+                  >
+                    ✓ Accept All AI Suggestions
+                  </button>
+                  <button
+                    style={{ ...styles.smallButton, backgroundColor: '#e5e7eb', color: '#374151' }}
+                    onClick={() => {
+                      const updatedItems = [...items];
+                      updatedItems[index].edited = {};
+                      updatedItems[index].status = 'extracted';
+                      setItems(updatedItems);
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {item.error && (
+              <div style={{ color: '#dc2626', marginTop: '10px' }}>
+                Error: {item.error}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {items.length === 0 && !isWorking && (
+        <div style={{ textAlign: 'center', padding: '60px', color: '#6b7280' }}>
+          <p style={{ fontSize: '48px', marginBottom: '20px' }}>🤖</p>
+          <p style={{ fontSize: '18px', marginBottom: '10px' }}>AI Auto-Fix</p>
+          <p>Enter SKUs above, then:</p>
+          <p>1️⃣ Load Items → 2️⃣ Extract with AI → 3️⃣ Review & Push</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+========================================
+FILE: ./components/BulkAuditTool.js
+========================================
+import React, { useState, useCallback } from 'react';
+
+/**
+ * BulkAuditTool Component
+ * 
+ * Scans multiple SKUs against eBay category requirements
+ * and identifies listings that need improvement.
+ */
+
+const styles = {
+  container: {
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    maxWidth: '1400px',
+    margin: '0 auto',
+    padding: '20px'
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    paddingBottom: '15px',
+    borderBottom: '2px solid #e5e7eb'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: '600',
+    color: '#1f2937'
+  },
+  uploadSection: {
+    backgroundColor: '#f9fafb',
+    borderRadius: '8px',
+    padding: '20px',
+    marginBottom: '20px',
+    border: '2px dashed #d1d5db'
+  },
+  textarea: {
+    width: '100%',
+    minHeight: '120px',
+    padding: '12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontFamily: 'monospace',
+    resize: 'vertical'
+  },
+  buttonRow: {
+    display: 'flex',
+    gap: '10px',
+    marginTop: '15px',
+    alignItems: 'center'
+  },
+  button: {
+    padding: '10px 20px',
+    backgroundColor: '#2563eb',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px'
+  },
+  buttonGreen: {
+    padding: '10px 20px',
+    backgroundColor: '#16a34a',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px'
+  },
+  buttonSecondary: {
+    padding: '10px 20px',
+    backgroundColor: '#6b7280',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px'
+  },
+  progressBar: {
+    width: '100%',
+    height: '20px',
+    backgroundColor: '#e5e7eb',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    marginTop: '15px'
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#2563eb',
+    transition: 'width 0.3s ease'
+  },
+  statsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, 1fr)',
+    gap: '15px',
+    marginBottom: '20px'
+  },
+  statCard: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    padding: '15px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    textAlign: 'center'
+  },
+  statNumber: {
+    fontSize: '28px',
+    fontWeight: '700',
+    marginBottom: '5px'
+  },
+  statLabel: {
+    fontSize: '12px',
+    color: '#6b7280',
+    textTransform: 'uppercase'
+  },
+  resultsTable: {
+    width: '100%',
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    overflow: 'hidden'
+  },
+  tableHeader: {
+    display: 'grid',
+    gridTemplateColumns: '100px 1fr 120px 100px 80px 150px',
+    padding: '12px 15px',
+    backgroundColor: '#f3f4f6',
+    fontWeight: '600',
+    fontSize: '14px',
+    borderBottom: '1px solid #e5e7eb'
+  },
+  tableRow: {
+    display: 'grid',
+    gridTemplateColumns: '100px 1fr 120px 100px 80px 150px',
+    padding: '12px 15px',
+    borderBottom: '1px solid #f3f4f6',
+    alignItems: 'center',
+    fontSize: '14px'
+  },
+  tableRowError: {
+    backgroundColor: '#fef2f2'
+  },
+  tableRowWarning: {
+    backgroundColor: '#fffbeb'
+  },
+  tableRowGood: {
+    backgroundColor: '#f0fdf4'
+  },
+  scoreBadge: {
+    padding: '4px 12px',
+    borderRadius: '20px',
+    fontWeight: '600',
+    fontSize: '13px',
+    display: 'inline-block'
+  },
+  missingFields: {
+    fontSize: '12px',
+    color: '#dc2626'
+  },
+  filterRow: {
+    display: 'flex',
+    gap: '10px',
+    marginBottom: '15px',
+    alignItems: 'center'
+  },
+  filterButton: {
+    padding: '6px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    backgroundColor: 'white',
+    cursor: 'pointer',
+    fontSize: '13px'
+  },
+  filterButtonActive: {
+    padding: '6px 12px',
+    border: '1px solid #2563eb',
+    borderRadius: '6px',
+    backgroundColor: '#dbeafe',
+    color: '#2563eb',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500'
+  }
+};
+
+// Calculate score based on filled fields
+function calculateScore(item, aspects) {
+  if (!aspects) return { score: 0, missing: [], filled: [] };
+  
+  let maxPoints = 0;
+  let earnedPoints = 0;
+  const missing = [];
+  const filled = [];
+  
+  // Check recommended fields (most important for SEO)
+  aspects.recommended?.forEach(aspect => {
+    maxPoints += 15;
+    const fieldName = aspect.name.toLowerCase().replace(/\s+/g, '');
+    const value = item[fieldName] || item[aspect.name] || item.brand || '';
+    
+    // Special handling for common fields
+    let hasValue = false;
+    if (aspect.name === 'Brand') {
+      hasValue = !!(item.brand || item.manufacturer);
+    } else if (aspect.name === 'MPN') {
+      hasValue = !!(item.mpn || item.model || item.partnumber);
+    } else if (aspect.name === 'Model') {
+      hasValue = !!(item.model || item.mpn);
+    } else {
+      hasValue = !!value;
+    }
+    
+    if (hasValue) {
+      earnedPoints += 15;
+      filled.push(aspect.name);
+    } else {
+      missing.push(aspect.name);
+    }
+  });
+  
+  const score = maxPoints > 0 ? Math.round((earnedPoints / maxPoints) * 100) : 100;
+  return { score, missing, filled };
+}
+
+function getScoreColor(score) {
+  if (score >= 80) return '#16a34a';
+  if (score >= 60) return '#d97706';
+  return '#dc2626';
+}
+
+function getRowStyle(score) {
+  if (score >= 80) return styles.tableRowGood;
+  if (score >= 60) return styles.tableRowWarning;
+  return styles.tableRowError;
+}
+
+export default function BulkAuditTool({ categoryAspects = null }) {
+  const [skuInput, setSkuInput] = useState('');
+  const [results, setResults] = useState([]);
+  const [processing, setProcessing] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [filter, setFilter] = useState('all'); // all, poor, fair, good
+  const [error, setError] = useState(null);
+
+  // Parse SKUs from input (comma, newline, or space separated)
+  const parseSkus = (input) => {
+    return input
+      .split(/[\n,\s]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  };
+
+  // Fetch single item from SureDone
+  const fetchItem = async (sku) => {
+    try {
+      const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku)}`);
+      const data = await response.json();
+      if (data.success && data.item) {
+        return data.item;
+      }
+      return null;
+    } catch (err) {
+      console.error(`Error fetching ${sku}:`, err);
+      return null;
+    }
+  };
+
+  // Fetch category aspects
+  const fetchCategoryAspects = async (categoryId) => {
+    // Check local cache first
+    if (categoryAspects?.categories?.[categoryId]?.aspects) {
+      return categoryAspects.categories[categoryId].aspects;
+    }
+    
+    // Fetch from API
+    try {
+      const response = await fetch(`/api/ebay/get-category-aspects?categoryId=${categoryId}`);
+      const data = await response.json();
+      if (data.success) {
+        return {
+          required: data.required || [],
+          recommended: data.recommended || [],
+          optional: data.optional || []
+        };
+      }
+    } catch (err) {
+      console.error(`Error fetching aspects for category ${categoryId}:`, err);
+    }
+    return null;
+  };
+
+  // Run bulk audit
+  const runAudit = async () => {
+    const skus = parseSkus(skuInput);
+    if (skus.length === 0) {
+      setError('Please enter at least one SKU');
+      return;
+    }
+
+    setProcessing(true);
+    setError(null);
+    setResults([]);
+    setProgress({ current: 0, total: skus.length });
+
+    const auditResults = [];
+    const categoryCache = {};
+
+    for (let i = 0; i < skus.length; i++) {
+      const sku = skus[i];
+      setProgress({ current: i + 1, total: skus.length });
+
+      // Fetch item from SureDone
+      const item = await fetchItem(sku);
+      
+      if (!item) {
+        auditResults.push({
+          sku,
+          error: 'Not found in SureDone',
+          score: 0,
+          missing: [],
+          filled: []
+        });
+        continue;
+      }
+
+      // Get category aspects (with caching)
+      let aspects = null;
+      if (item.ebaycatid) {
+        if (categoryCache[item.ebaycatid]) {
+          aspects = categoryCache[item.ebaycatid];
+        } else {
+          aspects = await fetchCategoryAspects(item.ebaycatid);
+          categoryCache[item.ebaycatid] = aspects;
+        }
+      }
+
+      // Calculate score
+      const { score, missing, filled } = calculateScore(item, aspects);
+
+      auditResults.push({
+        sku,
+        title: item.title || 'No Title',
+        brand: item.brand || item.manufacturer || '',
+        categoryId: item.ebaycatid || '',
+        price: item.price || '0.00',
+        stock: item.stock || '0',
+        score,
+        missing,
+        filled,
+        item
+      });
+
+      // Small delay to avoid overwhelming the API
+      if (i < skus.length - 1) {
+        await new Promise(r => setTimeout(r, 200));
+      }
+    }
+
+    setResults(auditResults);
+    setProcessing(false);
+  };
+
+  // Export results as CSV
+  const exportCSV = () => {
+    const headers = ['SKU', 'Title', 'Brand', 'Category', 'Price', 'Stock', 'Score', 'Missing Fields'];
+    const rows = filteredResults.map(r => [
+      r.sku,
+      `"${(r.title || '').replace(/"/g, '""')}"`,
+      r.brand,
+      r.categoryId,
+      r.price,
+      r.stock,
+      r.score,
+      `"${r.missing.join(', ')}"`
+    ]);
+
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `listing-audit-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  // Filter results
+  const filteredResults = results.filter(r => {
+    if (filter === 'all') return true;
+    if (filter === 'poor') return r.score < 60;
+    if (filter === 'fair') return r.score >= 60 && r.score < 80;
+    if (filter === 'good') return r.score >= 80;
+    return true;
+  });
+
+  // Calculate stats
+  const stats = {
+    total: results.length,
+    poor: results.filter(r => r.score < 60).length,
+    fair: results.filter(r => r.score >= 60 && r.score < 80).length,
+    good: results.filter(r => r.score >= 80).length,
+    avgScore: results.length > 0 
+      ? Math.round(results.reduce((sum, r) => sum + r.score, 0) / results.length)
+      : 0
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>📊 Bulk Listing Audit</h1>
+      </div>
+
+      {/* Input Section */}
+      <div style={styles.uploadSection}>
+        <label style={{ fontWeight: '500', marginBottom: '10px', display: 'block' }}>
+          Enter SKUs (one per line, or comma/space separated):
+        </label>
+        <textarea
+          style={styles.textarea}
+          value={skuInput}
+          onChange={(e) => setSkuInput(e.target.value)}
+          placeholder="IP13622&#10;IP13623&#10;IP13624&#10;...or paste from Excel"
+          disabled={processing}
+        />
+        
+        <div style={styles.buttonRow}>
+          <button
+            style={styles.button}
+            onClick={runAudit}
+            disabled={processing || !skuInput.trim()}
+          >
+            {processing ? `Processing ${progress.current}/${progress.total}...` : '🔍 Run Audit'}
+          </button>
+          
+          {results.length > 0 && (
+            <button style={styles.buttonGreen} onClick={exportCSV}>
+              📥 Export CSV
+            </button>
+          )}
+          
+          <button
+            style={styles.buttonSecondary}
+            onClick={() => {
+              setSkuInput('');
+              setResults([]);
+              setProgress({ current: 0, total: 0 });
+            }}
+            disabled={processing}
+          >
+            Clear
+          </button>
+          
+          <span style={{ color: '#6b7280', fontSize: '14px' }}>
+            {parseSkus(skuInput).length} SKUs detected
+          </span>
+        </div>
+
+        {processing && (
+          <div style={styles.progressBar}>
+            <div 
+              style={{ 
+                ...styles.progressFill, 
+                width: `${(progress.current / progress.total) * 100}%` 
+              }} 
+            />
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div style={{ padding: '15px', backgroundColor: '#fef2f2', color: '#dc2626', borderRadius: '8px', marginBottom: '20px' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Stats */}
+      {results.length > 0 && (
+        <>
+          <div style={styles.statsRow}>
+            <div style={styles.statCard}>
+              <div style={{ ...styles.statNumber, color: '#1f2937' }}>{stats.total}</div>
+              <div style={styles.statLabel}>Total Scanned</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={{ ...styles.statNumber, color: '#dc2626' }}>{stats.poor}</div>
+              <div style={styles.statLabel}>Need Work (&lt;60)</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={{ ...styles.statNumber, color: '#d97706' }}>{stats.fair}</div>
+              <div style={styles.statLabel}>Fair (60-79)</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={{ ...styles.statNumber, color: '#16a34a' }}>{stats.good}</div>
+              <div style={styles.statLabel}>Good (80+)</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={{ ...styles.statNumber, color: '#2563eb' }}>{stats.avgScore}</div>
+              <div style={styles.statLabel}>Avg Score</div>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div style={styles.filterRow}>
+            <span style={{ fontWeight: '500', marginRight: '10px' }}>Filter:</span>
+            <button
+              style={filter === 'all' ? styles.filterButtonActive : styles.filterButton}
+              onClick={() => setFilter('all')}
+            >
+              All ({stats.total})
+            </button>
+            <button
+              style={filter === 'poor' ? styles.filterButtonActive : styles.filterButton}
+              onClick={() => setFilter('poor')}
+            >
+              🔴 Poor ({stats.poor})
+            </button>
+            <button
+              style={filter === 'fair' ? styles.filterButtonActive : styles.filterButton}
+              onClick={() => setFilter('fair')}
+            >
+              🟡 Fair ({stats.fair})
+            </button>
+            <button
+              style={filter === 'good' ? styles.filterButtonActive : styles.filterButton}
+              onClick={() => setFilter('good')}
+            >
+              🟢 Good ({stats.good})
+            </button>
+          </div>
+
+          {/* Results Table */}
+          <div style={styles.resultsTable}>
+            <div style={styles.tableHeader}>
+              <div>SKU</div>
+              <div>Title</div>
+              <div>Category</div>
+              <div>Price</div>
+              <div>Score</div>
+              <div>Missing Fields</div>
+            </div>
+            
+            {filteredResults.map((result, idx) => (
+              <div 
+                key={idx} 
+                style={{ ...styles.tableRow, ...getRowStyle(result.score) }}
+              >
+                <div style={{ fontWeight: '500' }}>{result.sku}</div>
+                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {result.error || result.title}
+                </div>
+                <div>{result.categoryId || '-'}</div>
+                <div>${result.price}</div>
+                <div>
+                  <span style={{
+                    ...styles.scoreBadge,
+                    backgroundColor: result.error ? '#fee2e2' : `${getScoreColor(result.score)}20`,
+                    color: result.error ? '#dc2626' : getScoreColor(result.score)
+                  }}>
+                    {result.error ? 'ERR' : result.score}
+                  </span>
+                </div>
+                <div style={styles.missingFields}>
+                  {result.missing.slice(0, 3).join(', ')}
+                  {result.missing.length > 3 && ` +${result.missing.length - 3} more`}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {results.length === 0 && !processing && (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+          <p>Enter SKUs above and click "Run Audit" to scan your listings.</p>
+          <p style={{ fontSize: '14px' }}>Tip: You can paste a column of SKUs directly from Excel!</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+========================================
+FILE: ./components/CategoryHealthCheck.js
+========================================
+import React, { useState, useCallback } from 'react';
+
+/**
+ * CategoryHealthCheck Component
+ * 
+ * Scans listings for invalid/outdated eBay category IDs
+ */
+
+const styles = {
+  container: {
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: '20px'
+  },
+  header: {
+    marginBottom: '20px',
+    paddingBottom: '15px',
+    borderBottom: '2px solid #e5e7eb'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: '600',
+    color: '#1f2937'
+  },
+  subtitle: {
+    color: '#6b7280',
+    marginTop: '5px'
+  },
+  inputSection: {
+    backgroundColor: '#f9fafb',
+    borderRadius: '8px',
+    padding: '20px',
+    marginBottom: '20px'
+  },
+  textarea: {
+    width: '100%',
+    minHeight: '100px',
+    padding: '12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontFamily: 'monospace'
+  },
+  buttonRow: {
+    display: 'flex',
+    gap: '10px',
+    marginTop: '15px',
+    alignItems: 'center'
+  },
+  button: {
+    padding: '10px 20px',
+    backgroundColor: '#2563eb',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500'
+  },
+  buttonGreen: {
+    padding: '10px 20px',
+    backgroundColor: '#16a34a',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500'
+  },
+  buttonSecondary: {
+    padding: '10px 20px',
+    backgroundColor: '#6b7280',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500'
+  },
+  progressBar: {
+    width: '100%',
+    height: '20px',
+    backgroundColor: '#e5e7eb',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    marginTop: '15px'
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#2563eb',
+    transition: 'width 0.3s ease'
+  },
+  statsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '15px',
+    marginBottom: '20px'
+  },
+  statCard: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    padding: '15px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    textAlign: 'center'
+  },
+  statNumber: {
+    fontSize: '28px',
+    fontWeight: '700',
+    marginBottom: '5px'
+  },
+  statLabel: {
+    fontSize: '12px',
+    color: '#6b7280',
+    textTransform: 'uppercase'
+  },
+  resultsTable: {
+    width: '100%',
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    overflow: 'hidden'
+  },
+  tableHeader: {
+    display: 'grid',
+    gridTemplateColumns: '100px 1fr 120px 100px 200px',
+    padding: '12px 15px',
+    backgroundColor: '#f3f4f6',
+    fontWeight: '600',
+    fontSize: '14px',
+    borderBottom: '1px solid #e5e7eb'
+  },
+  tableRow: {
+    display: 'grid',
+    gridTemplateColumns: '100px 1fr 120px 100px 200px',
+    padding: '12px 15px',
+    borderBottom: '1px solid #f3f4f6',
+    alignItems: 'center',
+    fontSize: '14px'
+  },
+  tableRowInvalid: {
+    backgroundColor: '#fef2f2'
+  },
+  tableRowValid: {
+    backgroundColor: '#f0fdf4'
+  },
+  badge: {
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '500'
+  },
+  badgeValid: {
+    backgroundColor: '#dcfce7',
+    color: '#16a34a'
+  },
+  badgeInvalid: {
+    backgroundColor: '#fee2e2',
+    color: '#dc2626'
+  },
+  filterRow: {
+    display: 'flex',
+    gap: '10px',
+    marginBottom: '15px'
+  },
+  filterButton: {
+    padding: '6px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    backgroundColor: 'white',
+    cursor: 'pointer',
+    fontSize: '13px'
+  },
+  filterButtonActive: {
+    padding: '6px 12px',
+    border: '1px solid #dc2626',
+    borderRadius: '6px',
+    backgroundColor: '#fee2e2',
+    color: '#dc2626',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500'
+  }
+};
+
+// Known valid category mappings for common invalid ones
+const CATEGORY_SUGGESTIONS = {
+  '67010': { suggestion: '181714', name: 'Try: I/O Modules or search eBay for current Pneumatic Cylinder category' },
+  '67011': { suggestion: '181714', name: 'Try: Search eBay for current Pneumatic Valve category' },
+  '57011': { suggestion: '181714', name: 'Try: Search eBay for current Hydraulic Valve category' },
+  '66981': { suggestion: '78192', name: 'Try: 78192 (AC Drives/VFDs)' },
+  '181938': { suggestion: '181720', name: 'Try: Search eBay for current Transformer category' },
+  '181831': { suggestion: '260823', name: 'Try: 260823 (Fuses & Accessories)' },
+  '181836': { suggestion: '260823', name: 'Try: 260823 (Fuses & Accessories)' },
+  '181693': { suggestion: '65464', name: 'Try: 65464 (Safety Relays) or search for Timing Relay' },
+  '50928': { suggestion: '184027', name: 'Try: 184027 (Pneumatic Fittings)' }
+};
+
+export default function CategoryHealthCheck() {
+  const [skuInput, setSkuInput] = useState('');
+  const [results, setResults] = useState([]);
+  const [processing, setProcessing] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [filter, setFilter] = useState('all');
+  const [checkedCategories, setCheckedCategories] = useState({});
+
+  const parseSkus = (input) => {
+    return input
+      .split(/[\n,\s]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  };
+
+  const fetchItem = async (sku) => {
+    try {
+      const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku)}`);
+      const data = await response.json();
+      return data.success ? data.item : null;
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const checkCategory = async (categoryId) => {
+    // Return cached result if we already checked this category
+    if (checkedCategories[categoryId] !== undefined) {
+      return checkedCategories[categoryId];
+    }
+
+    try {
+      const response = await fetch(`/api/ebay/check-category?categoryId=${categoryId}`);
+      const data = await response.json();
+      const isValid = data.valid === true;
+      
+      setCheckedCategories(prev => ({ ...prev, [categoryId]: isValid }));
+      return isValid;
+    } catch (err) {
+      return false;
+    }
+  };
+
+  const runHealthCheck = async () => {
+    const skus = parseSkus(skuInput);
+    if (skus.length === 0) return;
+
+    setProcessing(true);
+    setResults([]);
+    setProgress({ current: 0, total: skus.length });
+
+    const checkResults = [];
+
+    for (let i = 0; i < skus.length; i++) {
+      const sku = skus[i];
+      setProgress({ current: i + 1, total: skus.length });
+
+      const item = await fetchItem(sku);
+      
+      if (!item) {
+        checkResults.push({
+          sku,
+          error: 'Not found in SureDone',
+          valid: null
+        });
+        continue;
+      }
+
+      const categoryId = item.ebaycatid;
+      
+      if (!categoryId) {
+        checkResults.push({
+          sku,
+          title: item.title,
+          categoryId: null,
+          valid: false,
+          error: 'No eBay category assigned',
+          stock: item.stock
+        });
+        continue;
+      }
+
+      const isValid = await checkCategory(categoryId);
+      const suggestion = CATEGORY_SUGGESTIONS[categoryId];
+
+      checkResults.push({
+        sku,
+        title: item.title || 'No Title',
+        categoryId,
+        valid: isValid,
+        stock: item.stock || '0',
+        suggestion: !isValid ? suggestion?.name : null
+      });
+
+      // Small delay
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+    setResults(checkResults);
+    setProcessing(false);
+  };
+
+  const exportCSV = () => {
+    const headers = ['SKU', 'Title', 'Category ID', 'Valid', 'Stock', 'Suggestion'];
+    const rows = filteredResults.map(r => [
+      r.sku,
+      `"${(r.title || '').replace(/"/g, '""')}"`,
+      r.categoryId || '',
+      r.valid === null ? 'ERROR' : r.valid ? 'YES' : 'NO',
+      r.stock || '0',
+      `"${r.suggestion || ''}"`
+    ]);
+
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `category-health-check-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  const filteredResults = results.filter(r => {
+    if (filter === 'all') return true;
+    if (filter === 'invalid') return r.valid === false;
+    if (filter === 'valid') return r.valid === true;
+    return true;
+  });
+
+  const stats = {
+    total: results.length,
+    valid: results.filter(r => r.valid === true).length,
+    invalid: results.filter(r => r.valid === false).length,
+    errors: results.filter(r => r.valid === null).length
+  };
+
+  // Get unique invalid categories
+  const invalidCategories = [...new Set(
+    results
+      .filter(r => r.valid === false && r.categoryId)
+      .map(r => r.categoryId)
+  )];
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>🏥 Category Health Check</h1>
+        <p style={styles.subtitle}>
+          Scan listings for invalid or outdated eBay category IDs
+        </p>
+      </div>
+
+      <div style={styles.inputSection}>
+        <label style={{ fontWeight: '500', marginBottom: '10px', display: 'block' }}>
+          Enter SKUs to check (one per line, or comma separated):
+        </label>
+        <textarea
+          style={styles.textarea}
+          value={skuInput}
+          onChange={(e) => setSkuInput(e.target.value)}
+          placeholder="IP6388&#10;IP6389&#10;IP6390"
+          disabled={processing}
+        />
+        
+        <div style={styles.buttonRow}>
+          <button
+            style={styles.button}
+            onClick={runHealthCheck}
+            disabled={processing || !skuInput.trim()}
+          >
+            {processing ? `Checking ${progress.current}/${progress.total}...` : '🔍 Check Categories'}
+          </button>
+          
+          {results.length > 0 && (
+            <button style={styles.buttonGreen} onClick={exportCSV}>
+              📥 Export CSV
+            </button>
+          )}
+          
+          <button
+            style={styles.buttonSecondary}
+            onClick={() => {
+              setSkuInput('');
+              setResults([]);
+            }}
+            disabled={processing}
+          >
+            Clear
+          </button>
+        </div>
+
+        {processing && (
+          <div style={styles.progressBar}>
+            <div style={{ ...styles.progressFill, width: `${(progress.current / progress.total) * 100}%` }} />
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      {results.length > 0 && (
+        <>
+          <div style={styles.statsRow}>
+            <div style={styles.statCard}>
+              <div style={{ ...styles.statNumber, color: '#1f2937' }}>{stats.total}</div>
+              <div style={styles.statLabel}>Total Checked</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={{ ...styles.statNumber, color: '#16a34a' }}>{stats.valid}</div>
+              <div style={styles.statLabel}>Valid Categories</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={{ ...styles.statNumber, color: '#dc2626' }}>{stats.invalid}</div>
+              <div style={styles.statLabel}>Invalid Categories</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={{ ...styles.statNumber, color: '#6b7280' }}>{stats.errors}</div>
+              <div style={styles.statLabel}>Errors</div>
+            </div>
+          </div>
+
+          {/* Invalid category summary */}
+          {invalidCategories.length > 0 && (
+            <div style={{ 
+              backgroundColor: '#fef2f2', 
+              border: '1px solid #fecaca',
+              borderRadius: '8px', 
+              padding: '15px', 
+              marginBottom: '20px' 
+            }}>
+              <h3 style={{ margin: '0 0 10px 0', color: '#dc2626' }}>
+                ⚠️ Invalid Category IDs Found:
+              </h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {invalidCategories.map(catId => (
+                  <span key={catId} style={{
+                    backgroundColor: '#fee2e2',
+                    color: '#dc2626',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    {catId}
+                    {CATEGORY_SUGGESTIONS[catId] && (
+                      <span style={{ fontWeight: '400', marginLeft: '5px' }}>
+                        → {CATEGORY_SUGGESTIONS[catId].suggestion}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Filters */}
+          <div style={styles.filterRow}>
+            <span style={{ fontWeight: '500', marginRight: '10px' }}>Filter:</span>
+            <button
+              style={filter === 'all' ? styles.filterButtonActive : styles.filterButton}
+              onClick={() => setFilter('all')}
+            >
+              All ({stats.total})
+            </button>
+            <button
+              style={filter === 'invalid' ? styles.filterButtonActive : styles.filterButton}
+              onClick={() => setFilter('invalid')}
+            >
+              🔴 Invalid ({stats.invalid})
+            </button>
+            <button
+              style={filter === 'valid' ? { ...styles.filterButton, borderColor: '#16a34a', color: '#16a34a' } : styles.filterButton}
+              onClick={() => setFilter('valid')}
+            >
+              🟢 Valid ({stats.valid})
+            </button>
+          </div>
+
+          {/* Results Table */}
+          <div style={styles.resultsTable}>
+            <div style={styles.tableHeader}>
+              <div>SKU</div>
+              <div>Title</div>
+              <div>Category</div>
+              <div>Status</div>
+              <div>Suggestion</div>
+            </div>
+            
+            {filteredResults.map((result, idx) => (
+              <div 
+                key={idx} 
+                style={{ 
+                  ...styles.tableRow, 
+                  ...(result.valid === false ? styles.tableRowInvalid : 
+                      result.valid === true ? styles.tableRowValid : {})
+                }}
+              >
+                <div style={{ fontWeight: '500' }}>{result.sku}</div>
+                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {result.error || result.title}
+                </div>
+                <div>{result.categoryId || '-'}</div>
+                <div>
+                  <span style={{
+                    ...styles.badge,
+                    ...(result.valid === true ? styles.badgeValid : 
+                        result.valid === false ? styles.badgeInvalid : 
+                        { backgroundColor: '#f3f4f6', color: '#6b7280' })
+                  }}>
+                    {result.valid === null ? 'ERROR' : result.valid ? '✓ Valid' : '✗ Invalid'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: '#dc2626' }}>
+                  {result.suggestion || ''}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {results.length === 0 && !processing && (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+          <p>Enter SKUs above to check their eBay category validity.</p>
+          <p style={{ fontSize: '14px' }}>
+            This tool identifies listings with outdated category IDs that need to be updated.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+========================================
+FILE: ./components/ExistingListingPanel.js
+========================================
+// components/ExistingListingPanel.js
+// Side panel showing existing SureDone listing data for comparison
+
+import React, { useState, useEffect } from 'react';
+import { X, RefreshCw, ArrowRight, Check } from 'lucide-react';
+
+/**
+ * ExistingListingPanel - Shows existing listing data from SureDone
+ * for side-by-side comparison with AI suggestions
+ */
+export default function ExistingListingPanel({ 
+  sku, 
+  isOpen, 
+  onClose, 
+  onUseValue,
+  onUseAllValues,
+  currentData = {}
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [existingData, setExistingData] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeTab, setActiveTab] = useState('existing'); // For mobile toggle
+
+  // Check for mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Fetch existing listing when SKU changes
+  useEffect(() => {
+    if (sku && isOpen) {
+      fetchExistingListing(sku);
+    }
+  }, [sku, isOpen]);
+
+  const fetchExistingListing = async (skuToFetch) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(skuToFetch)}`);
+      const data = await response.json();
+      
+      if (data.success && data.item) {
+        setExistingData(data.item);
+      } else {
+        setError('SKU not found in SureDone');
+        setExistingData(null);
+      }
+    } catch (err) {
+      setError(`Error: ${err.message}`);
+      setExistingData(null);
+    }
+    
+    setLoading(false);
+  };
+
+  // Field mapping for display
+  const fieldGroups = [
+    {
+      title: 'Basic Info',
+      fields: [
+        { key: 'title', label: 'Title' },
+        { key: 'brand', label: 'Brand' },
+        { key: 'mpn', label: 'MPN' },
+        { key: 'model', label: 'Model' }
+      ]
+    },
+    {
+      title: 'Categories',
+      fields: [
+        { key: 'ebaycatid', label: 'eBay Category ID' },
+        { key: 'ebaystoreid', label: 'eBay Store Cat 1' },
+        { key: 'ebaystoreid2', label: 'eBay Store Cat 2' },
+        { key: 'bigcommercecategories', label: 'BigCommerce Categories' }
+      ]
+    },
+    {
+      title: 'Pricing & Stock',
+      fields: [
+        { key: 'price', label: 'Price' },
+        { key: 'stock', label: 'Stock' },
+        { key: 'condition', label: 'Condition' }
+      ]
+    },
+    {
+      title: 'Specifications',
+      fields: [
+        { key: 'voltage', label: 'Voltage' },
+        { key: 'inputvoltage', label: 'Input Voltage' },
+        { key: 'outputvoltage', label: 'Output Voltage' },
+        { key: 'current', label: 'Current' },
+        { key: 'horsepower', label: 'Horsepower' },
+        { key: 'kw', label: 'kW' },
+        { key: 'rpm', label: 'RPM' },
+        { key: 'controllerplatform', label: 'Controller Platform' },
+        { key: 'usertype', label: 'Product Type' },
+        { key: 'bore', label: 'Bore' },
+        { key: 'stroke', label: 'Stroke' },
+        { key: 'portsize', label: 'Port Size' }
+      ]
+    },
+    {
+      title: 'Shipping',
+      fields: [
+        { key: 'weight', label: 'Weight' },
+        { key: 'boxlength', label: 'Box Length' },
+        { key: 'boxwidth', label: 'Box Width' },
+        { key: 'boxheight', label: 'Box Height' },
+        { key: 'shelf', label: 'Shelf Location' }
+      ]
+    }
+  ];
+
+  // Compare values and determine if different
+  const isDifferent = (fieldKey) => {
+    const existingVal = existingData?.[fieldKey] || '';
+    const currentVal = currentData?.[fieldKey] || '';
+    return existingVal.toString().toLowerCase() !== currentVal.toString().toLowerCase();
+  };
+
+  // Render a comparison row
+  const renderComparisonRow = (field) => {
+    const existingVal = existingData?.[field.key] || '';
+    const currentVal = currentData?.[field.key] || '';
+    const different = isDifferent(field.key);
+
+    return (
+      <div 
+        key={field.key} 
+        className={`grid grid-cols-3 gap-2 py-2 px-3 border-b border-gray-100 ${different ? 'bg-yellow-50' : ''}`}
+      >
+        <div className="text-xs font-medium text-gray-600">{field.label}</div>
+        <div className="text-xs">
+          {existingVal || <span className="text-gray-400 italic">empty</span>}
+        </div>
+        <div className="text-xs flex items-center gap-1">
+          {currentVal || <span className="text-gray-400 italic">empty</span>}
+          {different && existingVal && (
+            <button
+              onClick={() => onUseValue && onUseValue(field.key, existingVal)}
+              className="ml-auto text-blue-600 hover:text-blue-800 p-1"
+              title="Use existing value"
+            >
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Mobile view with tabs
+  if (isMobile && isOpen) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
+        <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-xl max-h-[80vh] overflow-hidden">
+          {/* Header */}
+          <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
+            <div>
+              <h3 className="font-bold">Compare: {sku}</h3>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => setActiveTab('existing')}
+                  className={`px-3 py-1 text-sm rounded-full ${activeTab === 'existing' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+                >
+                  Existing
+                </button>
+                <button
+                  onClick={() => setActiveTab('new')}
+                  className={`px-3 py-1 text-sm rounded-full ${activeTab === 'new' ? 'bg-green-600 text-white' : 'bg-gray-100'}`}
+                >
+                  New/AI
+                </button>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="overflow-y-auto p-4" style={{ maxHeight: 'calc(80vh - 80px)' }}>
+            {loading && (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+                <span className="ml-2">Loading...</span>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            {existingData && !loading && (
+              <div className="space-y-4">
+                {fieldGroups.map(group => (
+                  <div key={group.title} className="bg-gray-50 rounded-lg overflow-hidden">
+                    <h4 className="font-semibold text-sm bg-gray-200 px-3 py-2">{group.title}</h4>
+                    {group.fields.map(field => {
+                      const val = activeTab === 'existing' 
+                        ? existingData[field.key] 
+                        : currentData[field.key];
+                      return (
+                        <div key={field.key} className="flex justify-between px-3 py-2 border-b border-gray-100">
+                          <span className="text-xs text-gray-600">{field.label}</span>
+                          <span className="text-xs font-medium">
+                            {val || <span className="text-gray-400 italic">empty</span>}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop side panel
+  if (!isOpen) return null;
+
+  return (
+    <div className="w-96 bg-white border-l shadow-lg overflow-hidden flex flex-col h-full">
+      {/* Header */}
+      <div className="p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="font-bold">Existing Listing</h3>
+            <p className="text-sm text-blue-100">{sku}</p>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => fetchExistingListing(sku)}
+              className="p-2 hover:bg-blue-500 rounded"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-blue-500 rounded">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="px-4 py-2 bg-gray-50 border-b text-xs flex items-center gap-4">
+        <span className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-yellow-200 rounded"></div>
+          Different
+        </span>
+        <button 
+          onClick={() => onUseAllValues && onUseAllValues(existingData)}
+          className="ml-auto text-blue-600 hover:text-blue-800 text-xs font-medium"
+        >
+          Use All Existing →
+        </button>
+      </div>
+
+      {/* Column Headers */}
+      <div className="grid grid-cols-3 gap-2 px-3 py-2 bg-gray-100 text-xs font-semibold text-gray-600 border-b">
+        <div>Field</div>
+        <div>Existing</div>
+        <div>New/AI</div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading existing listing...</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="m-4 p-4 bg-red-50 text-red-600 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
+        {existingData && !loading && (
+          <div>
+            {fieldGroups.map(group => (
+              <div key={group.title}>
+                <div className="px-3 py-2 bg-gray-50 font-semibold text-xs text-gray-700 border-b border-t">
+                  {group.title}
+                </div>
+                {group.fields.map(field => renderComparisonRow(field))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!existingData && !loading && !error && (
+          <div className="p-8 text-center text-gray-500">
+            <p>Enter a SKU to load existing listing data</p>
+          </div>
+        )}
+      </div>
+
+      {/* Footer Actions */}
+      {existingData && (
+        <div className="p-4 border-t bg-gray-50">
+          <button
+            onClick={() => onUseAllValues && onUseAllValues(existingData)}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Check className="w-4 h-4" />
+            Keep All Existing Values
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+========================================
+FILE: ./components/InventoryCheckAlert.js
+========================================
+// components/InventoryCheckAlert.js
+// React component to display existing inventory matches
+// Add this to your pro.js page
+
+import { useState, useEffect, useRef } from 'react';
+
+export default function InventoryCheckAlert({ brand, partNumber, onSelectExisting, onCreateNew }) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  
+  // Track what we last searched for to avoid duplicate searches
+  const lastSearchRef = useRef('');
+
+  // DEBOUNCED search - waits 800ms after user stops typing
+  useEffect(() => {
+    // Don't search if part number is too short
+    if (!partNumber || partNumber.trim().length < 5) {
+      setResult(null);
+      setError(null);
+      return;
+    }
+
+    // Create a search key to track what we're searching
+    const searchKey = `${brand || ''}-${partNumber}`.toUpperCase();
+    
+    // Don't search if we already searched for this exact term
+    if (searchKey === lastSearchRef.current) {
+      return;
+    }
+
+    // Set up debounce timer - wait 800ms after last keystroke
+    const debounceTimer = setTimeout(() => {
+      lastSearchRef.current = searchKey;
+      checkInventory();
+    }, 800);
+
+    // Clear timer if user keeps typing
+    return () => clearTimeout(debounceTimer);
+  }, [brand, partNumber]);
+
+  const checkInventory = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/check-inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand, partNumber })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setResult(data);
+        // Auto-expand if matches found
+        if (data.found && data.totalMatches > 0) {
+          setExpanded(true);
+        }
+      } else {
+        setError(data.error || 'Failed to check inventory');
+      }
+    } catch (err) {
+      setError('Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Don't render anything if no search has been done
+  if (!result && !loading && !error) {
+    return null;
+  }
+
+  return (
+    <div style={styles.container}>
+      {/* Loading State */}
+      {loading && (
+        <div style={styles.loadingBox}>
+          <span style={styles.spinner}>⏳</span>
+          Checking existing inventory...
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div style={styles.errorBox}>
+          <strong>⚠️ Error:</strong> {error}
+          <button onClick={checkInventory} style={styles.retryButton}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Results - Matches Found */}
+      {result && result.found && !loading && (
+        <div style={styles.alertBox}>
+          <div style={styles.alertHeader}>
+            <span style={styles.alertIcon}>🔔</span>
+            <strong>EXISTING INVENTORY FOUND!</strong>
+            <span style={styles.badge}>{result.totalMatches} match{result.totalMatches > 1 ? 'es' : ''}</span>
+          </div>
+          
+          <p style={styles.alertMessage}>
+            We already have <strong>{partNumber}</strong> in stock. 
+            Review before creating a duplicate listing.
+          </p>
+
+          {/* Toggle to show/hide matches */}
+          <button 
+            onClick={() => setExpanded(!expanded)} 
+            style={styles.expandButton}
+          >
+            {expanded ? '▼ Hide Details' : '▶ Show Existing Listings'}
+          </button>
+
+          {/* Expanded Match List */}
+          {expanded && (
+            <div style={styles.matchList}>
+              {result.matches.map((match, index) => (
+                <MatchCard 
+                  key={match.sku} 
+                  match={match} 
+                  onSelect={() => onSelectExisting && onSelectExisting(match)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div style={styles.actionButtons}>
+            <button 
+              onClick={() => onCreateNew && onCreateNew()} 
+              style={styles.createNewButton}
+            >
+              Create New Listing Anyway
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Results - No Matches */}
+      {result && !result.found && !loading && (
+        <div style={styles.clearBox}>
+          <span style={styles.clearIcon}>✅</span>
+          <strong>No existing inventory found</strong>
+          <p style={styles.clearMessage}>
+            No items matching "{partNumber}" with stock &gt; 0. 
+            Safe to create a new listing.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Individual Match Card Component
+function MatchCard({ match, onSelect }) {
+  return (
+    <div style={styles.matchCard}>
+      {/* Thumbnail */}
+      <div style={styles.thumbnailContainer}>
+        {match.thumbnail ? (
+          <img 
+            src={match.thumbnail} 
+            alt={match.title}
+            style={styles.thumbnail}
+            onError={(e) => e.target.style.display = 'none'}
+          />
+        ) : (
+          <div style={styles.noImage}>No Image</div>
+        )}
+      </div>
+
+      {/* Match Details */}
+      <div style={styles.matchDetails}>
+        <div style={styles.matchTitle}>{match.title}</div>
+        
+        <div style={styles.matchInfo}>
+          <span style={styles.infoItem}>
+            <strong>SKU:</strong> {match.sku}
+          </span>
+          <span style={styles.infoItem}>
+            <strong>Condition:</strong> 
+            <span style={getConditionStyle(match.condition)}>{match.condition}</span>
+          </span>
+          <span style={styles.infoItem}>
+            <strong>Shelf:</strong> {match.shelf}
+          </span>
+          <span style={styles.infoItem}>
+            <strong>Qty:</strong> {match.stock}
+          </span>
+          <span style={styles.infoItem}>
+            <strong>Price:</strong> ${match.price}
+          </span>
+          <span style={styles.infoItem}>
+            <strong>Images:</strong> {match.imageCount}
+          </span>
+        </div>
+
+        {/* Quality Warnings */}
+        {match.missingFields.length > 0 && (
+          <div style={styles.warning}>
+            ⚠️ Missing: {match.missingFields.join(', ')}
+          </div>
+        )}
+
+        {/* Channels */}
+        <div style={styles.channels}>
+          {match.channels.ebay && <span style={styles.channelBadge}>eBay</span>}
+          {match.channels.bigcommerce && <span style={styles.channelBadge}>BigCommerce</span>}
+        </div>
+      </div>
+
+      {/* Select Button */}
+      <div style={styles.matchActions}>
+        <button onClick={onSelect} style={styles.selectButton}>
+          Update This Listing
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Helper function for condition styling
+function getConditionStyle(condition) {
+  const colors = {
+    'New': { backgroundColor: '#22c55e', color: 'white' },
+    'New Other': { backgroundColor: '#84cc16', color: 'white' },
+    'Manufacturer Refurbished': { backgroundColor: '#3b82f6', color: 'white' },
+    'Seller Refurbished': { backgroundColor: '#8b5cf6', color: 'white' },
+    'Used': { backgroundColor: '#f59e0b', color: 'white' },
+    'For Parts or Not Working': { backgroundColor: '#ef4444', color: 'white' },
+  };
+  
+  return {
+    ...styles.conditionBadge,
+    ...(colors[condition] || { backgroundColor: '#6b7280', color: 'white' })
+  };
+}
+
+// Styles
+const styles = {
+  container: {
+    marginBottom: '20px',
+    fontFamily: 'Arial, sans-serif',
+  },
+  
+  loadingBox: {
+    padding: '15px',
+    backgroundColor: '#f0f9ff',
+    border: '1px solid #bae6fd',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  
+  spinner: {
+    animation: 'spin 1s linear infinite',
+  },
+  
+  errorBox: {
+    padding: '15px',
+    backgroundColor: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '8px',
+    color: '#b91c1c',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  
+  retryButton: {
+    marginLeft: 'auto',
+    padding: '5px 10px',
+    backgroundColor: '#b91c1c',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  
+  alertBox: {
+    padding: '20px',
+    backgroundColor: '#fffbeb',
+    border: '2px solid #f59e0b',
+    borderRadius: '8px',
+  },
+  
+  alertHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '10px',
+    fontSize: '18px',
+  },
+  
+  alertIcon: {
+    fontSize: '24px',
+  },
+  
+  badge: {
+    backgroundColor: '#f59e0b',
+    color: 'white',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '14px',
+    marginLeft: 'auto',
+  },
+  
+  alertMessage: {
+    margin: '10px 0',
+    color: '#92400e',
+  },
+  
+  expandButton: {
+    backgroundColor: 'transparent',
+    border: '1px solid #f59e0b',
+    color: '#92400e',
+    padding: '8px 16px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    marginBottom: '15px',
+  },
+  
+  matchList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '15px',
+    marginBottom: '15px',
+  },
+  
+  matchCard: {
+    display: 'flex',
+    gap: '15px',
+    padding: '15px',
+    backgroundColor: 'white',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+    alignItems: 'flex-start',
+    overflow: 'hidden',
+    flexWrap: 'wrap',
+  },
+  
+  thumbnailContainer: {
+    flexShrink: 0,
+    width: '80px',
+    height: '80px',
+  },
+  
+  thumbnail: {
+    width: '80px',
+    height: '80px',
+    objectFit: 'cover',
+    borderRadius: '4px',
+  },
+  
+  noImage: {
+    width: '80px',
+    height: '80px',
+    backgroundColor: '#f3f4f6',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '4px',
+    fontSize: '12px',
+    color: '#9ca3af',
+  },
+  
+  matchDetails: {
+    flex: 1,
+  },
+  
+  matchTitle: {
+    fontWeight: 'bold',
+    marginBottom: '8px',
+    fontSize: '14px',
+  },
+  
+  matchInfo: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '10px',
+    fontSize: '13px',
+    color: '#4b5563',
+  },
+  
+  infoItem: {
+    display: 'flex',
+    gap: '4px',
+  },
+  
+  conditionBadge: {
+    padding: '2px 6px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    marginLeft: '4px',
+  },
+  
+  warning: {
+    marginTop: '8px',
+    padding: '5px 10px',
+    backgroundColor: '#fef3c7',
+    borderRadius: '4px',
+    fontSize: '12px',
+    color: '#92400e',
+  },
+  
+  channels: {
+    marginTop: '8px',
+    display: 'flex',
+    gap: '5px',
+  },
+  
+  channelBadge: {
+    padding: '2px 8px',
+    backgroundColor: '#e5e7eb',
+    borderRadius: '4px',
+    fontSize: '11px',
+    color: '#374151',
+  },
+  
+  matchActions: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '5px',
+    flexShrink: 0,
+    minWidth: '0',
+  },
+  
+  selectButton: {
+    padding: '8px 16px',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    textAlign: 'center',
+  },
+  
+  actionButtons: {
+    display: 'flex',
+    gap: '10px',
+    marginTop: '10px',
+  },
+  
+  createNewButton: {
+    padding: '10px 20px',
+    backgroundColor: '#6b7280',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  
+  clearBox: {
+    padding: '15px',
+    backgroundColor: '#f0fdf4',
+    border: '1px solid #86efac',
+    borderRadius: '8px',
+  },
+  
+  clearIcon: {
+    fontSize: '20px',
+    marginRight: '10px',
+  },
+  
+  clearMessage: {
+    margin: '5px 0 0 0',
+    color: '#166534',
+    fontSize: '14px',
+  },
+};
+
+
+========================================
+FILE: ./components/ListingQualityEditor.js
+========================================
+import React, { useState, useEffect, useCallback } from 'react';
+
+/**
+ * ListingQualityEditor Component
+ * 
+ * Analyzes listings against eBay category requirements and suggests improvements.
+ * Uses the local category aspects database + platform detection for auto-fill.
+ */
+
+// Platform detection patterns (from ebay-category-aspects.json)
+const PLATFORM_DETECTION = {
+  "Allen-Bradley": {
+    "1756-": "ControlLogix",
+    "1769-": "CompactLogix",
+    "1768-": "CompactLogix",
+    "1746-": "SLC 500",
+    "1747-": "SLC 500",
+    "1745-": "PLC-5",
+    "1771-": "PLC-5",
+    "1761-": "MicroLogix1000",
+    "1762-": "MicroLogix1200",
+    "1763-": "MicroLogix1100",
+    "1764-": "MicroLogix1500",
+    "1766-": "MicroLogix1400",
+    "1734-": "POINT I/O",
+    "1794-": "FLEX I/O",
+    "2080-": "Micro800",
+    "2085-": "Micro800",
+    "20-": "PowerFlex",
+    "22-": "PowerFlex"
+  },
+  "Siemens": {
+    "6ES7 21": "S7/200",
+    "6ES7 22": "S7/200",
+    "6ES7 31": "S7/300",
+    "6ES7 32": "S7/300",
+    "6ES7 33": "S7/300",
+    "6ES7 34": "S7/300",
+    "6ES7 35": "S7/300",
+    "6ES7 41": "S7/400",
+    "6ES7 51": "S7/1500",
+    "6ES7 52": "S7/1500",
+    "6ES5": "S5",
+    "6ED1": "LOGO!",
+    "6AV": "HMI Panel"
+  },
+  "GE": {
+    "IC693": "90-30",
+    "IC697": "90-70",
+    "IC200": "VersaMax",
+    "IC695": "RX3i"
+  },
+  "Omron": {
+    "CJ1": "CJ1",
+    "CJ2": "CJ2",
+    "CP1": "CP1",
+    "CS1": "CS1"
+  },
+  "Mitsubishi": {
+    "FX": "FX Series",
+    "QJ": "Q Series",
+    "AJ": "A Series"
+  },
+  "Yaskawa": {
+    "SGDV": "Sigma-5",
+    "SGDM": "Sigma-3",
+    "SGDS": "Sigma-2",
+    "CIMR": "VFD"
+  },
+  "FANUC": {
+    "A06B": "Servo/Spindle",
+    "A02B": "CNC Control",
+    "A03B": "I/O Module"
+  }
+};
+
+// Updated BRAND_DETECTION patterns for ListingQualityEditor.js
+// Replace the existing BRAND_DETECTION object with this expanded version
+
+const BRAND_DETECTION = {
+  // Allen-Bradley / Rockwell
+  "1756": "Allen-Bradley",
+  "1769": "Allen-Bradley",
+  "1768": "Allen-Bradley",
+  "1746": "Allen-Bradley",
+  "1747": "Allen-Bradley",
+  "1761": "Allen-Bradley",
+  "1762": "Allen-Bradley",
+  "1763": "Allen-Bradley",
+  "1764": "Allen-Bradley",
+  "1766": "Allen-Bradley",
+  "1794": "Allen-Bradley",
+  "1734": "Allen-Bradley",
+  "2080": "Allen-Bradley",
+  "2085": "Allen-Bradley",
+  "20-": "Allen-Bradley",
+  "22-": "Allen-Bradley",
+  "25-": "Allen-Bradley",
+  "150-": "Allen-Bradley",
+  "1492": "Allen-Bradley",
+  "700-": "Allen-Bradley",
+  "800": "Allen-Bradley",
+  "855": "Allen-Bradley",
+  "MPL-": "Allen-Bradley",
+  "MPM-": "Allen-Bradley",
+  "TL-": "Allen-Bradley",
+  "VPL-": "Allen-Bradley",
+  
+  // Siemens
+  "6ES": "Siemens",
+  "6ED": "Siemens",
+  "6AV": "Siemens",
+  "6SL": "Siemens",
+  "6SE": "Siemens",
+  "6EP": "Siemens",
+  "6GK": "Siemens",
+  "3RV": "Siemens",
+  "3RT": "Siemens",
+  "3RU": "Siemens",
+  "5SX": "Siemens",
+  "5SY": "Siemens",
+  
+  // SMC Pneumatics
+  "CDQ": "SMC",
+  "CD85": "SMC",
+  "CQ2": "SMC",
+  "CM2": "SMC",
+  "CG1": "SMC",
+  "CDG": "SMC",
+  "MGQL": "SMC",
+  "MKB": "SMC",
+  "MHS": "SMC",
+  "CDRB": "SMC",
+  "CRB": "SMC",
+  "CDLA": "SMC",
+  "MDNB": "SMC",
+  "MNB": "SMC",
+  "SY": "SMC",
+  "VQ": "SMC",
+  "VQZ": "SMC",
+  "AM": "SMC",
+  "AF": "SMC",
+  "AW": "SMC",
+  "AR": "SMC",
+  "AC": "SMC",
+  
+  // Festo
+  "MFH": "Festo",
+  "DSNU": "Festo",
+  "DNC": "Festo",
+  "ADN": "Festo",
+  "ADVU": "Festo",
+  "DGC": "Festo",
+  "DGSL": "Festo",
+  "CPE": "Festo",
+  "VUVG": "Festo",
+  "VTUG": "Festo",
+  "LFR": "Festo",
+  "MS": "Festo",
+  
+  // Parker
+  "P1D": "Parker",
+  "P1A": "Parker",
+  "OSP-P": "Parker",
+  "OSPP": "Parker",
+  
+  // Numatics
+  "L22": "Numatics",
+  "L12": "Numatics",
+  "L01": "Numatics",
+  
+  // GE Fanuc
+  "IC69": "GE Fanuc",
+  "IC20": "GE Fanuc",
+  
+  // FANUC
+  "A06B": "FANUC",
+  "A02B": "FANUC",
+  "A03B": "FANUC",
+  "A16B": "FANUC",
+  "A20B": "FANUC",
+  
+  // Omron
+  "CJ1": "Omron",
+  "CJ2": "Omron",
+  "CP1": "Omron",
+  "CS1": "Omron",
+  "NX1": "Omron",
+  "E2E": "Omron",
+  "E3Z": "Omron",
+  "E3X": "Omron",
+  "MY": "Omron",
+  "G2R": "Omron",
+  "G3NA": "Omron",
+  
+  // Yaskawa
+  "SGDV": "Yaskawa",
+  "SGDM": "Yaskawa",
+  "SGDS": "Yaskawa",
+  "SGMG": "Yaskawa",
+  "SGMJ": "Yaskawa",
+  "SGMS": "Yaskawa",
+  "CIMR": "Yaskawa",
+  
+  // Mitsubishi
+  "FX": "Mitsubishi",
+  "QJ": "Mitsubishi",
+  "AJ": "Mitsubishi",
+  "A1S": "Mitsubishi",
+  "Q0": "Mitsubishi",
+  "HF-": "Mitsubishi",
+  "MR-": "Mitsubishi",
+  "FR-": "Mitsubishi",
+  
+  // ABB
+  "3HAC": "ABB",
+  "3HAB": "ABB",
+  "ACS": "ABB",
+  "ACS5": "ABB",
+  "ACS8": "ABB",
+  "PS5": "ABB",
+  
+  // Schneider / Telemecanique
+  "LC1": "Schneider Electric",
+  "LC2": "Schneider Electric",
+  "LR": "Schneider Electric",
+  "XB": "Schneider Electric",
+  "ATV": "Schneider Electric",
+  "TM": "Schneider Electric",
+  "140": "Schneider Electric",
+  
+  // Automation Direct
+  "D2-": "Automation Direct",
+  "D4-": "Automation Direct",
+  "DL": "Automation Direct",
+  "GS": "Automation Direct",
+  
+  // Keyence
+  "PJ-": "Keyence",
+  "LV-": "Keyence",
+  "FS-": "Keyence",
+  "LR-": "Keyence",
+  "IV-": "Keyence",
+  "CV-": "Keyence",
+  "SZ-": "Keyence",
+  "GL-": "Keyence",
+  
+  // Banner
+  "Q45": "Banner",
+  "QS": "Banner",
+  "S18": "Banner",
+  "SM3": "Banner",
+  "PD45": "Banner",
+  
+  // IFM
+  "IG": "IFM",
+  "IE": "IFM",
+  "O5": "IFM",
+  "OG": "IFM",
+  "PN": "IFM",
+  
+  // Turck
+  "BI": "Turck",
+  "NI": "Turck",
+  
+  // Balluff
+  "BES": "Balluff",
+  "BOS": "Balluff",
+  "BTL": "Balluff",
+  
+  // Phoenix Contact
+  "PLC-": "Phoenix Contact",
+  "QUINT": "Phoenix Contact",
+  "TRIO": "Phoenix Contact",
+  "STEP": "Phoenix Contact",
+  
+  // WAGO
+  "750-": "WAGO",
+  "753-": "WAGO",
+  "787-": "WAGO",
+  
+  // Oriental Motor
+  "BLM": "Oriental Motor",
+  "ARM": "Oriental Motor",
+  "5GU": "Oriental Motor",
+  "5RK": "Oriental Motor",
+  "PK": "Oriental Motor",
+  "CRK": "Oriental Motor",
+  "AZ": "Oriental Motor",
+  "CH250": "Oriental Motor",
+  
+  // THK
+  "KR": "THK",
+  "SHS": "THK",
+  "HSR": "THK",
+  "LM": "THK",
+  "SSR": "THK",
+  
+  // Baldor
+  "VS1": "Baldor",
+  "VE1": "Baldor",
+  
+  // Sola / Emerson
+  "SDN": "Sola",
+  "SDP": "Sola",
+  
+  // Hydac
+  "EDS": "Hydac",
+  "HDA": "Hydac",
+  "VM": "Hydac",
+  
+  // Sun Hydraulics
+  "CW": "Sun Hydraulics",
+  "RPEC": "Sun Hydraulics",
+  "DTDA": "Sun Hydraulics",
+  
+  // Chromalox
+  "1603": "Chromalox",
+  "4003": "Chromalox",
+  
+  // Fuji Electric
+  "EG": "Fuji Electric",
+  "SC-": "Fuji Electric",
+  
+  // Cooper Bussmann
+  "LPJ": "Cooper Bussmann",
+  "FRS": "Cooper Bussmann",
+  "JJS": "Cooper Bussmann",
+  
+  // Werma
+  "697": "Werma",
+  "640": "Werma",
+  
+  // Toshiba
+  "EX10": "Toshiba"
+};
+
+// Export for use in other files if needed
+if (typeof module !== 'undefined') {
+  module.exports = { BRAND_DETECTION };
+}
+
+// Styles
+const styles = {
+  container: {
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: '20px'
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    paddingBottom: '15px',
+    borderBottom: '2px solid #e5e7eb'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: '600',
+    color: '#1f2937'
+  },
+  inputSection: {
+    backgroundColor: '#f9fafb',
+    borderRadius: '8px',
+    padding: '20px',
+    marginBottom: '20px'
+  },
+  inputRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: '15px',
+    marginBottom: '15px'
+  },
+  inputGroup: {
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  label: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: '5px'
+  },
+  input: {
+    padding: '10px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px'
+  },
+  button: {
+    padding: '10px 20px',
+    backgroundColor: '#2563eb',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px'
+  },
+  buttonSecondary: {
+    padding: '10px 20px',
+    backgroundColor: '#6b7280',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px',
+    marginLeft: '10px'
+  },
+  scoreCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '20px',
+    padding: '20px',
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    marginBottom: '20px'
+  },
+  scoreCircle: {
+    width: '80px',
+    height: '80px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '24px',
+    fontWeight: '700',
+    color: 'white'
+  },
+  scoreDetails: {
+    flex: 1
+  },
+  aspectsSection: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    overflow: 'hidden'
+  },
+  aspectsHeader: {
+    padding: '15px 20px',
+    backgroundColor: '#f3f4f6',
+    fontWeight: '600',
+    fontSize: '16px',
+    borderBottom: '1px solid #e5e7eb'
+  },
+  aspectRow: {
+    display: 'grid',
+    gridTemplateColumns: '200px 1fr 150px 100px',
+    padding: '12px 20px',
+    borderBottom: '1px solid #f3f4f6',
+    alignItems: 'center'
+  },
+  aspectName: {
+    fontWeight: '500',
+    color: '#374151'
+  },
+  aspectValue: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  badge: {
+    padding: '2px 8px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: '500'
+  },
+  badgeRequired: {
+    backgroundColor: '#fef2f2',
+    color: '#dc2626'
+  },
+  badgeRecommended: {
+    backgroundColor: '#fffbeb',
+    color: '#d97706'
+  },
+  badgeOptional: {
+    backgroundColor: '#f0fdf4',
+    color: '#16a34a'
+  },
+  badgeFilled: {
+    backgroundColor: '#dbeafe',
+    color: '#2563eb'
+  },
+  badgeMissing: {
+    backgroundColor: '#fee2e2',
+    color: '#dc2626'
+  },
+  suggestButton: {
+    padding: '4px 10px',
+    backgroundColor: '#10b981',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '12px'
+  },
+  suggestionDropdown: {
+    padding: '8px',
+    border: '1px solid #d1d5db',
+    borderRadius: '4px',
+    fontSize: '14px',
+    minWidth: '200px'
+  },
+  autoDetected: {
+    fontSize: '12px',
+    color: '#059669',
+    fontStyle: 'italic'
+  },
+  noData: {
+    padding: '40px',
+    textAlign: 'center',
+    color: '#6b7280'
+  }
+};
+
+// Helper: Detect brand from part number
+function detectBrand(partNumber) {
+  if (!partNumber) return null;
+  const pn = partNumber.toUpperCase().replace(/[\s-]/g, '');
+  
+  for (const [prefix, brand] of Object.entries(BRAND_DETECTION)) {
+    if (pn.startsWith(prefix.replace('-', ''))) {
+      return brand;
+    }
+  }
+  return null;
+}
+
+// Helper: Detect platform from brand and part number
+function detectPlatform(brand, partNumber) {
+  if (!brand || !partNumber) return null;
+  
+  const patterns = PLATFORM_DETECTION[brand];
+  if (!patterns) return null;
+  
+  const pn = partNumber.toUpperCase();
+  for (const [prefix, platform] of Object.entries(patterns)) {
+    if (pn.includes(prefix.replace(/[\s-]/g, ''))) {
+      return platform;
+    }
+  }
+  return null;
+}
+
+// Helper: Calculate quality score
+function calculateScore(aspects, filledFields) {
+  let maxPoints = 0;
+  let earnedPoints = 0;
+  
+  // Required fields: 30 points each
+  aspects.required?.forEach(aspect => {
+    maxPoints += 30;
+    if (filledFields[aspect.name]) earnedPoints += 30;
+  });
+  
+  // Recommended fields: 15 points each
+  aspects.recommended?.forEach(aspect => {
+    maxPoints += 15;
+    if (filledFields[aspect.name]) earnedPoints += 15;
+  });
+  
+  // Optional fields: 5 points each (max 25 points total)
+  let optionalPoints = 0;
+  aspects.optional?.forEach(aspect => {
+    if (filledFields[aspect.name] && optionalPoints < 25) {
+      optionalPoints += 5;
+    }
+  });
+  maxPoints += 25;
+  earnedPoints += optionalPoints;
+  
+  return maxPoints > 0 ? Math.round((earnedPoints / maxPoints) * 100) : 0;
+}
+
+// Helper: Get score color
+function getScoreColor(score) {
+  if (score >= 80) return '#16a34a';
+  if (score >= 60) return '#d97706';
+  return '#dc2626';
+}
+
+// Main Component
+export default function ListingQualityEditor({ categoryAspects = null }) {
+  const [listing, setListing] = useState({
+    sku: '',
+    title: '',
+    mpn: '',
+    brand: '',
+    categoryId: '',
+    controllerPlatform: '',
+    type: ''
+  });
+  
+  const [aspects, setAspects] = useState(null);
+  const [filledFields, setFilledFields] = useState({});
+  const [autoDetections, setAutoDetections] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [skuLoading, setSkuLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [skuData, setSkuData] = useState(null);
+
+  // Lookup SKU from SureDone
+  const lookupSku = useCallback(async (sku) => {
+    if (!sku || sku.length < 3) return;
+    
+    setSkuLoading(true);
+    setError(null);
+    
+    try {
+      // Use the existing check-inventory API with SKU search
+      const response = await fetch('/api/suredone/get-item?sku=' + encodeURIComponent(sku));
+      const data = await response.json();
+      
+      if (data.success && data.item) {
+        const item = data.item;
+        setSkuData(item);
+        
+        // Auto-fill fields from SureDone data
+        const newListing = {
+          ...listing,
+          sku: sku,
+          title: item.title || '',
+          mpn: item.mpn || item.model || '',
+          brand: item.brand || item.manufacturer || '',
+          categoryId: item.ebaycatid || '',
+          controllerPlatform: item.controllerplatform || '',
+          type: item.type || item.usertype || ''
+        };
+        
+        setListing(newListing);
+        
+        // Update filled fields
+        const newFilledFields = {};
+        if (item.brand || item.manufacturer) newFilledFields['Brand'] = item.brand || item.manufacturer;
+        if (item.mpn || item.model) newFilledFields['MPN'] = item.mpn || item.model;
+        if (item.model) newFilledFields['Model'] = item.model;
+        if (item.controllerplatform) newFilledFields['Controller Platform'] = item.controllerplatform;
+        if (item.type || item.usertype) newFilledFields['Type'] = item.type || item.usertype;
+        
+        setFilledFields(newFilledFields);
+        
+        // Fetch category aspects if we have a category
+        if (item.ebaycatid) {
+          fetchAspects(item.ebaycatid);
+        }
+        
+        setAutoDetections({ ...autoDetections, 'SKU Loaded': true });
+      } else {
+        setError('SKU not found in SureDone');
+        setSkuData(null);
+      }
+    } catch (err) {
+      setError('Error looking up SKU: ' + err.message);
+      setSkuData(null);
+    }
+    
+    setSkuLoading(false);
+  }, [listing, autoDetections]);
+
+  // Fetch category aspects when categoryId changes
+  const fetchAspects = useCallback(async (categoryId) => {
+    if (!categoryId) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // First check local database if provided
+      if (categoryAspects?.categories?.[categoryId]) {
+        setAspects(categoryAspects.categories[categoryId].aspects);
+        setLoading(false);
+        return;
+      }
+      
+      // Otherwise fetch from API
+      const response = await fetch(`/api/ebay/get-category-aspects?categoryId=${categoryId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setAspects({
+          required: data.required || [],
+          recommended: data.recommended || [],
+          optional: data.optional || []
+        });
+      } else {
+        setError(data.error || 'Failed to fetch category aspects');
+      }
+    } catch (err) {
+      setError('Error fetching category data: ' + err.message);
+    }
+    
+    setLoading(false);
+  }, [categoryAspects]);
+
+  // Auto-detect brand and platform when MPN changes
+  useEffect(() => {
+    if (listing.mpn) {
+      const detectedBrand = detectBrand(listing.mpn);
+      const detectedPlatform = detectedBrand ? detectPlatform(detectedBrand, listing.mpn) : null;
+      
+      const newDetections = {};
+      
+      if (detectedBrand && !listing.brand) {
+        newDetections.Brand = detectedBrand;
+        setListing(prev => ({ ...prev, brand: detectedBrand }));
+        setFilledFields(prev => ({ ...prev, Brand: detectedBrand }));
+      }
+      
+      if (detectedPlatform && !listing.controllerPlatform) {
+        newDetections['Controller Platform'] = detectedPlatform;
+        setListing(prev => ({ ...prev, controllerPlatform: detectedPlatform }));
+        setFilledFields(prev => ({ ...prev, 'Controller Platform': detectedPlatform }));
+      }
+      
+      setAutoDetections(newDetections);
+    }
+  }, [listing.mpn]);
+
+  // Handle input changes
+  const handleInputChange = (field, value) => {
+    setListing(prev => ({ ...prev, [field]: value }));
+    
+    // Map UI fields to aspect names
+    const aspectFieldMap = {
+      brand: 'Brand',
+      mpn: 'MPN',
+      controllerPlatform: 'Controller Platform',
+      type: 'Type'
+    };
+    
+    if (aspectFieldMap[field]) {
+      setFilledFields(prev => ({
+        ...prev,
+        [aspectFieldMap[field]]: value
+      }));
+    }
+  };
+
+  // Handle category change
+  const handleCategoryChange = (categoryId) => {
+    setListing(prev => ({ ...prev, categoryId }));
+    fetchAspects(categoryId);
+  };
+
+  // Apply suggestion to a field
+  const applySuggestion = (aspectName, value) => {
+    setFilledFields(prev => ({ ...prev, [aspectName]: value }));
+    
+    // Also update the main listing state for key fields
+    const fieldMap = {
+      'Brand': 'brand',
+      'MPN': 'mpn',
+      'Controller Platform': 'controllerPlatform',
+      'Type': 'type'
+    };
+    
+    if (fieldMap[aspectName]) {
+      setListing(prev => ({ ...prev, [fieldMap[aspectName]]: value }));
+    }
+  };
+
+  // Render aspect row
+  const renderAspectRow = (aspect, priority) => {
+    const value = filledFields[aspect.name] || '';
+    const isAutoDetected = autoDetections[aspect.name];
+    const isFilled = !!value;
+    
+    return (
+      <div key={aspect.name} style={styles.aspectRow}>
+        <div style={styles.aspectName}>
+          {aspect.name}
+          {isAutoDetected && (
+            <div style={styles.autoDetected}>✓ Auto-detected</div>
+          )}
+        </div>
+        
+        <div style={styles.aspectValue}>
+          {aspect.allowedValues?.length > 0 ? (
+            <select
+              style={styles.suggestionDropdown}
+              value={value}
+              onChange={(e) => applySuggestion(aspect.name, e.target.value)}
+            >
+              <option value="">-- Select --</option>
+              {aspect.allowedValues.map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              style={{ ...styles.input, flex: 1, maxWidth: '300px' }}
+              value={value}
+              onChange={(e) => applySuggestion(aspect.name, e.target.value)}
+              placeholder={`Enter ${aspect.name}`}
+            />
+          )}
+          
+          {aspect.acceptsCustom && aspect.allowedValues?.length > 0 && (
+            <input
+              type="text"
+              style={{ ...styles.input, width: '150px' }}
+              placeholder="Or custom..."
+              onChange={(e) => applySuggestion(aspect.name, e.target.value)}
+            />
+          )}
+        </div>
+        
+        <div>
+          <span style={{
+            ...styles.badge,
+            ...(priority === 'required' ? styles.badgeRequired : 
+                priority === 'recommended' ? styles.badgeRecommended : 
+                styles.badgeOptional)
+          }}>
+            {priority.charAt(0).toUpperCase() + priority.slice(1)}
+          </span>
+        </div>
+        
+        <div>
+          <span style={{
+            ...styles.badge,
+            ...(isFilled ? styles.badgeFilled : styles.badgeMissing)
+          }}>
+            {isFilled ? '✓ Filled' : '✗ Missing'}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const score = aspects ? calculateScore(aspects, filledFields) : 0;
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>📋 Listing Quality Editor</h1>
+      </div>
+
+      {/* Input Section */}
+      <div style={styles.inputSection}>
+        <div style={styles.inputRow}>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>SKU</label>
+            <input
+              type="text"
+              style={styles.input}
+              value={listing.sku}
+              onChange={(e) => handleInputChange('sku', e.target.value)}
+              placeholder="e.g., IP04082"
+            />
+          </div>
+          
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>MPN / Part Number</label>
+            <input
+              type="text"
+              style={styles.input}
+              value={listing.mpn}
+              onChange={(e) => handleInputChange('mpn', e.target.value)}
+              placeholder="e.g., 1756-L72"
+            />
+          </div>
+          
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>eBay Category ID</label>
+            <input
+              type="text"
+              style={styles.input}
+              value={listing.categoryId}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              placeholder="e.g., 181708"
+            />
+          </div>
+        </div>
+        
+        <div style={styles.inputRow}>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Title</label>
+            <input
+              type="text"
+              style={styles.input}
+              value={listing.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              placeholder="Listing title..."
+            />
+          </div>
+          
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Brand {autoDetections.Brand && <span style={styles.autoDetected}>(auto)</span>}</label>
+            <input
+              type="text"
+              style={styles.input}
+              value={listing.brand}
+              onChange={(e) => handleInputChange('brand', e.target.value)}
+              placeholder="e.g., Allen-Bradley"
+            />
+          </div>
+          
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>
+              Controller Platform {autoDetections['Controller Platform'] && <span style={styles.autoDetected}>(auto)</span>}
+            </label>
+            <input
+              type="text"
+              style={styles.input}
+              value={listing.controllerPlatform}
+              onChange={(e) => handleInputChange('controllerPlatform', e.target.value)}
+              placeholder="e.g., ControlLogix"
+            />
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            style={styles.button}
+            onClick={() => lookupSku(listing.sku)}
+            disabled={!listing.sku || skuLoading}
+          >
+            {skuLoading ? 'Loading...' : '🔍 Lookup SKU'}
+          </button>
+          
+          <button
+            style={styles.button}
+            onClick={() => fetchAspects(listing.categoryId)}
+            disabled={!listing.categoryId || loading}
+          >
+            {loading ? 'Loading...' : 'Analyze Listing'}
+          </button>
+          
+          <button
+            style={styles.buttonSecondary}
+            onClick={() => {
+              setListing({ sku: '', title: '', mpn: '', brand: '', categoryId: '', controllerPlatform: '', type: '' });
+              setFilledFields({});
+              setAspects(null);
+              setAutoDetections({});
+              setSkuData(null);
+            }}
+          >
+            Clear
+          </button>
+        </div>
+        
+        {/* SKU Data Preview */}
+        {skuData && (
+          <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#dbeafe', borderRadius: '8px', border: '1px solid #3b82f6' }}>
+            <div style={{ fontWeight: '600', marginBottom: '10px', color: '#1e40af' }}>✅ Loaded from SureDone</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', fontSize: '14px' }}>
+              <div><strong>Title:</strong> {skuData.title?.substring(0, 40)}...</div>
+              <div><strong>Stock:</strong> {skuData.stock || 0}</div>
+              <div><strong>Price:</strong> ${skuData.price || '0.00'}</div>
+              <div><strong>Condition:</strong> {skuData.condition || 'N/A'}</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div style={{ padding: '15px', backgroundColor: '#fef2f2', color: '#dc2626', borderRadius: '8px', marginBottom: '20px' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Score Card */}
+      {aspects && (
+        <div style={styles.scoreCard}>
+          <div style={{ ...styles.scoreCircle, backgroundColor: getScoreColor(score) }}>
+            {score}
+          </div>
+          <div style={styles.scoreDetails}>
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>Listing Quality Score</h3>
+            <p style={{ margin: 0, color: '#6b7280' }}>
+              {score >= 80 ? '🎉 Excellent! Your listing is well-optimized.' :
+               score >= 60 ? '👍 Good, but there\'s room for improvement.' :
+               '⚠️ Needs attention. Fill in more fields for better visibility.'}
+            </p>
+            <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#9ca3af' }}>
+              Required: {aspects.required?.length || 0} | 
+              Recommended: {aspects.recommended?.length || 0} | 
+              Optional: {aspects.optional?.length || 0}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Aspects Section */}
+      {aspects && (
+        <div style={styles.aspectsSection}>
+          {/* Required */}
+          {aspects.required?.length > 0 && (
+            <>
+              <div style={{ ...styles.aspectsHeader, backgroundColor: '#fef2f2', color: '#dc2626' }}>
+                🔴 Required Fields ({aspects.required.length})
+              </div>
+              {aspects.required.map(aspect => renderAspectRow(aspect, 'required'))}
+            </>
+          )}
+          
+          {/* Recommended */}
+          {aspects.recommended?.length > 0 && (
+            <>
+              <div style={{ ...styles.aspectsHeader, backgroundColor: '#fffbeb', color: '#d97706' }}>
+                🟡 Recommended Fields ({aspects.recommended.length})
+              </div>
+              {aspects.recommended.map(aspect => renderAspectRow(aspect, 'recommended'))}
+            </>
+          )}
+          
+          {/* Optional (collapsed by default, show first 5) */}
+          {aspects.optional?.length > 0 && (
+            <>
+              <div style={{ ...styles.aspectsHeader, backgroundColor: '#f0fdf4', color: '#16a34a' }}>
+                🟢 Optional Fields ({aspects.optional.length})
+              </div>
+              {aspects.optional.slice(0, 5).map(aspect => renderAspectRow(aspect, 'optional'))}
+              {aspects.optional.length > 5 && (
+                <div style={{ padding: '10px 20px', color: '#6b7280', fontSize: '14px' }}>
+                  + {aspects.optional.length - 5} more optional fields...
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {!aspects && !loading && (
+        <div style={styles.noData}>
+          <p>Enter an eBay Category ID and click "Analyze Listing" to see required fields.</p>
+          <p style={{ fontSize: '14px', color: '#9ca3af' }}>
+            Common categories: 181708 (PLCs), 78191 (Servo Drives), 78192 (VFDs), 181709 (HMIs)
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+========================================
+FILE: ./components/PhotoEditor.js
+========================================
+// components/PhotoEditor.js
+// Photo editor: zoom, pan, rotate, brightness, background removal, watermark preview
+// Outputs 2000x2000 JPEG images for eBay listings
+//
+// COORDINATE SYSTEM:
+// - pan is stored in DISPLAY pixels (canvas is 500x500)
+// - pan is applied BEFORE rotation so dragging right always moves image right on screen
+// - zoom=1.0 means "fill the frame" (image fills canvas edge-to-edge)
+// - Export canvas is 2000x2000 — pan is scaled up by 4x (2000/500) for export
+
+import { useState, useRef, useEffect } from 'react';
+
+const OUTPUT_SIZE = 2000;
+const DISPLAY_SIZE = 500;
+const PAN_SCALE = OUTPUT_SIZE / DISPLAY_SIZE; // 4
+
+function getFillScale(imgW, imgH, rotDeg, canvasSize) {
+  const isRotated = rotDeg === 90 || rotDeg === 270;
+  const effectiveW = isRotated ? imgH : imgW;
+  const effectiveH = isRotated ? imgW : imgH;
+  return Math.max(canvasSize / effectiveW, canvasSize / effectiveH);
+}
+
+function drawImageToCtx(ctx, img, canvasSize, rotDeg, zoomMultiplier, panPx, brightnessDelta) {
+  const tmp = document.createElement('canvas');
+  tmp.width = img.width;
+  tmp.height = img.height;
+  const tmpCtx = tmp.getContext('2d');
+  tmpCtx.drawImage(img, 0, 0);
+
+  if (brightnessDelta !== 0) {
+    const id = tmpCtx.getImageData(0, 0, img.width, img.height);
+    const d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i]   = Math.max(0, Math.min(255, d[i]   + brightnessDelta));
+      d[i+1] = Math.max(0, Math.min(255, d[i+1] + brightnessDelta));
+      d[i+2] = Math.max(0, Math.min(255, d[i+2] + brightnessDelta));
+    }
+    tmpCtx.putImageData(id, 0, 0);
+  }
+
+  const fillScale = getFillScale(img.width, img.height, rotDeg, canvasSize);
+  const totalScale = fillScale * zoomMultiplier;
+
+  ctx.save();
+  ctx.translate(canvasSize / 2 + panPx.x, canvasSize / 2 + panPx.y);
+  ctx.rotate((rotDeg * Math.PI) / 180);
+  ctx.scale(totalScale, totalScale);
+  ctx.drawImage(tmp, -img.width / 2, -img.height / 2, img.width, img.height);
+  ctx.restore();
+}
+
+export default function PhotoEditor({
+  photoUrl, sku, viewName, onSave, onCancel, showWatermarkOption = true
+}) {
+  const [rotation, setRotation]     = useState(0);
+  const [brightness, setBrightness] = useState(0);
+  const [zoom, setZoom]             = useState(1);
+  const [pan, setPan]               = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart]   = useState({ x: 0, y: 0 });
+  const [showWatermark, setShowWatermark] = useState(false);
+  const [isSaving, setIsSaving]     = useState(false);
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
+  const [currentPhotoUrl, setCurrentPhotoUrl] = useState(photoUrl);
+  const [showBgOptions, setShowBgOptions] = useState(false);
+  const [selectedBg, setSelectedBg] = useState('white');
+  const [autoCropCenter, setAutoCropCenter] = useState(true);
+  const [productScale, setProductScale] = useState(80);
+  const [imageLoadId, setImageLoadId] = useState(0);
+
+  const editImageRef      = useRef(null);
+  const displayCanvasRef  = useRef(null);
+  const watermarkLogoRef  = useRef(null);
+  const watermarkContactRef = useRef(null);
+
+  useEffect(() => {
+    const logo = new Image();
+    logo.src = '/watermarks/logo.png';
+    logo.onload = () => { watermarkLogoRef.current = logo; };
+    const contact = new Image();
+    contact.src = '/watermarks/contact-info.png';
+    contact.onload = () => { watermarkContactRef.current = contact; };
+  }, []);
+
+  useEffect(() => {
+    if (!currentPhotoUrl) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      editImageRef.current = img;
+      console.log('Image loaded:', img.width, 'x', img.height);
+      setImageLoadId(prev => prev + 1);
+    };
+    img.onerror = async () => {
+      try {
+        const r = await fetch(`/api/photos/proxy-image?url=${encodeURIComponent(currentPhotoUrl)}`);
+        if (!r.ok) throw new Error(`Proxy failed: ${r.status}`);
+        const d = await r.json();
+        if (!d.success || !d.dataUrl) throw new Error('Proxy invalid');
+        img.crossOrigin = undefined;
+        img.src = d.dataUrl;
+      } catch (err) {
+        alert('Failed to load image for editing.');
+        onCancel();
+      }
+    };
+    img.src = currentPhotoUrl;
+  }, [currentPhotoUrl, onCancel]);
+
+  useEffect(() => {
+    if (!editImageRef.current) return;
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [imageLoadId]);
+
+  useEffect(() => {
+    if (!editImageRef.current || !displayCanvasRef.current) return;
+    const canvas = displayCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    canvas.width = DISPLAY_SIZE;
+    canvas.height = DISPLAY_SIZE;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, DISPLAY_SIZE, DISPLAY_SIZE);
+    drawImageToCtx(ctx, editImageRef.current, DISPLAY_SIZE, rotation, zoom, pan, brightness);
+    if (showWatermark) drawWatermarkPreview(ctx, DISPLAY_SIZE);
+  }, [rotation, brightness, zoom, pan, showWatermark, imageLoadId]);
+
+  function drawWatermarkPreview(ctx, size) {
+    ctx.save();
+    if (watermarkLogoRef.current) {
+      const logo = watermarkLogoRef.current;
+      const w = Math.round(size * 0.32);
+      const h = Math.round(w * (logo.height / logo.width));
+      ctx.globalAlpha = 0.6;
+      ctx.drawImage(logo, 20, 20, w, h);
+    }
+    if (watermarkContactRef.current) {
+      ctx.globalAlpha = 0.6;
+      ctx.drawImage(watermarkContactRef.current, 0, 0, size, size);
+    }
+    ctx.restore();
+  }
+
+  const handleMouseDown = (e) => {
+    if (!displayCanvasRef.current) return;
+    setIsDragging(true);
+    const r = displayCanvasRef.current.getBoundingClientRect();
+    setDragStart({ x: e.clientX - r.left, y: e.clientY - r.top });
+  };
+  const handleMouseMove = (e) => {
+    if (!isDragging || !displayCanvasRef.current) return;
+    const r = displayCanvasRef.current.getBoundingClientRect();
+    const cx = e.clientX - r.left;
+    const cy = e.clientY - r.top;
+    setPan(prev => ({ x: prev.x + cx - dragStart.x, y: prev.y + cy - dragStart.y }));
+    setDragStart({ x: cx, y: cy });
+  };
+  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseLeave = () => setIsDragging(false);
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length !== 1 || !displayCanvasRef.current) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const r = displayCanvasRef.current.getBoundingClientRect();
+    setIsDragging(true);
+    setDragStart({ x: t.clientX - r.left, y: t.clientY - r.top });
+  };
+  const handleTouchMove = (e) => {
+    if (!isDragging || e.touches.length !== 1 || !displayCanvasRef.current) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const r = displayCanvasRef.current.getBoundingClientRect();
+    const cx = t.clientX - r.left;
+    const cy = t.clientY - r.top;
+    setPan(prev => ({ x: prev.x + cx - dragStart.x, y: prev.y + cy - dragStart.y }));
+    setDragStart({ x: cx, y: cy });
+  };
+  const handleTouchEnd = () => setIsDragging(false);
+
+  const handleRemoveBg = async () => {
+    if (!editImageRef.current) return;
+    setIsRemovingBg(true);
+    setShowBgOptions(false);
+    try {
+      const img = editImageRef.current;
+      const tmp = document.createElement('canvas');
+      tmp.width = img.width; tmp.height = img.height;
+      tmp.getContext('2d').drawImage(img, 0, 0);
+      const base64 = tmp.toDataURL('image/jpeg', 0.95).split(',')[1];
+      const res = await fetch('/api/photos/remove-bg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, view: viewName, background: selectedBg, autoCrop: autoCropCenter, scale: productScale })
+      });
+      if (!res.ok) throw new Error(`Background removal failed: ${res.status}`);
+      const data = await res.json();
+      setCurrentPhotoUrl(data.dataUrl);
+    } catch (err) {
+      alert('Background removal failed: ' + err.message);
+    } finally {
+      setIsRemovingBg(false);
+    }
+  };
+
+  function sharpenImage(ctx, w, h, amount = 0.2) {
+    const id = ctx.getImageData(0, 0, w, h);
+    const d = id.data;
+    const copy = new Uint8ClampedArray(d);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = (y * w + x) * 4;
+        for (let c = 0; c < 3; c++) {
+          const center = copy[i+c] * (1 + 4 * amount);
+          const nbrs = (copy[((y-1)*w+x)*4+c] + copy[((y+1)*w+x)*4+c] + copy[(y*w+x-1)*4+c] + copy[(y*w+x+1)*4+c]) * amount;
+          d[i+c] = Math.min(255, Math.max(0, center - nbrs));
+        }
+      }
+    }
+    ctx.putImageData(id, 0, 0);
+  }
+
+  const handleSave = async () => {
+    if (!editImageRef.current) return;
+    setIsSaving(true);
+    try {
+      const img = editImageRef.current;
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = OUTPUT_SIZE;
+      exportCanvas.height = OUTPUT_SIZE;
+      const ctx = exportCanvas.getContext('2d');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+      const exportPan = { x: pan.x * PAN_SCALE, y: pan.y * PAN_SCALE };
+      drawImageToCtx(ctx, img, OUTPUT_SIZE, rotation, zoom, exportPan, brightness);
+      sharpenImage(ctx, OUTPUT_SIZE, OUTPUT_SIZE, 0.2);
+      const blob = await new Promise(r => exportCanvas.toBlob(r, 'image/jpeg', 0.92));
+      const base64 = await new Promise(r => {
+        const reader = new FileReader();
+        reader.onloadend = () => r(reader.result.split(',')[1]);
+        reader.readAsDataURL(blob);
+      });
+      const res = await fetch('/api/photos/upload-simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku, view: `${viewName}_edited`, imageData: base64, contentType: 'image/jpeg' })
+      });
+      if (!res.ok) {
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const e = await res.json();
+          throw new Error(e.error || `Upload failed (${res.status})`);
+        }
+        throw new Error(`Upload failed: ${res.status} ${res.statusText}`);
+      }
+      const data = await res.json();
+      onSave(data.url);
+    } catch (error) {
+      alert('Failed to save photo: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] overflow-y-auto">
+
+        <div className="px-6 py-4 border-b flex items-center justify-between">
+          <h2 className="text-xl font-bold">Edit Photo — {viewName}</h2>
+          <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+        </div>
+
+        <div className="p-6 flex justify-center bg-gray-50">
+          <canvas
+            ref={displayCanvasRef}
+            width={DISPLAY_SIZE}
+            height={DISPLAY_SIZE}
+            className="border-2 border-gray-300 rounded-lg shadow-lg"
+            style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          />
+        </div>
+
+        <div className="px-6 py-4 space-y-4">
+
+          <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+            <label className="block text-sm font-semibold mb-2">
+              ☀️ Brightness: {brightness > 0 ? '+' : ''}{brightness}
+            </label>
+            <input type="range" min="-50" max="50" value={brightness}
+              onChange={e => setBrightness(parseInt(e.target.value))} className="w-full" />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Darker</span><span>0</span><span>Brighter</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold mb-2">
+              🔍 Zoom: {zoom.toFixed(2)}x
+              <span className="font-normal text-gray-500 text-xs ml-2">(1.00 = fill frame · drag canvas to pan)</span>
+            </label>
+            <input type="range" min="0.5" max="3" step="0.05" value={zoom}
+              onChange={e => setZoom(parseFloat(e.target.value))} className="w-full" />
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {[
+                { label: 'Reset', fn: () => { setZoom(1); setPan({ x: 0, y: 0 }); } },
+                { label: 'Center', fn: () => setPan({ x: 0, y: 0 }) },
+                { label: '1.5x', fn: () => setZoom(1.5) },
+                { label: '2x',   fn: () => setZoom(2) },
+                { label: '3x',   fn: () => setZoom(3) },
+              ].map(b => (
+                <button key={b.label} onClick={b.fn}
+                  className="px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 font-medium">
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold mb-2">🔄 Rotate <span className="font-normal text-gray-500 text-xs">({rotation}°)</span></label>
+            <div className="flex gap-2">
+              <button onClick={() => setRotation(r => (r - 90 + 360) % 360)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">↺ 90° Left</button>
+              <button onClick={() => setRotation(r => (r + 90) % 360)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">↻ 90° Right</button>
+              {rotation !== 0 && (
+                <button onClick={() => setRotation(0)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Reset</button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold mb-2">🖼️ Background</label>
+            {!showBgOptions ? (
+              <button onClick={() => setShowBgOptions(true)} disabled={isRemovingBg}
+                className="w-full px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 disabled:opacity-50 font-medium">
+                {isRemovingBg ? '⏳ Processing...' : '🖼️ Remove Background'}
+              </button>
+            ) : (
+              <div className="border-2 border-green-300 rounded-lg p-4 bg-green-50">
+                <h4 className="font-medium mb-3 text-sm">Background Options</h4>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {[
+                    { id: 'white', label: 'White', preview: '#ffffff' },
+                    { id: 'transparent', label: 'Transparent', preview: 'checkerboard' },
+                    { id: 'lightgray', label: 'Light Gray', preview: '#f5f5f5' },
+                    { id: 'warehouse', label: 'Warehouse', preview: '/bg-templates/warehouse-floor.jpg' },
+                    { id: 'studio', label: 'Studio', preview: '/bg-templates/studio-gradient.jpg' },
+                    { id: 'industrial', label: 'Industrial', preview: '/bg-templates/industrial.jpg' },
+                  ].map(bg => (
+                    <button key={bg.id} type="button" onClick={() => setSelectedBg(bg.id)}
+                      className={`p-2 rounded border-2 text-center text-xs transition ${selectedBg === bg.id ? 'border-green-500 bg-green-100 shadow-md' : 'border-gray-200 hover:border-gray-400 bg-white'}`}>
+                      <div className="w-full h-12 rounded mb-1 border border-gray-300" style={{
+                        background: bg.preview.startsWith('#') ? bg.preview
+                          : bg.preview === 'checkerboard' ? 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 16px 16px'
+                          : `url(${bg.preview}) center/cover`
+                      }} />
+                      <span className="font-medium">{bg.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                  <input type="checkbox" checked={autoCropCenter}
+                    onChange={e => setAutoCropCenter(e.target.checked)} className="w-4 h-4 rounded" />
+                  <span className="text-sm font-medium">Auto-crop & center product</span>
+                </label>
+                {autoCropCenter && (
+                  <div className="mb-4">
+                    <label className="text-sm text-gray-600 font-medium mb-1 block">Product scale: {productScale}%</label>
+                    <input type="range" min="50" max="95" step="5" value={productScale}
+                      onChange={e => setProductScale(parseInt(e.target.value))} className="w-full" />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>More whitespace</span><span>Fills frame</span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button onClick={handleRemoveBg} disabled={isRemovingBg}
+                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium">
+                    {isRemovingBg ? '⏳ Processing...' : '🖼️ Remove Background'}
+                  </button>
+                  <button onClick={() => setShowBgOptions(false)} disabled={isRemovingBg}
+                    className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-medium">
+                    Cancel
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">💡 Silver/white parts work best against a blue or gray backdrop.</p>
+              </div>
+            )}
+          </div>
+
+          {showWatermarkOption && (
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="wm-preview" checked={showWatermark}
+                  onChange={e => setShowWatermark(e.target.checked)} className="w-4 h-4" />
+                <label htmlFor="wm-preview" className="text-sm font-semibold text-blue-900">
+                  Preview Watermark (not saved to image)
+                </label>
+              </div>
+              {showWatermark && (
+                <p className="text-xs text-blue-700 mt-2">
+                  ℹ️ Watermark is always at the <strong>top-left corner</strong> of the exported image, regardless of pan position.
+                </p>
+              )}
+            </div>
+          )}
+
+        </div>
+
+        <div className="px-6 py-4 border-t flex justify-end gap-3">
+          <button onClick={onCancel} disabled={isSaving}
+            className="px-6 py-2 border rounded hover:bg-gray-100 disabled:opacity-50">
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={isSaving}
+            className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
+            {isSaving ? 'Saving...' : 'Save Photo'}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+
+========================================
+FILE: ./components/SkuLookup.js
+========================================
+// components/SkuLookup.js
+// SKU lookup input for loading existing listings into Pro Listing Builder
+
+import React, { useState } from 'react';
+import { Search, Loader, ExternalLink } from 'lucide-react';
+
+/**
+ * SkuLookup - Searches SureDone for an existing listing
+ * and returns the data to populate the editor
+ */
+export default function SkuLookup({ onLoadListing, onCompareClick }) {
+  const [sku, setSku] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const searchSku = async () => {
+    if (!sku.trim()) return;
+    
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    
+    try {
+      const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku.trim())}`);
+      const data = await response.json();
+      
+      if (data.success && data.item) {
+        setResult(data.item);
+      } else {
+        setError('SKU not found in SureDone');
+      }
+    } catch (err) {
+      setError(`Error: ${err.message}`);
+    }
+    
+    setLoading(false);
+  };
+
+  const handleLoadIntoEditor = () => {
+    if (result && onLoadListing) {
+      onLoadListing(result);
+      setSku('');
+      setResult(null);
+    }
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4 mb-4">
+      <h3 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
+        <Search className="w-4 h-4" />
+        Edit Existing Listing
+      </h3>
+      
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={sku}
+          onChange={(e) => setSku(e.target.value.toUpperCase())}
+          onKeyPress={(e) => e.key === 'Enter' && searchSku()}
+          placeholder="Enter SKU (e.g., IP6388)"
+          className="flex-1 px-3 py-2 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+        />
+        <button
+          onClick={searchSku}
+          disabled={loading || !sku.trim()}
+          className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2 text-sm"
+        >
+          {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+          {loading ? 'Searching...' : 'Search'}
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="mt-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
+          {error}
+        </div>
+      )}
+
+      {/* Result Preview */}
+      {result && (
+        <div className="mt-3 bg-white border border-amber-200 rounded-lg p-3">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <span className="font-bold text-amber-900">{result.sku || result.guid}</span>
+              <span className="ml-2 text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                In Stock: {result.stock || 0}
+              </span>
+            </div>
+            <span className="text-sm font-bold text-green-600">${result.price}</span>
+          </div>
+          
+          <p className="text-sm text-gray-700 mb-2 line-clamp-2">{result.title}</p>
+          
+          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-3">
+            <div><strong>Brand:</strong> {result.brand || 'N/A'}</div>
+            <div><strong>MPN:</strong> {result.mpn || result.model || 'N/A'}</div>
+            <div><strong>Category:</strong> {result.ebaycatid || 'N/A'}</div>
+            <div><strong>Condition:</strong> {result.condition || 'N/A'}</div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleLoadIntoEditor}
+              className="flex-1 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-medium"
+            >
+              Load into Editor
+            </button>
+            {onCompareClick && (
+              <button
+                onClick={() => onCompareClick(result.sku || result.guid)}
+                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                title="Open comparison panel"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-amber-700 mt-2">
+        💡 Load an existing listing to edit and improve its specifications
+      </p>
+    </div>
+  );
+}
+
+
+========================================
+FILE: ./components/UnifiedListingManager.js
+========================================
+import React, { useState, useEffect, useCallback } from 'react';
+
+/**
+ * UnifiedListingManager Component
+ * 
+ * All-in-one tool for managing listings:
+ * - SKU lookup from SureDone
+ * - Auto-detect brand/platform from MPN
+ * - Category-aware AI spec extraction
+ * - eBay field requirements by category
+ * - Quality scoring
+ * - Push updates back to SureDone
+ */
+
+// ============================================
+// BRAND DETECTION PATTERNS
+// ============================================
+const BRAND_DETECTION = {
+  // Allen-Bradley / Rockwell
+  "1756": "Allen-Bradley", "1769": "Allen-Bradley", "1768": "Allen-Bradley",
+  "1746": "Allen-Bradley", "1747": "Allen-Bradley", "1761": "Allen-Bradley",
+  "1762": "Allen-Bradley", "1763": "Allen-Bradley", "1764": "Allen-Bradley",
+  "1766": "Allen-Bradley", "1794": "Allen-Bradley", "1734": "Allen-Bradley",
+  "2080": "Allen-Bradley", "2085": "Allen-Bradley", "20-": "Allen-Bradley",
+  "22-": "Allen-Bradley", "25-": "Allen-Bradley", "150-": "Allen-Bradley",
+  "1492": "Allen-Bradley", "700-": "Allen-Bradley", "800": "Allen-Bradley",
+  "855": "Allen-Bradley", "MPL-": "Allen-Bradley", "MPM-": "Allen-Bradley",
+  "VPL-": "Allen-Bradley",
+  
+  // Siemens
+  "6ES": "Siemens", "6ED": "Siemens", "6AV": "Siemens", "6SL": "Siemens",
+  "6SE": "Siemens", "6EP": "Siemens", "6GK": "Siemens", "3RV": "Siemens",
+  "3RT": "Siemens", "3RU": "Siemens", "5SX": "Siemens", "5SY": "Siemens",
+  
+  // SMC Pneumatics
+  "CDQ": "SMC", "CD85": "SMC", "CQ2": "SMC", "CM2": "SMC", "CG1": "SMC",
+  "CDG": "SMC", "MGQL": "SMC", "MKB": "SMC", "MHS": "SMC", "CDRB": "SMC",
+  "CRB": "SMC", "CDLA": "SMC", "MDNB": "SMC", "MNB": "SMC", "SY": "SMC",
+  "VQ": "SMC", "VQZ": "SMC", "AM": "SMC", "AF": "SMC", "AW": "SMC",
+  
+  // Festo
+  "MFH": "Festo", "DSNU": "Festo", "DNC": "Festo", "ADN": "Festo",
+  "ADVU": "Festo", "DGC": "Festo", "CPE": "Festo", "VUVG": "Festo",
+  
+  // Yaskawa
+  "SGDV": "Yaskawa", "SGDM": "Yaskawa", "SGDS": "Yaskawa", "SGMG": "Yaskawa",
+  "SGMJ": "Yaskawa", "CIMR": "Yaskawa",
+  
+  // Mitsubishi
+  "FX": "Mitsubishi", "QJ": "Mitsubishi", "A1S": "Mitsubishi", "Q0": "Mitsubishi",
+  "HF-": "Mitsubishi", "MR-": "Mitsubishi", "FR-": "Mitsubishi",
+  
+  // FANUC
+  "A06B": "FANUC", "A02B": "FANUC", "A03B": "FANUC", "A16B": "FANUC",
+  
+  // Omron
+  "CJ1": "Omron", "CJ2": "Omron", "CP1": "Omron", "E2E": "Omron", "E3Z": "Omron",
+  
+  // Others
+  "IC69": "GE Fanuc", "IC20": "GE Fanuc",
+  "750-": "WAGO", "753-": "WAGO", "787-": "WAGO",
+  "D2-": "Automation Direct", "D4-": "Automation Direct",
+  "PJ-": "Keyence", "LV-": "Keyence", "FS-": "Keyence",
+  "ACS": "ABB", "3HAC": "ABB",
+  "LC1": "Schneider Electric", "ATV": "Schneider Electric",
+  "SDN": "Sola", "EDS": "Hydac", "CW": "Sun Hydraulics",
+  "EG": "Fuji Electric", "SC-": "Fuji Electric",
+  "LPJ": "Cooper Bussmann", "697": "Werma", "EX10": "Toshiba",
+  "5GU": "Oriental Motor", "5RK": "Oriental Motor", "BLM": "Oriental Motor",
+  "KR": "THK", "SHS": "THK", "HSR": "THK"
+};
+
+// ============================================
+// PLATFORM DETECTION
+// ============================================
+const PLATFORM_DETECTION = {
+  "Allen-Bradley": {
+    "1756-": "ControlLogix", "1769-": "CompactLogix", "1768-": "CompactLogix",
+    "1746-": "SLC 500", "1747-": "SLC 500", "1761-": "MicroLogix1000",
+    "1762-": "MicroLogix1200", "1763-": "MicroLogix1100", "1764-": "MicroLogix1500",
+    "1766-": "MicroLogix1400", "1734-": "POINT I/O", "1794-": "FLEX I/O",
+    "2080-": "Micro800", "20-": "PowerFlex", "22-": "PowerFlex"
+  },
+  "Siemens": {
+    "6ES7 21": "S7-200", "6ES7 22": "S7-200", "6ES7 31": "S7-300",
+    "6ES7 32": "S7-300", "6ES7 41": "S7-400", "6ES7 51": "S7-1500",
+    "6ED1": "LOGO!", "6AV": "HMI Panel"
+  },
+  "GE Fanuc": {
+    "IC693": "90-30", "IC697": "90-70", "IC200": "VersaMax", "IC695": "RX3i"
+  }
+};
+
+// ============================================
+// PRODUCT TYPE DETECTION & FIELD MAPPING
+// ============================================
+const PRODUCT_TYPES = {
+  // Pneumatic Cylinders
+  cylinder: {
+    keywords: ['cylinder', 'pneumatic cylinder', 'air cylinder', 'cdq', 'cq2', 'dsnu', 'dnc', 'adn'],
+    fields: ['Brand', 'MPN', 'Bore', 'Stroke', 'Port Size', 'Action Type', 'Body Material', 'Rod Type'],
+    extractPrompt: 'bore size (mm), stroke length (mm), port size, mounting style, rod type (single/double)'
+  },
+  // Pneumatic Valves
+  valve: {
+    keywords: ['valve', 'solenoid valve', 'pneumatic valve', 'mfh', 'vq', 'sy', 'cpe'],
+    fields: ['Brand', 'MPN', 'Port Size', 'Voltage', 'Number of Ways', 'Number of Positions', 'Actuation Type'],
+    extractPrompt: 'port size, coil voltage (Vdc/Vac), ways/positions (like 5/2 or 3/2), actuation type'
+  },
+  // PLCs / Controllers
+  plc: {
+    keywords: ['plc', 'processor', 'cpu', 'controller', '1756', '1769', '6es7', 'cj1', 'cj2'],
+    fields: ['Brand', 'MPN', 'Controller Platform', 'Memory Size', 'I/O Count', 'Communication'],
+    extractPrompt: 'controller platform/series, memory size, I/O count, communication protocols'
+  },
+  // I/O Modules
+  io_module: {
+    keywords: ['input module', 'output module', 'i/o module', 'analog input', 'digital input', 'analog output'],
+    fields: ['Brand', 'MPN', 'Controller Platform', 'Number of Points', 'Voltage', 'Type'],
+    extractPrompt: 'number of I/O points, input/output voltage, digital or analog, controller platform'
+  },
+  // Servo Motors
+  servo_motor: {
+    keywords: ['servo motor', 'ac servo', 'servomotor', 'mpl-', 'sgm', 'hf-'],
+    fields: ['Brand', 'MPN', 'Voltage', 'Power (kW)', 'Torque (Nm)', 'RPM', 'Frame Size', 'Encoder Type'],
+    extractPrompt: 'voltage, power in kW or HP, torque in Nm, max RPM, frame size, encoder type'
+  },
+  // Servo Drives
+  servo_drive: {
+    keywords: ['servo drive', 'servo amplifier', 'sgdv', 'sgdm', 'mr-j', 'kinetix'],
+    fields: ['Brand', 'MPN', 'Voltage', 'Current Rating', 'Power (kW)', 'Communication'],
+    extractPrompt: 'input voltage, output current, power rating, communication protocol'
+  },
+  // VFDs / AC Drives
+  vfd: {
+    keywords: ['vfd', 'variable frequency', 'ac drive', 'inverter', 'frequency drive', 'cimr', 'powerflex', 'atv'],
+    fields: ['Brand', 'MPN', 'HP', 'Input Voltage', 'Output Voltage', 'Phase', 'Current Rating'],
+    extractPrompt: 'horsepower or kW, input voltage, output voltage, phase (single/three), current rating'
+  },
+  // Power Supplies
+  power_supply: {
+    keywords: ['power supply', 'psu', '6ep', 'sdn', 'quint'],
+    fields: ['Brand', 'MPN', 'Input Voltage', 'Output Voltage', 'Output Current', 'Power (W)'],
+    extractPrompt: 'input voltage range, output voltage (usually 24Vdc), output current in amps, power in watts'
+  },
+  // Circuit Breakers
+  circuit_breaker: {
+    keywords: ['circuit breaker', 'breaker', '5sx', '3rv', 'eg3'],
+    fields: ['Brand', 'MPN', 'Current Rating', 'Voltage Rating', 'Number of Poles', 'Trip Type'],
+    extractPrompt: 'amperage rating, voltage rating, number of poles (1P/2P/3P), trip curve type'
+  },
+  // Contactors
+  contactor: {
+    keywords: ['contactor', 'lc1', '3rt', 'sc-'],
+    fields: ['Brand', 'MPN', 'Coil Voltage', 'Current Rating', 'Number of Poles', 'Auxiliary Contacts'],
+    extractPrompt: 'coil voltage, current rating in amps, number of poles, auxiliary contact configuration'
+  },
+  // Sensors
+  sensor: {
+    keywords: ['sensor', 'proximity', 'photoelectric', 'inductive', 'e2e', 'e3z', 'bi', 'ni'],
+    fields: ['Brand', 'MPN', 'Sensing Range', 'Output Type', 'Voltage', 'Connection Type'],
+    extractPrompt: 'sensing range/distance, output type (NPN/PNP/analog), operating voltage, connector type'
+  },
+  // Light Towers / Stack Lights
+  light_tower: {
+    keywords: ['light tower', 'stack light', 'signal tower', '855', '697'],
+    fields: ['Brand', 'MPN', 'Voltage', 'Colors', 'Number of Tiers', 'Mount Type'],
+    extractPrompt: 'operating voltage, light colors, number of light tiers, mounting style'
+  },
+  // Linear Actuators / Motion
+  linear_actuator: {
+    keywords: ['linear actuator', 'ball screw', 'linear guide', 'kr', 'lm guide'],
+    fields: ['Brand', 'MPN', 'Stroke', 'Load Capacity', 'Speed', 'Drive Type'],
+    extractPrompt: 'stroke length, load capacity, max speed, drive mechanism type'
+  },
+  // Transformers
+  transformer: {
+    keywords: ['transformer', 'kva'],
+    fields: ['Brand', 'MPN', 'KVA', 'Primary Voltage', 'Secondary Voltage', 'Phase'],
+    extractPrompt: 'KVA rating, primary voltage, secondary voltage, phase (single/three)'
+  },
+  // Default / Generic
+  generic: {
+    keywords: [],
+    fields: ['Brand', 'MPN', 'Model', 'Voltage', 'Type'],
+    extractPrompt: 'brand, model/part number, voltage if applicable, product type'
+  }
+};
+
+// ============================================
+// STYLES
+// ============================================
+const styles = {
+  container: {
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    maxWidth: '1400px',
+    margin: '0 auto',
+    padding: '20px'
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    paddingBottom: '15px',
+    borderBottom: '2px solid #e5e7eb'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: '600',
+    color: '#1f2937'
+  },
+  tabs: {
+    display: 'flex',
+    gap: '5px',
+    marginBottom: '20px',
+    borderBottom: '2px solid #e5e7eb',
+    paddingBottom: '0'
+  },
+  tab: {
+    padding: '12px 20px',
+    border: 'none',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#6b7280',
+    borderBottom: '2px solid transparent',
+    marginBottom: '-2px'
+  },
+  tabActive: {
+    padding: '12px 20px',
+    border: 'none',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#2563eb',
+    borderBottom: '2px solid #2563eb',
+    marginBottom: '-2px'
+  },
+  inputSection: {
+    backgroundColor: '#f9fafb',
+    borderRadius: '8px',
+    padding: '20px',
+    marginBottom: '20px'
+  },
+  inputRow: {
+    display: 'grid',
+    gridTemplateColumns: '200px 1fr',
+    gap: '15px',
+    marginBottom: '15px',
+    alignItems: 'start'
+  },
+  input: {
+    padding: '10px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px',
+    width: '100%'
+  },
+  buttonRow: {
+    display: 'flex',
+    gap: '10px',
+    marginTop: '15px'
+  },
+  button: {
+    padding: '10px 20px',
+    backgroundColor: '#2563eb',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  buttonGreen: {
+    padding: '10px 20px',
+    backgroundColor: '#16a34a',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px'
+  },
+  buttonOrange: {
+    padding: '10px 20px',
+    backgroundColor: '#ea580c',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px'
+  },
+  buttonSecondary: {
+    padding: '10px 20px',
+    backgroundColor: '#6b7280',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px'
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    marginBottom: '20px',
+    overflow: 'hidden'
+  },
+  cardHeader: {
+    padding: '15px 20px',
+    backgroundColor: '#f9fafb',
+    borderBottom: '1px solid #e5e7eb',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  cardBody: {
+    padding: '20px'
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '20px'
+  },
+  grid3: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '15px'
+  },
+  fieldGroup: {
+    marginBottom: '15px'
+  },
+  label: {
+    display: 'block',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#6b7280',
+    marginBottom: '5px',
+    textTransform: 'uppercase'
+  },
+  value: {
+    fontSize: '14px',
+    color: '#1f2937'
+  },
+  badge: {
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '500'
+  },
+  badgeBlue: {
+    backgroundColor: '#dbeafe',
+    color: '#2563eb'
+  },
+  badgeGreen: {
+    backgroundColor: '#dcfce7',
+    color: '#16a34a'
+  },
+  badgeOrange: {
+    backgroundColor: '#ffedd5',
+    color: '#ea580c'
+  },
+  badgeRed: {
+    backgroundColor: '#fee2e2',
+    color: '#dc2626'
+  },
+  scoreCircle: {
+    width: '60px',
+    height: '60px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '20px',
+    fontWeight: '700',
+    color: 'white'
+  },
+  specRow: {
+    display: 'grid',
+    gridTemplateColumns: '150px 1fr 100px',
+    padding: '10px 0',
+    borderBottom: '1px solid #f3f4f6',
+    alignItems: 'center'
+  },
+  specInput: {
+    padding: '8px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px'
+  },
+  aiSuggestion: {
+    backgroundColor: '#fef3c7',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    color: '#92400e'
+  },
+  progressBar: {
+    width: '100%',
+    height: '8px',
+    backgroundColor: '#e5e7eb',
+    borderRadius: '4px',
+    overflow: 'hidden',
+    marginTop: '10px'
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#2563eb',
+    transition: 'width 0.3s ease'
+  }
+};
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+function detectBrand(partNumber) {
+  if (!partNumber) return null;
+  const pn = partNumber.toUpperCase().replace(/[\s-]/g, '');
+  
+  for (const [prefix, brand] of Object.entries(BRAND_DETECTION)) {
+    if (pn.startsWith(prefix.replace('-', ''))) {
+      return brand;
+    }
+  }
+  return null;
+}
+
+function detectPlatform(brand, partNumber) {
+  if (!brand || !partNumber) return null;
+  const patterns = PLATFORM_DETECTION[brand];
+  if (!patterns) return null;
+  
+  const pn = partNumber.toUpperCase();
+  for (const [prefix, platform] of Object.entries(patterns)) {
+    if (pn.includes(prefix.replace(/[\s-]/g, ''))) {
+      return platform;
+    }
+  }
+  return null;
+}
+
+function detectProductType(title, mpn) {
+  const text = `${title} ${mpn}`.toLowerCase();
+  
+  for (const [type, config] of Object.entries(PRODUCT_TYPES)) {
+    if (type === 'generic') continue;
+    for (const keyword of config.keywords) {
+      if (text.includes(keyword.toLowerCase())) {
+        return { type, ...config };
+      }
+    }
+  }
+  return { type: 'generic', ...PRODUCT_TYPES.generic };
+}
+
+function calculateScore(item, productType) {
+  const fields = productType.fields;
+  let filled = 0;
+  
+  for (const field of fields) {
+    const key = field.toLowerCase().replace(/[\s()\/]/g, '');
+    if (item[key] || item[field] || item.extracted?.[field]) {
+      filled++;
+    }
+  }
+  
+  return Math.round((filled / fields.length) * 100);
+}
+
+function getScoreColor(score) {
+  if (score >= 80) return '#16a34a';
+  if (score >= 60) return '#d97706';
+  return '#dc2626';
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
+export default function UnifiedListingManager({ categoryAspects = null }) {
+  const [activeTab, setActiveTab] = useState('single');
+  const [sku, setSku] = useState('');
+  const [item, setItem] = useState(null);
+  const [productType, setProductType] = useState(null);
+  const [extracted, setExtracted] = useState({});
+  const [edited, setEdited] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null);
+  
+  // Bulk mode state
+  const [bulkSkus, setBulkSkus] = useState('');
+  const [bulkItems, setBulkItems] = useState([]);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, phase: '' });
+
+  // Load single item
+  const loadItem = async () => {
+    if (!sku) return;
+    
+    setLoading(true);
+    setMessage(null);
+    setItem(null);
+    setExtracted({});
+    setEdited({});
+    
+    try {
+      const response = await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku)}`);
+      const data = await response.json();
+      
+      if (data.success && data.item) {
+        const loadedItem = data.item;
+        setItem(loadedItem);
+        
+        // Auto-detect product type
+        const detected = detectProductType(loadedItem.title, loadedItem.mpn || loadedItem.model);
+        setProductType(detected);
+        
+        // Auto-detect brand if missing
+        if (!loadedItem.brand) {
+          const detectedBrand = detectBrand(loadedItem.mpn || loadedItem.model || loadedItem.title);
+          if (detectedBrand) {
+            setEdited(prev => ({ ...prev, brand: detectedBrand }));
+          }
+        }
+        
+        // Auto-detect platform
+        const brand = loadedItem.brand || detectBrand(loadedItem.mpn || loadedItem.model);
+        const platform = detectPlatform(brand, loadedItem.mpn || loadedItem.model);
+        if (platform && !loadedItem.controllerplatform) {
+          setEdited(prev => ({ ...prev, controllerplatform: platform }));
+        }
+        
+        setMessage({ type: 'success', text: `Loaded ${loadedItem.sku} - Detected as: ${detected.type}` });
+      } else {
+        setMessage({ type: 'error', text: 'SKU not found in SureDone' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: `Error: ${err.message}` });
+    }
+    
+    setLoading(false);
+  };
+
+  // Extract specs with AI
+  const extractWithAI = async () => {
+    if (!item) return;
+    
+    setExtracting(true);
+    setMessage({ type: 'info', text: 'Extracting specifications with AI...' });
+    
+    try {
+      const response = await fetch('/api/ai/extract-specs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: item.title,
+          description: item.longdescription,
+          brand: item.brand || edited.brand,
+          categoryId: item.ebaycatid,
+          productType: productType?.type,
+          fieldsToExtract: productType?.fields,
+          extractPrompt: productType?.extractPrompt
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.extracted) {
+        setExtracted(data.extracted);
+        setMessage({ type: 'success', text: `AI extracted ${Object.keys(data.extracted).length} fields` });
+      } else {
+        setMessage({ type: 'error', text: data.error || 'AI extraction failed' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: `AI Error: ${err.message}` });
+    }
+    
+    setExtracting(false);
+  };
+
+  // Accept AI suggestion
+  const acceptSuggestion = (field, value) => {
+    const suredoneField = mapToSuredoneField(field);
+    setEdited(prev => ({ ...prev, [suredoneField]: value }));
+  };
+
+  // Accept all AI suggestions
+  const acceptAllSuggestions = () => {
+    const newEdited = { ...edited };
+    for (const [field, value] of Object.entries(extracted)) {
+      if (value && value !== 'null' && field !== 'confidence') {
+        const suredoneField = mapToSuredoneField(field);
+        newEdited[suredoneField] = value;
+      }
+    }
+    setEdited(newEdited);
+    setMessage({ type: 'success', text: 'All AI suggestions accepted' });
+  };
+
+  // Map display field to SureDone field name
+  const mapToSuredoneField = (field) => {
+    const map = {
+      'Brand': 'brand',
+      'MPN': 'mpn',
+      'Model': 'model',
+      'Voltage': 'voltage',
+      'Current': 'current',
+      'Current Rating': 'current',
+      'Type': 'usertype',
+      'Controller Platform': 'controllerplatform',
+      'Bore': 'bore',
+      'Stroke': 'stroke',
+      'Port Size': 'portsize',
+      'HP': 'horsepower',
+      'Power (kW)': 'kw',
+      'Power (W)': 'watts',
+      'RPM': 'rpm',
+      'Torque (Nm)': 'nm',
+      'Input Voltage': 'inputvoltage',
+      'Output Voltage': 'outputvoltage',
+      'Output Current': 'outputamperage',
+      'Coil Voltage': 'coilvoltage',
+      'Number of Poles': 'numberofpoles',
+      'KVA': 'kva',
+      'Phase': 'phase',
+      'Primary Voltage': 'primaryvoltage',
+      'Secondary Voltage': 'secondaryvoltage'
+    };
+    return map[field] || field.toLowerCase().replace(/[\s()\/]/g, '');
+  };
+
+  // Save to SureDone
+  const saveToSureDone = async () => {
+    if (!item || Object.keys(edited).length === 0) {
+      setMessage({ type: 'error', text: 'No changes to save' });
+      return;
+    }
+    
+    setSaving(true);
+    setMessage({ type: 'info', text: 'Saving to SureDone...' });
+    
+    try {
+      const updateData = {
+        guid: item.sku || item.guid,
+        ...edited
+      };
+      
+      const response = await fetch('/api/suredone/update-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setMessage({ type: 'success', text: `✓ Saved ${item.sku} to SureDone!` });
+        // Merge edited values into item
+        setItem(prev => ({ ...prev, ...edited }));
+        setEdited({});
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Save failed' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: `Save Error: ${err.message}` });
+    }
+    
+    setSaving(false);
+  };
+
+  // Calculate current score
+  const score = item && productType ? calculateScore({ ...item, ...edited, extracted }, productType) : 0;
+
+  return (
+    <div style={styles.container}>
+      {/* Header */}
+      <div style={styles.header}>
+        <h1 style={styles.title}>🛠️ Unified Listing Manager</h1>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <span style={{ ...styles.badge, ...styles.badgeBlue }}>v2.0</span>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={styles.tabs}>
+        <button
+          style={activeTab === 'single' ? styles.tabActive : styles.tab}
+          onClick={() => setActiveTab('single')}
+        >
+          📝 Single Item
+        </button>
+        <button
+          style={activeTab === 'bulk' ? styles.tabActive : styles.tab}
+          onClick={() => setActiveTab('bulk')}
+        >
+          📊 Bulk Process
+        </button>
+      </div>
+
+      {/* Single Item Mode */}
+      {activeTab === 'single' && (
+        <>
+          {/* SKU Input */}
+          <div style={styles.inputSection}>
+            <div style={styles.inputRow}>
+              <label style={{ ...styles.label, marginBottom: 0, alignSelf: 'center' }}>SKU:</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="text"
+                  style={{ ...styles.input, maxWidth: '200px' }}
+                  value={sku}
+                  onChange={(e) => setSku(e.target.value.toUpperCase())}
+                  placeholder="e.g., IP6388"
+                  onKeyPress={(e) => e.key === 'Enter' && loadItem()}
+                />
+                <button style={styles.button} onClick={loadItem} disabled={loading || !sku}>
+                  {loading ? '⏳' : '🔍'} Load Item
+                </button>
+              </div>
+            </div>
+            
+            {message && (
+              <div style={{
+                padding: '10px 15px',
+                borderRadius: '6px',
+                marginTop: '10px',
+                backgroundColor: message.type === 'success' ? '#dcfce7' : 
+                               message.type === 'error' ? '#fee2e2' : '#dbeafe',
+                color: message.type === 'success' ? '#16a34a' : 
+                       message.type === 'error' ? '#dc2626' : '#2563eb'
+              }}>
+                {message.text}
+              </div>
+            )}
+          </div>
+
+          {/* Item Details */}
+          {item && (
+            <>
+              {/* Item Info Card */}
+              <div style={styles.card}>
+                <div style={styles.cardHeader}>
+                  <div>
+                    <strong style={{ fontSize: '18px' }}>{item.sku}</strong>
+                    <span style={{ marginLeft: '15px', color: '#6b7280' }}>{item.title}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <span style={{ ...styles.badge, ...styles.badgeOrange }}>
+                      {productType?.type || 'Unknown'}
+                    </span>
+                    <div style={{ ...styles.scoreCircle, backgroundColor: getScoreColor(score) }}>
+                      {score}
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={styles.cardBody}>
+                  <div style={styles.grid2}>
+                    {/* Current Data */}
+                    <div>
+                      <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#374151' }}>
+                        📦 Current Data
+                      </h4>
+                      <div style={styles.grid3}>
+                        <div style={styles.fieldGroup}>
+                          <label style={styles.label}>Brand</label>
+                          <div style={styles.value}>{item.brand || <em style={{ color: '#9ca3af' }}>empty</em>}</div>
+                        </div>
+                        <div style={styles.fieldGroup}>
+                          <label style={styles.label}>MPN</label>
+                          <div style={styles.value}>{item.mpn || item.model || <em style={{ color: '#9ca3af' }}>empty</em>}</div>
+                        </div>
+                        <div style={styles.fieldGroup}>
+                          <label style={styles.label}>Category</label>
+                          <div style={styles.value}>{item.ebaycatid || <em style={{ color: '#9ca3af' }}>empty</em>}</div>
+                        </div>
+                        <div style={styles.fieldGroup}>
+                          <label style={styles.label}>Price</label>
+                          <div style={styles.value}>${item.price}</div>
+                        </div>
+                        <div style={styles.fieldGroup}>
+                          <label style={styles.label}>Stock</label>
+                          <div style={styles.value}>{item.stock}</div>
+                        </div>
+                        <div style={styles.fieldGroup}>
+                          <label style={styles.label}>Condition</label>
+                          <div style={styles.value}>{item.condition || 'N/A'}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* AI Actions */}
+                    <div>
+                      <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#374151' }}>
+                        🤖 AI Extraction
+                      </h4>
+                      <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '15px' }}>
+                        Product type: <strong>{productType?.type}</strong><br />
+                        Fields to extract: {productType?.fields.slice(0, 4).join(', ')}...
+                      </p>
+                      <button
+                        style={styles.buttonOrange}
+                        onClick={extractWithAI}
+                        disabled={extracting}
+                      >
+                        {extracting ? '🧠 Extracting...' : '🤖 Extract Specs with AI'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Specs Editor Card */}
+              <div style={styles.card}>
+                <div style={styles.cardHeader}>
+                  <h3 style={{ margin: 0 }}>📋 Specifications Editor</h3>
+                  {Object.keys(extracted).length > 0 && (
+                    <button
+                      style={{ ...styles.buttonGreen, padding: '6px 12px', fontSize: '13px' }}
+                      onClick={acceptAllSuggestions}
+                    >
+                      ✓ Accept All AI Suggestions
+                    </button>
+                  )}
+                </div>
+                
+                <div style={styles.cardBody}>
+                  {productType?.fields.map(field => {
+                    const suredoneKey = mapToSuredoneField(field);
+                    const currentValue = edited[suredoneKey] || item[suredoneKey] || '';
+                    const aiValue = extracted[field];
+                    
+                    return (
+                      <div key={field} style={styles.specRow}>
+                        <label style={{ fontWeight: '500', color: '#374151' }}>{field}</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <input
+                            type="text"
+                            style={{ ...styles.specInput, flex: 1 }}
+                            value={currentValue}
+                            onChange={(e) => setEdited(prev => ({ ...prev, [suredoneKey]: e.target.value }))}
+                            placeholder={`Enter ${field}`}
+                          />
+                          {aiValue && aiValue !== 'null' && aiValue !== currentValue && (
+                            <button
+                              style={{ ...styles.aiSuggestion, cursor: 'pointer', border: 'none' }}
+                              onClick={() => acceptSuggestion(field, aiValue)}
+                              title="Click to accept"
+                            >
+                              AI: {aiValue}
+                            </button>
+                          )}
+                        </div>
+                        <div>
+                          {currentValue ? (
+                            <span style={{ ...styles.badge, ...styles.badgeGreen }}>✓</span>
+                          ) : (
+                            <span style={{ ...styles.badge, ...styles.badgeRed }}>Missing</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={styles.buttonRow}>
+                <button
+                  style={styles.buttonGreen}
+                  onClick={saveToSureDone}
+                  disabled={saving || Object.keys(edited).length === 0}
+                >
+                  {saving ? '💾 Saving...' : `💾 Save to SureDone (${Object.keys(edited).length} changes)`}
+                </button>
+                <button
+                  style={styles.buttonSecondary}
+                  onClick={() => {
+                    setItem(null);
+                    setExtracted({});
+                    setEdited({});
+                    setSku('');
+                    setMessage(null);
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* Bulk Mode - Placeholder for now */}
+      {activeTab === 'bulk' && (
+        <div style={styles.inputSection}>
+          <p style={{ textAlign: 'center', color: '#6b7280', padding: '40px' }}>
+            🚧 Bulk processing mode coming soon!<br />
+            For now, use the Single Item tab to process items one at a time.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+========================================
+FILE: ./components/NotificationCenter.jsx
+========================================
+// ============================================================
+// NotificationCenter.jsx
+// React component — Notification bell + alert panel
+// ============================================================
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  initMessaging,
+  requestNotificationPermission,
+  onForegroundMessage,
+  triggerVibration,
+} from '../lib/notificationService';
+
+// ------------------------------------------------------------
+// Styles
+// ------------------------------------------------------------
+const styles = {
+  bellButton: {
+    position: 'relative',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '8px',
+    fontSize: '24px',
+    lineHeight: 1,
+  },
+  badge: {
+    position: 'absolute',
+    top: '2px',
+    right: '2px',
+    background: '#ef4444',
+    color: 'white',
+    borderRadius: '50%',
+    width: '20px',
+    height: '20px',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '2px solid white',
+  },
+  panel: {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    maxWidth: '400px',
+    background: '#111827',
+    color: '#f9fafb',
+    boxShadow: '-4px 0 20px rgba(0,0,0,0.5)',
+    zIndex: 1000,
+    display: 'flex',
+    flexDirection: 'column',
+    fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+    transition: 'transform 0.3s ease',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  panelHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '16px 20px',
+    borderBottom: '1px solid #374151',
+    flexShrink: 0,
+  },
+  panelTitle: {
+    fontSize: '18px',
+    fontWeight: '700',
+    margin: 0,
+    color: '#f9fafb',
+  },
+  closeButton: {
+    background: 'none',
+    border: 'none',
+    color: '#9ca3af',
+    fontSize: '24px',
+    cursor: 'pointer',
+    padding: '4px 8px',
+    borderRadius: '6px',
+  },
+  cardList: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '16px',
+    minHeight: 0,
+  },
+  card: {
+    borderRadius: '12px',
+    padding: '14px 16px',
+    marginBottom: '10px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    border: '1px solid transparent',
+    overflow: 'hidden',
+    wordBreak: 'break-word',
+  },
+  cardReshelve: {
+    background: 'linear-gradient(135deg, #1e3a5f 0%, #1a2744 100%)',
+    borderColor: '#2563eb33',
+  },
+  cardRetrieve: {
+    background: 'linear-gradient(135deg, #2d4a2a 0%, #1a2e1a 100%)',
+    borderColor: '#16a34a33',
+  },
+  cardUrgent: {
+    background: 'linear-gradient(135deg, #5a1a1a 0%, #3a1111 100%)',
+    borderColor: '#ef444433',
+    animation: 'urgentPulse 2s ease-in-out infinite',
+  },
+  cardDefault: {
+    background: '#1f2937',
+    borderColor: '#374151',
+  },
+  cardTitle: {
+    fontSize: '14px',
+    fontWeight: '700',
+    marginBottom: '4px',
+  },
+  cardBody: {
+    fontSize: '13px',
+    color: '#d1d5db',
+    marginBottom: '8px',
+    lineHeight: '1.4',
+  },
+  cardMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    fontSize: '11px',
+    color: '#6b7280',
+  },
+  cardActions: {
+    display: 'flex',
+    gap: '8px',
+    marginTop: '10px',
+  },
+  actionButton: {
+    flex: 1,
+    padding: '8px 12px',
+    borderRadius: '8px',
+    border: 'none',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'opacity 0.2s',
+  },
+  doneButton: {
+    background: '#16a34a',
+    color: 'white',
+  },
+  snoozeButton: {
+    background: '#374151',
+    color: '#d1d5db',
+  },
+  emptyState: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '60px 20px',
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  emptyIcon: {
+    fontSize: '48px',
+    marginBottom: '12px',
+    opacity: 0.5,
+  },
+  setupBanner: {
+    margin: '16px',
+    padding: '16px',
+    background: '#1e293b',
+    borderRadius: '12px',
+    border: '1px solid #334155',
+    textAlign: 'center',
+    flexShrink: 0,
+  },
+  setupButton: {
+    marginTop: '10px',
+    padding: '10px 20px',
+    background: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0,0,0,0.5)',
+    zIndex: 999,
+  },
+};
+
+// Inject CSS keyframes on mount
+const injectKeyframes = () => {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('notification-keyframes')) return;
+  const style = document.createElement('style');
+  style.id = 'notification-keyframes';
+  style.textContent = `
+    @keyframes urgentPulse {
+      0%, 100% { border-color: rgba(239, 68, 68, 0.2); }
+      50% { border-color: rgba(239, 68, 68, 0.6); }
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); }
+      to   { transform: translateX(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  `;
+  document.head.appendChild(style);
+};
+
+// ============================================================
+// COMPONENT: NotificationBell
+// ============================================================
+export function NotificationBell({ unreadCount, onClick }) {
+  return (
+    <button style={styles.bellButton} onClick={onClick} aria-label="Notifications">
+      🔔
+      {unreadCount > 0 && (
+        <span style={styles.badge}>
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// ============================================================
+// COMPONENT: NotificationCard
+// ============================================================
+function NotificationCard({ notification, onDone, onSnooze }) {
+  const { title, body, data, timestamp } = notification;
+  const alertType = data?.alertType || 'default';
+
+  const cardStyle = {
+    ...styles.card,
+    ...(alertType === 'reshelve' ? styles.cardReshelve :
+        alertType === 'retrieve' ? styles.cardRetrieve :
+        alertType === 'urgent'   ? styles.cardUrgent :
+        styles.cardDefault),
+    animation: 'fadeIn 0.3s ease',
+  };
+
+  const typeIcon = {
+    reshelve: '📦',
+    retrieve: '🔍',
+    urgent:   '🚨',
+    default:  '🔔',
+  };
+
+  const timeAgo = getTimeAgo(timestamp);
+
+  return (
+    <div style={cardStyle}>
+      <div style={styles.cardTitle}>
+        {typeIcon[alertType] || '🔔'} {title}
+      </div>
+      <div style={styles.cardBody}>{body}</div>
+      <div style={styles.cardMeta}>
+        <span>{data?.sku && `SKU: ${data.sku}`}</span>
+        <span>{timeAgo}</span>
+      </div>
+      <div style={styles.cardActions}>
+        <button
+          style={{ ...styles.actionButton, ...styles.doneButton }}
+          onClick={() => onDone(notification)}
+        >
+          ✅ Done
+        </button>
+        <button
+          style={{ ...styles.actionButton, ...styles.snoozeButton }}
+          onClick={() => onSnooze(notification)}
+        >
+          ⏰ Snooze 5m
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// COMPONENT: NotificationCenter (main export)
+// ============================================================
+export default function NotificationCenter({ firebaseApp, userId, deviceName }) {
+  const [isOpen, setIsOpen]             = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [isSetup, setIsSetup]           = useState(false);
+  const [isSettingUp, setIsSettingUp]   = useState(false);
+  const [deviceInfo, setDeviceInfo]     = useState(null);
+  const unsubRef = useRef(null);
+
+  // Inject CSS keyframes on mount
+  useEffect(() => {
+    injectKeyframes();
+  }, []);
+
+  // Listen for alerts-cleared event (fired by admin Clear All)
+  useEffect(() => {
+    const handleAlertsCleared = () => {
+      setNotifications([]);
+      setIsOpen(false);
+    };
+    window.addEventListener('alerts-cleared', handleAlertsCleared);
+    return () => window.removeEventListener('alerts-cleared', handleAlertsCleared);
+  }, []);
+
+  // Check if already set up (token in localStorage)
+  useEffect(() => {
+    const savedDevice = localStorage.getItem('fcm_device_info');
+    if (savedDevice) {
+      try {
+        setDeviceInfo(JSON.parse(savedDevice));
+        setIsSetup(true);
+      } catch (e) {
+        localStorage.removeItem('fcm_device_info');
+      }
+    }
+  }, []);
+
+  // Listen for foreground messages once set up
+  useEffect(() => {
+    if (!isSetup || !firebaseApp) return;
+
+    initMessaging(firebaseApp);
+
+    unsubRef.current = onForegroundMessage((msg) => {
+      setNotifications((prev) => [msg, ...prev]);
+    });
+
+    return () => {
+      // Cleanup if needed
+    };
+  }, [isSetup, firebaseApp]);
+
+  // Handle setup / permission request
+  const handleSetup = async () => {
+    setIsSettingUp(true);
+    try {
+      const result = await requestNotificationPermission(
+        firebaseApp,
+        userId,
+        deviceName || `${detectPlatformShort()} Device`
+      );
+      setDeviceInfo(result);
+      setIsSetup(true);
+      localStorage.setItem('fcm_device_info', JSON.stringify(result));
+      triggerVibration('default');
+    } catch (err) {
+      alert(`Setup failed: ${err.message}\n\nMake sure notifications are enabled in your browser settings.`);
+    }
+    setIsSettingUp(false);
+  };
+
+  // Mark notification as done
+  const handleDone = useCallback((notification) => {
+    setNotifications((prev) => prev.filter((n) => n !== notification));
+
+    fetch('/api/tasks/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sku: notification.data?.sku || '',
+        userId: userId,
+        alertId: notification.data?.alertId || '',
+      }),
+    }).catch(console.error);
+  }, [userId]);
+
+  // Snooze notification
+  const handleSnooze = useCallback((notification) => {
+    setNotifications((prev) => prev.filter((n) => n !== notification));
+
+    if (notification.data?.sku) {
+      fetch('/api/tasks/snooze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sku: notification.data.sku,
+          userId: userId,
+          minutes: 5,
+        }),
+      }).catch(console.error);
+    }
+  }, [userId]);
+
+  const handleClearAll = () => {
+    setNotifications([]);
+  };
+
+  const unreadCount = notifications.length;
+
+  return (
+    <>
+      <NotificationBell unreadCount={unreadCount} onClick={() => setIsOpen(true)} />
+
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <>
+          <div style={styles.overlay} onClick={() => setIsOpen(false)} />
+          <div style={{ ...styles.panel, animation: 'slideIn 0.3s ease' }}>
+            <div style={styles.panelHeader}>
+              <h2 style={styles.panelTitle}>
+                Alerts {unreadCount > 0 && `(${unreadCount})`}
+              </h2>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {unreadCount > 0 && (
+                  <button
+                    style={{ ...styles.closeButton, fontSize: '12px' }}
+                    onClick={handleClearAll}
+                  >
+                    Clear All
+                  </button>
+                )}
+                <button style={styles.closeButton} onClick={() => setIsOpen(false)}>
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {!isSetup && (
+              <div style={styles.setupBanner}>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔔</div>
+                <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+                  Enable Warehouse Alerts
+                </div>
+                <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>
+                  Get vibration and sound alerts when parts need to be shelved or retrieved.
+                </div>
+                <button
+                  style={{
+                    ...styles.setupButton,
+                    opacity: isSettingUp ? 0.6 : 1,
+                  }}
+                  onClick={handleSetup}
+                  disabled={isSettingUp}
+                >
+                  {isSettingUp ? 'Setting up...' : 'Enable Notifications'}
+                </button>
+              </div>
+            )}
+
+            <div style={styles.cardList}>
+              {notifications.length > 0 ? (
+                notifications.map((n, i) => (
+                  <NotificationCard
+                    key={`${n.data?.sku || ''}-${n.timestamp?.getTime() || i}`}
+                    notification={n}
+                    onDone={handleDone}
+                    onSnooze={handleSnooze}
+                  />
+                ))
+              ) : (
+                <div style={styles.emptyState}>
+                  <div style={styles.emptyIcon}>✅</div>
+                  <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '4px' }}>
+                    All clear!
+                  </div>
+                  <div style={{ fontSize: '13px' }}>
+                    No pending alerts right now.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {isSetup && deviceInfo && (
+              <div
+                style={{
+                  padding: '12px 20px',
+                  borderTop: '1px solid #374151',
+                  fontSize: '11px',
+                  color: '#6b7280',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                📱 Device registered - Notifications active
+              </div>
+            )}
+          </div>
+        </>,
+        document.body
+      )}
+    </>
+  );
+}
+
+// ============================================================
+// UTILITY HELPERS
+// ============================================================
+function getTimeAgo(date) {
+  if (!date) return '';
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+function detectPlatformShort() {
+  if (typeof navigator === 'undefined') return 'Web';
+  const ua = navigator.userAgent;
+  if (/android/i.test(ua)) return 'Android';
+  if (/iPad|iPhone|iPod/.test(ua)) return 'iOS';
+  return 'Web';
+}
+
+
+========================================
+FILE: ./components/PartRequestModal.jsx
+========================================
+// ============================================================
+// PartRequestModal.jsx
+// "Request Part" modal for Pro Builder and Photo Station
+// Sends a push notification to warehouse workers
+// ============================================================
+
+import React, { useState } from 'react';
+import { TEAM_MEMBERS, getWarehouseWorkers } from '../lib/users';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+
+export default function PartRequestModal({ item, currentUser, onClose }) {
+  const [priority, setPriority] = useState('normal');
+  const [note, setNote] = useState('');
+  const [sendTo, setSendTo] = useState('all');
+  const [isSending, setIsSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const warehouseWorkers = getWarehouseWorkers();
+
+  const handleSend = async () => {
+    if (isSending) return;  // Prevent double-tap
+    setIsSending(true);
+    try {
+      const payload = {
+        type: priority === 'urgent' ? 'urgent' : 'retrieve',
+        sku: item?.sku || '',
+        shelfLocation: item?.shelf || item?.shelfLocation || '',
+        message: note
+          ? `${item?.sku || 'Part'} from shelf ${item?.shelf || '?'} — ${note}`
+          : undefined,
+        requestedBy: currentUser?.id || currentUser?.name || 'unknown',
+        priority: priority,
+      };
+
+      if (sendTo === 'all') {
+        payload.broadcast = true;
+      } else {
+        payload.userId = sendTo;
+      }
+
+      const response = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to send request');
+      }
+
+      // Persist to Firestore so Scanner app can show the queue
+      await addDoc(collection(db, 'partRequests'), {
+        sku: item?.sku || '',
+        brand: item?.brand || '',
+        partNumber: item?.partNumber || '',
+        shelfLocation: item?.shelf || item?.shelfLocation || '',
+        quantity: item?.quantity || item?.stock || 1,
+        condition: item?.condition || '',
+        productCategory: item?.productCategory || item?.title || '',
+        photoUrl: item?.photos?.[0] || '',
+        note: note || '',
+        priority: priority,
+        status: 'pending',
+        requestedBy: currentUser?.id || currentUser?.name || 'unknown',
+        requestedByName: currentUser?.name || 'Unknown',
+        requestedAt: serverTimestamp(),
+        claimedBy: null,
+        claimedAt: null,
+        completedBy: null,
+        completedAt: null,
+        firebaseProductId: item?.id || null,
+      });
+
+      setSent(true);
+      setTimeout(() => onClose(), 2000);
+    } catch (err) {
+      alert(`Failed to send: ${err.message}`);
+    }
+    setIsSending(false);
+  };
+
+  if (sent) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center">
+          <div className="text-5xl mb-4">✅</div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Request Sent!</h3>
+          <p className="text-gray-600">
+            {sendTo === 'all' ? 'All warehouse workers' : TEAM_MEMBERS.find(m => m.id === sendTo)?.name || sendTo} will be notified.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-900">📦 Request Part</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Part Info */}
+        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="text-gray-500">SKU:</span>{' '}
+              <span className="font-bold text-gray-900">{item?.sku || 'N/A'}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Shelf:</span>{' '}
+              <span className="font-bold text-gray-900">{item?.shelf || item?.shelfLocation || 'N/A'}</span>
+            </div>
+            <div className="col-span-2">
+              <span className="text-gray-500">Part:</span>{' '}
+              <span className="font-bold text-gray-900">{item?.brand} {item?.partNumber}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Priority */}
+        <div className="mb-4">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setPriority('normal')}
+              className={`flex-1 py-3 rounded-lg font-semibold text-center transition ${
+                priority === 'normal'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Normal
+            </button>
+            <button
+              onClick={() => setPriority('urgent')}
+              className={`flex-1 py-3 rounded-lg font-semibold text-center transition ${
+                priority === 'urgent'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              🚨 Urgent
+            </button>
+          </div>
+        </div>
+
+        {/* Note */}
+        <div className="mb-4">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Note (optional)</label>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="e.g., Need nameplate photo"
+            className="w-full px-4 py-3 border rounded-lg text-sm"
+          />
+        </div>
+
+        {/* Send To */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Send to</label>
+          <select
+            value={sendTo}
+            onChange={(e) => setSendTo(e.target.value)}
+            className="w-full px-4 py-3 border rounded-lg text-sm"
+          >
+            <option value="all">All Warehouse Workers</option>
+            {warehouseWorkers.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name} ({w.role})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Send Button */}
+        <button
+          onClick={handleSend}
+          disabled={isSending}
+          className={`w-full py-4 rounded-lg font-bold text-lg text-white transition ${
+            priority === 'urgent'
+              ? 'bg-red-600 hover:bg-red-700'
+              : 'bg-blue-600 hover:bg-blue-700'
+          } disabled:opacity-50`}
+        >
+          {isSending ? 'Sending...' : priority === 'urgent' ? '🚨 Send Urgent Request' : '📦 Send Request'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+========================================
+FILE: ./components/UserPicker.jsx
+========================================
+// ============================================================
+// components/UserPicker.jsx
+// "Who are you?" modal — shown on first visit to any tool
+// Groups team members by role with colored avatar dots
+// ============================================================
+
+import React from 'react';
+import { TEAM_MEMBERS, ROLE_GROUPS, setCurrentUser } from '../lib/users';
+
+export default function UserPicker({ onSelect, title, subtitle }) {
+  const handleSelect = (member) => {
+    setCurrentUser(member);
+    if (onSelect) onSelect(member);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">{title || 'Who are you?'}</h1>
+          <p className="text-gray-500 mt-1">{subtitle || 'Select your name to get started'}</p>
+        </div>
+
+        <div className="space-y-5">
+          {ROLE_GROUPS.map(group => {
+            const members = TEAM_MEMBERS.filter(m => m.role === group.key);
+            if (members.length === 0) return null;
+
+            return (
+              <div key={group.key}>
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <span className="text-lg">{group.icon}</span>
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    {group.label}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {members.map(member => (
+                    <button
+                      key={member.id}
+                      onClick={() => handleSelect(member)}
+                      className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 active:bg-blue-100 transition-all font-medium text-gray-800"
+                    >
+                      <span
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: member.color }}
+                      />
+                      {member.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
