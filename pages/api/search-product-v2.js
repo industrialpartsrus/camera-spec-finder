@@ -1111,7 +1111,7 @@ export default async function handler(req, res) {
 
     const response = await callClaudeWithRetry(client, {
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      max_tokens: 16000,
       // =====================================================================
       // ⚠️  CRITICAL: DO NOT REMOVE WEB SEARCH
       // Web search is essential for identifying obscure industrial parts.
@@ -1123,6 +1123,11 @@ export default async function handler(req, res) {
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }]
     });
+
+    console.log(`AI stop_reason: ${response.stop_reason}, output tokens: ${response.usage?.output_tokens}`);
+    if (response.stop_reason === 'max_tokens') {
+      throw new Error('AI response was cut off (hit max_tokens) — JSON incomplete');
+    }
 
     // Extract the JSON from AI response
     // =====================================================================
