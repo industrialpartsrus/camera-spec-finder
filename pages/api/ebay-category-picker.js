@@ -17,7 +17,11 @@ export default async function handler(req, res) {
         const nameSearch = { matches: 0, error: null };
         const candidates = await getCandidates({ productType, query: String(q) }, {
           searchCategoriesByName: async (text) => {
-            try { const r = await searchCategoriesByName(text); nameSearch.matches = r.length; return r; }
+            try {
+              const r = await searchCategoriesByName(text, { limit: RANKING_RULES.searchTop, preferPrefix: RANKING_RULES.preferredPathPrefix });
+              nameSearch.matches = r.length;
+              return r;
+            }
             catch (e) { nameSearch.error = e.message; return []; }
           },
         });
