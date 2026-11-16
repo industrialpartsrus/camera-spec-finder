@@ -87,27 +87,49 @@ export default function PhotoEditor({
 
   useEffect(() => {
     if (!currentPhotoUrl) return;
+    let objectUrl = null;
+    let proxied = false;
+    let source = currentPhotoUrl;
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       editImageRef.current = img;
-      console.log('Image loaded:', img.width, 'x', img.height);
+      console.log('Image loaded:', img.naturalWidth, 'x', img.naturalHeight, 'from', source);
       setImageLoadId(prev => prev + 1);
     };
-    img.onerror = async () => {
+    // The proxy returns raw image bytes; for SureDone it loads the full-size
+    // media-photos original (falls back to media-pics if there is none).
+    const loadViaProxy = async () => {
+      if (proxied) {
+        alert('Failed to load image for editing.');
+        onCancel();
+        return;
+      }
+      proxied = true;
       try {
         const r = await fetch(`/api/photos/proxy-image?url=${encodeURIComponent(currentPhotoUrl)}`);
         if (!r.ok) throw new Error(`Proxy failed: ${r.status}`);
-        const d = await r.json();
-        if (!d.success || !d.dataUrl) throw new Error('Proxy invalid');
-        img.crossOrigin = undefined;
-        img.src = d.dataUrl;
+        source = r.headers.get('X-Proxy-Source') || currentPhotoUrl;
+        const blob = await r.blob();
+        objectUrl = URL.createObjectURL(blob);
+        img.removeAttribute('crossorigin');
+        img.src = objectUrl;
       } catch (err) {
         alert('Failed to load image for editing.');
         onCancel();
       }
     };
-    img.src = currentPhotoUrl;
+    img.onerror = loadViaProxy;
+    if (/^https:\/\/assets\.suredone\.com\//i.test(currentPhotoUrl)) {
+      loadViaProxy();
+    } else {
+      img.src = currentPhotoUrl;
+    }
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [currentPhotoUrl, onCancel]);
 
   useEffect(() => {
