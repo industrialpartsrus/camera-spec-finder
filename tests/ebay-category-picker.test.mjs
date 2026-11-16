@@ -85,3 +85,13 @@ test('source order: Firestore down still falls through', async () => {
 test('choice doc id is safe for Firestore', () => {
   assert.equal(choiceDocId('Motor Starter / Contactor'), 'motor starter _ contactor');
 });
+
+test('ranking: eBay blocked/internal-use categories are never offered', () => {
+  const r = rankCandidates([C('263529', 'Blocked Category For Internal Use'), C('1', 'Photoelectric Sensors')], { productType: 'Color Mark Sensor' });
+  assert.deepEqual(r.map(x => x.categoryId), ['1']);
+});
+
+test('choice doc id avoids Firestore reserved ids', () => {
+  assert.equal(choiceDocId('__x__'), 'pt-__x__');
+  assert.equal(choiceDocId('..'), 'pt-..');
+});
