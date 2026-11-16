@@ -5,6 +5,7 @@
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
 import { gateItemSpecifics } from '../../../lib/field-gate';
 import { StandardsUnavailableError } from '../../../lib/iprus-standards';
+import { checkLeafCategory } from '../../../lib/ebay-categories';
 const { toSureDoneCondition } = require('../../../lib/condition-map');
 
 export default async function handler(req, res) {
@@ -75,6 +76,20 @@ export default async function handler(req, res) {
     appendIfValue('countryoforigin', updateData.countryoforigin);
 
     // eBay fields (ONLY if they have values)
+    // ebaycatid must be a current LEAF category in eBay's live Taxonomy API, or nothing is sent
+    if (updateData.ebaycatid !== undefined && updateData.ebaycatid !== null && String(updateData.ebaycatid).trim() !== '') {
+      let catCheck;
+      try {
+        catCheck = await checkLeafCategory(updateData.ebaycatid);
+      } catch (catErr) {
+        console.error('EBAY_CATEGORY_CHECK unavailable:', catErr.message);
+        return res.status(503).json({ success: false, guid: updateData.guid, error: `${catErr.message}. The eBay category could not be checked, so nothing was sent. Try again in a minute.` });
+      }
+      if (!catCheck.valid) {
+        console.log(`EBAY_CATEGORY_INVALID ${JSON.stringify({ sku: updateData.guid, ebayCategoryId: updateData.ebaycatid, reason: catCheck.reason })}`);
+        return res.status(422).json({ success: false, guid: updateData.guid, error: `${catCheck.reason}. Choose a current eBay category before sending.`, ebayCategory: catCheck });
+      }
+    }
     appendIfValue('ebaycatid', updateData.ebaycatid);
     appendIfValue('ebaystoreid', updateData.ebaystoreid);
     appendIfValue('ebaystoreid2', updateData.ebaystoreid2);

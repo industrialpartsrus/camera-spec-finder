@@ -10,6 +10,7 @@ import { resolveSpecFieldName } from '../../lib/field-name-resolver';
 import { SUREDONE_FIELD_NAMES, SUREDONE_EBAY_ONLY_FIELDS } from '../../data/suredone-field-names';
 import { gateItemSpecifics } from '../../lib/field-gate';
 import { StandardsUnavailableError } from '../../lib/iprus-standards';
+import { checkLeafCategory } from '../../lib/ebay-categories';
 const { generateAltText } = require('../../lib/generate-alt-text-templates');
 const { toSureDoneCondition } = require('../../lib/condition-map');
 
@@ -1469,6 +1470,20 @@ export default async function handler(req, res) {
     }
 
     // === EBAY MARKETPLACE CATEGORY ===
+    // Must be a current LEAF category in eBay's live Taxonomy API, or nothing is sent
+    if (product.ebayCategoryId !== undefined && product.ebayCategoryId !== null && String(product.ebayCategoryId).trim() !== '') {
+      let catCheck;
+      try {
+        catCheck = await checkLeafCategory(product.ebayCategoryId);
+      } catch (catErr) {
+        console.error('EBAY_CATEGORY_CHECK unavailable:', catErr.message);
+        return res.status(503).json({ success: false, error: `${catErr.message}. The eBay category could not be checked, so nothing was sent. Try again in a minute.` });
+      }
+      if (!catCheck.valid) {
+        console.log(`EBAY_CATEGORY_INVALID ${JSON.stringify({ sku, ebayCategoryId: product.ebayCategoryId, reason: catCheck.reason })}`);
+        return res.status(422).json({ success: false, error: `${catCheck.reason}. Choose a current eBay category before sending.`, ebayCategory: catCheck });
+      }
+    }
     if (product.ebayCategoryId) {
       formData.append('ebaycatid', product.ebayCategoryId);
       console.log('eBay Marketplace Category:', product.ebayCategoryId);
