@@ -5,6 +5,7 @@
 //   POST { productType, categoryId, path, confirmedBy } -> remember the lister's confirmed choice
 
 import { resolveCategory, getCandidates, confirmChoice, RANKING_RULES } from '../../lib/ebay-category-picker';
+import { searchCategoriesByName } from '../../lib/ebay-categories';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -12,8 +13,15 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { productType = '', title = '', tableId = '', q } = req.query;
       if (q !== undefined) {
-        const candidates = await getCandidates({ productType, query: String(q) });
-        return res.status(200).json({ candidates, rulesVersion: RANKING_RULES.version });
+        // Name search problems are reported (message only), not hidden
+        const nameSearch = { matches: 0, error: null };
+        const candidates = await getCandidates({ productType, query: String(q) }, {
+          searchCategoriesByName: async (text) => {
+            try { const r = await searchCategoriesByName(text); nameSearch.matches = r.length; return r; }
+            catch (e) { nameSearch.error = e.message; return []; }
+          },
+        });
+        return res.status(200).json({ candidates, nameSearch, rulesVersion: RANKING_RULES.version });
       }
       if (!productType && !title) return res.status(400).json({ error: 'productType or title required' });
       const result = await resolveCategory({ productType, title, tableId });
