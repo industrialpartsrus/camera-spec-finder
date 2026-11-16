@@ -1682,6 +1682,8 @@ export default function ProListingBuilder() {
   // Listing actions state
   const [actionLoading, setActionLoading] = useState(null); // null or action name
   const [ebayUrl, setEbayUrlRaw] = useState(null);
+  // eBay publish progress: { sku, state: 'publishing' | 'listed' | 'not-listed', ebayId, messages }
+  const [publishState, setPublishState] = useState(null);
   // Only a real eBay item link counts ("…/itm/0" or ebayid 0 = not on eBay yet)
   const setEbayUrl = (url) => setEbayUrlRaw(url && /\/itm\/\d{6,}/.test(String(url)) ? url : null);
   const [bigcommerceUrl, setBigcommerceUrl] = useState(null);
@@ -3593,13 +3595,9 @@ export default function ProListingBuilder() {
               body: JSON.stringify({ sku: createdSku, action: 'start', channel: 'all' }),
             });
             const publishData = await publishRes.json();
-            if (publishData.success) {
-              alert(`✅ Listing published!\n\nSKU: ${createdSku}${publishData.ebayItemId ? `\neBay: ${publishData.ebayItemId}` : ''}${publishData.ebayUrl ? `\n${publishData.ebayUrl}` : ''}`);
-              if (publishData.ebayUrl) setEbayUrl(publishData.ebayUrl);
-            } else {
-              const errMsg = publishData.instructions?.join('\n\n') || publishData.errors?.[0]?.message || 'Unknown error';
-              alert(`⚠️ Publish had issues:\n\n${errMsg}\n\nYou can retry from the listing actions panel.`);
-            }
+            console.log('Publish request result:', publishData);
+            // Success = a real eBay item ID appears (not the SureDone action reply)
+            reportPublish(createdSku, await waitForEbayListing(createdSku));
           } catch (pubErr) {
             console.error('Auto-publish error:', pubErr);
             alert('⚠️ Could not publish listing. You can retry from the listing actions panel.');
@@ -3695,6 +3693,47 @@ export default function ProListingBuilder() {
     }
   };
 
+  // Publishing to eBay is decided by a real eBay item ID appearing on the SureDone
+  // item, not by the SureDone action's reply. Polls get-item for up to ~2 minutes,
+  // then shows eBay's own messages from SureDone's logs (/api/suredone/item-logs).
+  const waitForEbayListing = async (sku) => {
+    const startedUtc = new Date(Date.now() - 60000).toISOString().slice(0, 19).replace('T', ' ');
+    setPublishState({ sku, state: 'publishing', messages: [] });
+    const readMessages = async () => {
+      try {
+        const l = await (await fetch(`/api/suredone/item-logs?sku=${encodeURIComponent(sku)}&since=${encodeURIComponent(startedUtc)}`)).json();
+        return (l.entries || []).slice(0, 8).map(e => `${e.context} ${e.action}${e.operation ? ` (${e.operation})` : ''}: ${e.result}${e.message ? ` — ${e.message}` : ''}`);
+      } catch { return []; }
+    };
+    const deadline = Date.now() + 120000;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 8000));
+      try {
+        const d = await (await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku)}`)).json();
+        const id = String(d.item?.ebayid || d.item?.ebayitemid || '');
+        if (/^\d{6,}$/.test(id)) {
+          setEbayUrl(`https://www.ebay.com/itm/${id}`);
+          const messages = await readMessages();
+          setPublishState({ sku, state: 'listed', ebayId: id, messages });
+          return { listed: true, ebayId: id, messages };
+        }
+      } catch { /* keep polling */ }
+    }
+    const messages = await readMessages();
+    setPublishState({ sku, state: 'not-listed', messages });
+    return { listed: false, messages };
+  };
+
+  const reportPublish = (sku, r) => {
+    if (r.listed) {
+      alert(`✅ Listed on eBay\n\nSKU: ${sku}\neBay: ${r.ebayId}\nhttps://www.ebay.com/itm/${r.ebayId}`);
+    } else {
+      alert(`⚠️ ${sku} is not on eBay yet (no eBay item ID after 2 minutes).\n\n` +
+        (r.messages.length ? `SureDone / eBay said:\n• ${r.messages.join('\n• ')}` : 'SureDone logged no eBay messages for it.') +
+        `\n\nYou can retry with Start in the listing actions panel.`);
+    }
+  };
+
   // Perform listing action (start/relist/end/revise/delete) via centralized API
   const performListingAction = async (action, overrideSku) => {
     const selected = queue.find(q => q.id === selectedItem);
@@ -3734,6 +3773,20 @@ export default function ProListingBuilder() {
       });
       const data = await res.json();
 
+      // Start / relist: success = a real eBay item ID appears (polled), not the reply
+      if ((action === 'start' || action === 'relist') && res.ok) {
+        if (data.alreadyListed) {
+          alert(`${currentSku} is already on eBay (${data.ebayItemId}).`);
+          if (data.ebayUrl) setEbayUrl(data.ebayUrl);
+        } else {
+          console.log(`${action} request result:`, data);
+          reportPublish(currentSku, await waitForEbayListing(currentSku));
+        }
+        fetchListingUrls(currentSku);
+        setActionLoading(null);
+        return;
+      }
+
       if (data.success) {
         let successMsg = `✅ ${action} completed for ${currentSku}`;
         if (data.ebayItemId) {
@@ -3757,41 +3810,6 @@ export default function ProListingBuilder() {
           setSuredoneUrl(null);
         }
 
-        // Verify listing actually published to eBay (delayed check)
-        if ((action === 'start' || action === 'relist') && data.success) {
-          setTimeout(async () => {
-            try {
-              const verifyRes = await fetch(
-                `/api/suredone/get-item?sku=${encodeURIComponent(currentSku)}`
-              );
-              const verifyData = await verifyRes.json();
-
-              if (verifyData.success && verifyData.item) {
-                const rawId = String(verifyData.item.ebayid || verifyData.item.ebayitemid || '');
-                const ebayId = /^\d{6,}$/.test(rawId) ? rawId : '';
-                const ebayUrlFound = ebayId ? (verifyData.item.ebayurl || '') : '';
-
-                if (!ebayId && !ebayUrlFound) {
-                  alert(
-                    `⚠️ Verification Check for ${currentSku}:\n\n` +
-                    `No eBay Item ID was found after ${action}. ` +
-                    `This could mean:\n` +
-                    `• eBay is still processing (check again in a minute)\n` +
-                    `• Images may be too small (under 500x500px)\n` +
-                    `• Payment profile may need to be set to "Don't Use Profile"\n` +
-                    `• Required item specifics may be missing\n\n` +
-                    `Check the item in SureDone for details.`
-                  );
-                } else {
-                  if (ebayUrlFound) setEbayUrl(ebayUrlFound);
-                  else if (ebayId) setEbayUrl(`https://www.ebay.com/itm/${ebayId}`);
-                }
-              }
-            } catch (err) {
-              console.warn('Post-listing verification failed:', err.message);
-            }
-          }, 10000);
-        }
       } else {
         if (data.instructions && data.instructions.length > 0) {
           alert(`${action} for ${currentSku} had issues:\n\n${data.instructions.join('\n\n')}`);
@@ -5660,6 +5678,25 @@ export default function ProListingBuilder() {
                           )}
                         </button>
                       </div>
+
+                      {/* eBay publish progress (success = real eBay item ID) */}
+                      {publishState && (
+                        <div className={`mb-2 p-2 rounded border text-xs ${
+                          publishState.state === 'publishing' ? 'bg-blue-50 border-blue-200 text-blue-800'
+                          : publishState.state === 'listed' ? 'bg-green-50 border-green-200 text-green-800'
+                          : 'bg-amber-50 border-amber-300 text-amber-900'}`}>
+                          <div className="font-semibold">
+                            {publishState.state === 'publishing' && <>⏳ Publishing {publishState.sku} to eBay… (waiting for an eBay item ID, up to 2 min)</>}
+                            {publishState.state === 'listed' && <>✅ {publishState.sku} is on eBay: {publishState.ebayId}</>}
+                            {publishState.state === 'not-listed' && <>⚠️ {publishState.sku} is not on eBay yet</>}
+                          </div>
+                          {publishState.messages?.length > 0 && (
+                            <ul className="mt-1 list-disc ml-4 space-y-0.5">
+                              {publishState.messages.map((m, i) => <li key={i}>{m}</li>)}
+                            </ul>
+                          )}
+                        </div>
+                      )}
 
                       {/* Live links */}
                       <div className="space-y-1.5 text-sm">

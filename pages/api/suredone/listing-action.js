@@ -225,19 +225,33 @@ export default async function handler(req, res) {
       // Start: first-time publish for brand new items only.
       // Fetch the item's title first — ebaytitle MUST be populated or /start fails with
       // "title:62 - Title is a required field for adding items" (same gotcha as relist).
+      // NOTE (2026-11-16, SureDone /logs): POST /start answers "title:62" for every
+      // item (it wants a full add payload), and never listed anything. Every eBay
+      // listing today was created by POST /relist ("ebay relist AddFixedPrice
+      // Successfully added item"). So "start" = pre-clear + /relist, and only for
+      // items that are not on eBay yet. The UI decides success by polling for a real ebayid.
       const checkUrl = `https://api.suredone.com/v1/search/items/${encodeURIComponent('guid:=' + sku)}`;
       let itemTitle = '';
+      let existingEbayId = '';
       try {
         const checkRes = await fetch(checkUrl, { headers: jsonHeaders });
         const checkData = await checkRes.json();
         for (const key of Object.keys(checkData)) {
           if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
             itemTitle = checkData[key].title || '';
+            existingEbayId = String(checkData[key].ebayid || '');
             break;
           }
         }
       } catch (e) {
         console.warn(`[listing-action] Could not fetch title for ${sku}: ${e.message}`);
+      }
+      if (isRealEbayId(existingEbayId)) {
+        console.log(`[listing-action] start: ${sku} is already on eBay (${existingEbayId}); nothing to start`);
+        return res.status(200).json({
+          success: true, action, channel, sku, alreadyListed: true,
+          ebayItemId: existingEbayId, ebayUrl: `https://www.ebay.com/itm/${existingEbayId}`,
+        });
       }
 
       const clearForm = makeForm(sku);
@@ -261,15 +275,15 @@ export default async function handler(req, res) {
       const form = makeForm(sku);
       form.append('ebay2skip', '1');
       form.append('googleskip', '1');
-      console.log(`[listing-action] POST /start for ${sku}`);
-      result = await suredonePost(formHeaders, 'start', form);
+      console.log(`[listing-action] POST /relist (start) for ${sku}`);
+      result = await suredonePost(formHeaders, 'relist', form);
 
       // Auto-fix payment profile on failure
       if (!isSuccess(result)) {
         const errors = extractError(result);
         const profileError = errors.find(e => e.type === 'payment_profile');
         if (profileError) {
-          console.log('Payment profile error detected, clearing profiles and retrying start...');
+          console.log('Payment profile error detected, clearing profiles and retrying (relist)...');
           const fixForm = makeForm(sku);
           fixForm.append('ebayprofile', '');
           fixForm.append('ebaypaymentprofile', '');
@@ -282,7 +296,7 @@ export default async function handler(req, res) {
           const retryForm = makeForm(sku);
           retryForm.append('ebay2skip', '1');
           retryForm.append('googleskip', '1');
-          result = await suredonePost(formHeaders, 'start', retryForm);
+          result = await suredonePost(formHeaders, 'relist', retryForm);
           retried = true;
         }
       }
