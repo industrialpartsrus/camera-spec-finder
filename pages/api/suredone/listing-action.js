@@ -15,13 +15,17 @@ import { getSureDoneCredentials } from '../../../lib/suredone-config';
 
 const BASE_URL = 'https://api.suredone.com/v1/editor/items';
 
-// Helper: check if SureDone response indicates success
+// Helper: check if SureDone response indicates success.
+// The item result wins: SureDone can answer top-level "success" while the
+// item itself ("1") failed (e.g. AI3000 /start, 2026-11-16).
 function isSuccess(data) {
-  if (data.result === 'success') return true;
   const itemResult = data['1'] || data[1];
-  if (itemResult?.result === 'success') return true;
-  return false;
+  if (itemResult?.result) return itemResult.result === 'success';
+  return data.result === 'success';
 }
+
+// A real eBay item ID is numeric and at least 6 digits ("0" means not on eBay)
+const isRealEbayId = (id) => /^\d{6,}$/.test(String(id ?? '').trim());
 
 // Helper: extract error details from SureDone response
 function extractError(data) {
@@ -396,10 +400,9 @@ export default async function handler(req, res) {
 
     if (success) {
       const itemResult = result['1'] || result[1] || {};
-      const ebayItemId = itemResult.ebayid || itemResult.ebay_id || null;
-      const ebayUrl = ebayItemId
-        ? `https://www.ebay.com/itm/${ebayItemId}`
-        : null;
+      const rawEbayId = itemResult.ebayid || itemResult.ebay_id || null;
+      const ebayItemId = isRealEbayId(rawEbayId) ? String(rawEbayId) : null;
+      const ebayUrl = ebayItemId ? `https://www.ebay.com/itm/${ebayItemId}` : null;
 
       const response = {
         success: true,
@@ -415,7 +418,7 @@ export default async function handler(req, res) {
         response.note = 'Payment profile was cleared automatically to resolve an error.';
       }
 
-      console.log(`${action} succeeded for ${sku}`);
+      console.log(`${action} succeeded for ${sku} (SureDone result: ${(result['1'] || result[1])?.result || result.result}, eBay ID: ${ebayItemId || 'none yet'})`);
       return res.status(200).json(response);
     } else {
       const errors = extractError(result);

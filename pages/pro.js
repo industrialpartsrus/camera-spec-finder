@@ -1681,7 +1681,9 @@ export default function ProListingBuilder() {
 
   // Listing actions state
   const [actionLoading, setActionLoading] = useState(null); // null or action name
-  const [ebayUrl, setEbayUrl] = useState(null);
+  const [ebayUrl, setEbayUrlRaw] = useState(null);
+  // Only a real eBay item link counts ("…/itm/0" or ebayid 0 = not on eBay yet)
+  const setEbayUrl = (url) => setEbayUrlRaw(url && /\/itm\/\d{6,}/.test(String(url)) ? url : null);
   const [bigcommerceUrl, setBigcommerceUrl] = useState(null);
   const [suredoneUrl, setSuredoneUrl] = useState(null);
   const [actionChannel, setActionChannel] = useState('all');
@@ -2618,7 +2620,28 @@ export default function ProListingBuilder() {
       console.log(`Extracted ${Object.keys(mediaAltTexts).length} media alt texts from SureDone`);
 
       const loadedDesc = existingData.longdescription || '';
+
+      // Keep the eBay category confirmation from PLB's earlier draft(s) of this SKU,
+      // when the category is unchanged (a reload must not ask the lister again).
+      const loadedCatId = String(detectedEbayCatId || existingData.ebaycatid || '');
+      let carriedCategory = {};
+      try {
+        const loadedSku = existingData.sku || existingData.guid;
+        const earlier = [];
+        for (const f of ['sku', 'listedSku']) {
+          (await getDocs(query(collection(db, 'products'), where(f, '==', loadedSku)))).forEach(d => earlier.push(d.data()));
+        }
+        const prev = earlier.find(x => x.ebayCategoryConfirmed && String(x.ebayCategoryPick?.categoryId || x.ebayCategoryId || '') === loadedCatId);
+        if (loadedCatId && prev) {
+          carriedCategory = { ebayCategoryConfirmed: true, ...(prev.ebayCategoryPick ? { ebayCategoryPick: prev.ebayCategoryPick } : {}) };
+          console.log(`Kept eBay category confirmation for ${loadedSku} (${loadedCatId}) from an earlier draft`);
+        }
+      } catch (e) {
+        console.warn('Could not check earlier drafts for category confirmation:', e.message);
+      }
+
       const docRef = await addDoc(collection(db, 'products'), {
+        ...carriedCategory,
         brand: existingData.brand || existingData.manufacturer || '',
         partNumber: existingData.mpn || existingData.partnumber || existingData.model || '',
         model: existingData.model || existingData.mpn || '',
@@ -3744,9 +3767,9 @@ export default function ProListingBuilder() {
               const verifyData = await verifyRes.json();
 
               if (verifyData.success && verifyData.item) {
-                const ebayId = verifyData.item.ebayid ||
-                               verifyData.item.ebayitemid || '';
-                const ebayUrlFound = verifyData.item.ebayurl || '';
+                const rawId = String(verifyData.item.ebayid || verifyData.item.ebayitemid || '');
+                const ebayId = /^\d{6,}$/.test(rawId) ? rawId : '';
+                const ebayUrlFound = ebayId ? (verifyData.item.ebayurl || '') : '';
 
                 if (!ebayId && !ebayUrlFound) {
                   alert(
@@ -5649,7 +5672,7 @@ export default function ProListingBuilder() {
                               Active — View ↗
                             </a>
                           ) : (
-                            <span className="text-gray-400">Not listed</span>
+                            <span className="text-gray-400">Not on eBay yet</span>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
