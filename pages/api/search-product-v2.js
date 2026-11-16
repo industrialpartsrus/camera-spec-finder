@@ -4,6 +4,7 @@
 // COMPREHENSIVE MAPPINGS for all product types
 
 import Anthropic from '@anthropic-ai/sdk';
+import { resolveCategory } from '../../lib/ebay-category-picker';
 import { resolveSpecsObject } from '../../lib/field-name-resolver.js';
 import { callClaudeWithRetry } from '../../lib/claude-retry';
 import { getCategoryAspects } from '../../lib/ebay-aspects';
@@ -1229,10 +1230,19 @@ export default async function handler(req, res) {
         Object.keys(resolvedSpecs).filter(k => EXCLUDED_SPEC_FIELDS.has(k)).join(', '));
     }
 
-    // Step 2: Map product type to eBay Category
+    // Step 2: eBay Category from the live Taxonomy API (lib/ebay-category-picker.js):
+    // remembered choice (if live) -> old table ID (if live) -> picker candidates
     const ebayMapping = PRODUCT_TYPE_TO_EBAY_CATEGORY[productType] || null;
-    const ebayCategoryId = ebayMapping?.ebayCategoryId || '';
-    const ebayCategoryName = ebayMapping?.ebayCategoryName || productType;
+    let ebayCategory;
+    try {
+      ebayCategory = await resolveCategory({ productType, title: product.title || '', tableId: ebayMapping?.ebayCategoryId || '' });
+    } catch (e) {
+      console.log('eBay category picker failed:', e.message);
+      ebayCategory = { source: 'picker', categoryId: '', name: '', path: '', needsConfirmation: true, candidates: [], notes: [e.message] };
+    }
+    const ebayCategoryId = ebayCategory.categoryId || '';
+    const ebayCategoryName = ebayCategory.name || productType;
+    console.log(`eBay Category source: ${ebayCategory.source}`, ebayCategory.notes?.length ? ebayCategory.notes : '');
     
     console.log('eBay Category ID:', ebayCategoryId);
     console.log('eBay Category Name:', ebayCategoryName);
@@ -1263,6 +1273,7 @@ export default async function handler(req, res) {
         productType: productType,
         detectedCategory: ebayCategoryName,
         detectedCategoryId: ebayCategoryId,
+        ebayCategory,
         ebayStoreCategoryId: ebayStoreCategoryId,
         ebayStoreCategoryId2: ebayStoreCategoryId2,
         ebayAspectsLoaded: !!ebayAspects,

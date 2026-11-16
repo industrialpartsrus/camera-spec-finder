@@ -2808,7 +2808,11 @@ export default function ProListingBuilder() {
         specifications: data._resolvedSpecs || product.specifications || {},
         rawSpecifications: product.rawSpecifications || [],
         qualityFlag: product.qualityFlag || 'NEEDS_REVIEW',
-        ebayCategoryId: data._metadata?.detectedCategoryId || product.ebayCategoryId || '',
+        // Live Taxonomy API only (lib/ebay-category-picker.js); never an AI-typed ID
+        ebayCategoryId: data._metadata?.ebayCategory
+          ? (data._metadata.detectedCategoryId || '')
+          : (data._metadata?.detectedCategoryId || product.ebayCategoryId || ''),
+        ebayCategoryPicker: data._metadata?.ebayCategory || null,
         ebayStoreCategoryId: data._metadata?.ebayStoreCategoryId || product.ebayStoreCategoryId || '',
         ebayStoreCategoryId2: data._metadata?.ebayStoreCategoryId2 || '23399313015'
       };
