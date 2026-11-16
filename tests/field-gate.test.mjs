@@ -42,9 +42,29 @@ test('gate: eBay casing with spaces resolves to the map field', { skip }, async 
   assert.equal(r.warnings.length, 0);
 });
 
-test('gate: one value per map name (first wins)', { skip }, async () => {
+test('gate: every mapped field is sent; different values on one map name are a conflict', { skip }, async () => {
   const r = await run([['voltage', '24VDC'], ['nominalvoltage', '12VDC']]);
-  assert.deepEqual(r.fields, [['voltage', '24VDC']]);
+  const keys = r.fields.map(([k]) => k);
+  assert.equal(keys.length, 2);
+  assert.equal(r.conflicts.length, 1);
+  assert.equal(r.conflicts[0].display, 'Voltage');
+});
+
+test('gate: IP14820 frame=DF100L and iecframesize=IP55 are both sent and reported', { skip }, async () => {
+  const r = await run([['ebayitemspecificsiecframesize', 'IP55'], ['frame', 'DF100L']]);
+  const out = sent(r);
+  assert.equal(out.ebayitemspecificsiecframesize, 'IP55');
+  assert.equal(Object.entries(out).find(([k]) => /frame$/.test(k))?.[1], 'DF100L');
+  assert.equal(r.conflicts.length, 1);
+  assert.equal(r.conflicts[0].display, 'Frame Size');
+  assert.deepEqual(r.conflicts[0].fields.map(f => f.value), ['IP55', 'DF100L']);
+  assert.ok(r.conflicts[0].fields.every(f => f.sent));
+});
+
+test('gate: exact duplicate key is skipped; same value is not a conflict', { skip }, async () => {
+  const r = await run([['ebayitemspecificsvoltage', '24VDC'], ['voltage', '24 vdc']]);
+  assert.equal(r.fields.length, 1);
+  assert.equal(r.conflicts.length, 0);
 });
 
 test('gate: bare kVA number stops the push even in warn mode', { skip }, async () => {
