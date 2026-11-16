@@ -131,7 +131,24 @@ export default async function handler(req, res) {
       qualityFlag: productData.qualityFlag || 'NEEDS_REVIEW',
       condition: productData.condition || product.condition || 'Used - Good',
       conditionNotes: productData.conditionNotes || CONDITION_NOTES[productData.condition] || CONDITION_NOTES[product.condition] || '',
-      ebayCategoryId: data._metadata?.ebayCategoryId || data._metadata?.detectedCategoryId || '',
+      // eBay category from the live picker (search-product-v2 -> lib/ebay-category-picker.js),
+      // same fields pro.js saves: the lister confirms it in Pro Builder before sending
+      ebayCategoryId: data._metadata?.ebayCategory
+        ? (data._metadata.detectedCategoryId || '')
+        : (data._metadata?.ebayCategoryId || data._metadata?.detectedCategoryId || ''),
+      ebayCategoryPicker: data._metadata?.ebayCategory || null,
+      productType: productData.productType || '',
+      ebayCategoryConfirmed: Boolean(data._metadata?.ebayCategory?.categoryId && !data._metadata.ebayCategory.needsConfirmation),
+      ebayCategoryPick: data._metadata?.ebayCategory?.categoryId ? {
+        categoryId: data._metadata.ebayCategory.categoryId,
+        name: data._metadata.ebayCategory.name || '',
+        path: data._metadata.ebayCategory.path || '',
+        source: data._metadata.ebayCategory.source,
+        rank: data._metadata.ebayCategory.rank ?? null,
+        productType: productData.productType || '',
+        confirmedBy: data._metadata.ebayCategory.confirmedBy || '',
+        count: data._metadata.ebayCategory.count ?? null,
+      } : null,
       ebayStoreCategoryId: data._metadata?.ebayStoreCategoryId || '',
       ebayStoreCategoryId2: data._metadata?.ebayStoreCategoryId2 || '23399313015',
       ebayAspects: ebayAspects,
@@ -152,84 +169,25 @@ export default async function handler(req, res) {
     await updateDoc(productRef, updateData);
     console.log(`Auto-research Pass 1 complete: ${itemId}`);
 
-    // ===== TIMEOUT CHECK =====
-    const elapsed = Date.now() - startTime;
-    console.log(`Auto-research elapsed time: ${elapsed}ms`);
-
-    if (elapsed > 45000) {
-      console.log('Auto-research: Pass 1 complete, skipping Pass 2 (timeout risk - approaching 60s limit)');
-      await updateDoc(productRef, {
-        pass2Status: 'pending',
-        autoResearchNote: 'Pass 2 skipped due to timeout - will run when opened in Pro Builder'
-      });
-      return res.json({
-        success: true,
-        itemId,
-        pass1: true,
-        pass2: 'skipped',
-        elapsed
-      });
-    }
-
-    // ===== PASS 2: EBAY ITEM SPECIFICS =====
-    if (data._ebayAspects && data._ebayAspects.all?.length > 0) {
-      await updateDoc(productRef, { pass2Status: 'filling' });
-      console.log(`[Auto-research ${itemId}] Pass 2 starting (${data._ebayAspects.all.length} aspects)`);
-
-      const pass2Url = `${protocol}://${host}/api/v2/auto-fill-ebay-specifics`;
-      const pass2Response = await fetch(pass2Url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brand: brand,
-          partNumber: partNumber,
-          productType: productData.productType || '',
-          title: updateData.title,
-          ebayAspects: data._ebayAspects,
-          pass1Specs: data._resolvedSpecs || {}
-        })
-      });
-
-      if (pass2Response.ok) {
-        const pass2Data = await pass2Response.json();
-        console.log('[Auto-research] Pass 2 response keys:', Object.keys(pass2Data));
-
-        if (pass2Data.success && (pass2Data.data || pass2Data.filledSpecifics)) {
-          // Handle both response formats (pass2Data.data.X or pass2Data.X)
-          const specificsForUI = pass2Data.data?.specificsForUI || pass2Data.filledSpecifics || [];
-          const specificsForSuredone = pass2Data.data?.specificsForSuredone || pass2Data.suredoneFields || {};
-          const filledCount = pass2Data.data?.filledCount || pass2Data.filledCount || 0;
-          const totalCount = pass2Data.data?.totalCount || pass2Data.totalCount || 0;
-
-          const pass2Update = {
-            ebayItemSpecifics: specificsForUI,
-            ebayItemSpecificsForSuredone: specificsForSuredone,
-            pass2Status: 'complete',
-            pass2FilledCount: filledCount,
-            pass2TotalCount: totalCount
-          };
-
-          // Safety: remove any undefined values before writing to Firebase
-          Object.keys(pass2Update).forEach(key => {
-            if (pass2Update[key] === undefined) {
-              delete pass2Update[key];
-            }
-          });
-
-          await updateDoc(productRef, pass2Update);
-          console.log(`[Auto-research] Pass 2 saved: ${filledCount}/${totalCount} fields`);
-
-          return res.json({
-            success: true,
-            itemId,
-            pass1: true,
-            pass2: true,
-            elapsed: Date.now() - startTime
-          });
-        }
-      } else {
-        console.error(`Auto-research Pass 2 failed: ${pass2Response.status}`);
-        await updateDoc(productRef, { pass2Status: 'error' });
+    // ===== PASS 2: EBAY ITEM SPECIFICS (its own call, own maxDuration) =====
+    // /api/auto-research-pass2 fetches the live aspects for the item's eBay
+    // category, saves the full aspect objects, and fills the specifics. If it
+    // fails, it leaves pass2Status 'pending' and Pro Builder resumes it on open.
+    console.log(`Auto-research elapsed time after Pass 1: ${Date.now() - startTime}ms`);
+    await updateDoc(productRef, { pass2Status: 'pending', ...(updateData.ebayCategoryId ? {} : { autoResearchNote: 'Pass 2 runs when the eBay category is confirmed in Pro Builder' }) });
+    if (updateData.ebayCategoryId) {
+      try {
+        const pass2Res = await fetch(`${protocol}://${host}/api/auto-research-pass2`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId }),
+        });
+        const pass2Data = await pass2Res.json().catch(() => ({}));
+        console.log(`[Auto-research ${itemId}] Pass 2: ${pass2Res.status} ${JSON.stringify(pass2Data).slice(0, 200)}`);
+        return res.json({ success: true, itemId, pass1: true, pass2: pass2Data.success ? true : 'pending', elapsed: Date.now() - startTime });
+      } catch (e) {
+        console.error(`[Auto-research ${itemId}] Pass 2 call failed: ${e.message} (left pending)`);
+        return res.json({ success: true, itemId, pass1: true, pass2: 'pending', elapsed: Date.now() - startTime });
       }
     }
 

@@ -1170,6 +1170,37 @@ function convertSuredoneSpecsToUIArray(suredoneSpecs) {
   return arr;
 }
 
+// eBay Item Specifics panel for a listing loaded from SureDone, built from the
+// category's LIVE eBay aspects: each aspect shows the value from its multi-channel
+// field (e.g. voltage) or its eBay-only field (ebayitemspecificsvoltage).
+// eBay-only fields with a value that match no aspect are kept at the end.
+function buildPanelFromAspects(aspects, existingData) {
+  const out = [];
+  const used = new Set();
+  const list = [...(aspects.required || []), ...(aspects.recommended || []), ...(aspects.optional || [])];
+  for (const a of list) {
+    const inline = a.suredoneInlineField, dynamic = a.suredoneDynamicField;
+    const raw = (inline && existingData[inline]) || (dynamic && existingData[dynamic]) || '';
+    const value = String(raw ?? '').trim();
+    if (inline) used.add(inline);
+    if (dynamic) used.add(dynamic);
+    // Optional aspects only when they have a value (keeps the panel short)
+    if (a.usage !== 'RECOMMENDED' && !a.required && !value) continue;
+    out.push({
+      ebayName: a.ebayName, value,
+      suredoneInlineField: inline, suredoneDynamicField: dynamic,
+      required: Boolean(a.required), mode: a.mode || 'FREE_TEXT', usage: a.usage || 'OPTIONAL',
+      allowedValues: a.allowedValues || [], multiValue: Boolean(a.multiValue),
+      source: 'suredone_import',
+    });
+  }
+  const extras = {};
+  for (const [k, v] of Object.entries(existingData)) {
+    if (k.startsWith('ebayitemspecifics') && !used.has(k) && v && String(v).trim()) extras[k] = String(v).trim();
+  }
+  return [...out, ...convertSuredoneSpecsToUIArray(extras)];
+}
+
 // ============================================
 // SKU LOOKUP COMPONENT (INLINE)
 // ============================================
@@ -2608,7 +2639,7 @@ export default function ProListingBuilder() {
       // === CONVERT SUREDONE SPECIFICS TO UI ARRAY ===
       // Transform flat {ebayitemspecificsvoltage: "24VDC"} into
       // [{ebayName: "Voltage", value: "24VDC", ...}] for the purple panel display
-      const ebayItemSpecificsArray = convertSuredoneSpecsToUIArray(ebayItemSpecificsForSuredone);
+      let ebayItemSpecificsArray = convertSuredoneSpecsToUIArray(ebayItemSpecificsForSuredone);
       console.log(`Converted ${ebayItemSpecificsArray.length} eBay specifics to UI format`);
 
       // === EXTRACT MEDIA ALT TEXTS FROM SUREDONE ===
@@ -2640,6 +2671,22 @@ export default function ProListingBuilder() {
         }
       } catch (e) {
         console.warn('Could not check earlier drafts for category confirmation:', e.message);
+      }
+
+      // eBay panel from the category's live aspects (falls back to the eBay-only fields)
+      if (loadedCatId) {
+        try {
+          const ar = await fetch(`/api/ebay-category-aspects?categoryId=${encodeURIComponent(loadedCatId)}`);
+          if (ar.ok) {
+            const aspects = await ar.json();
+            if (aspects.all?.length) {
+              ebayItemSpecificsArray = buildPanelFromAspects(aspects, existingData);
+              console.log(`eBay panel built from ${aspects.all.length} live aspects for category ${loadedCatId}`);
+            }
+          }
+        } catch (e) {
+          console.warn('Could not load live aspects for the eBay panel:', e.message);
+        }
       }
 
       const docRef = await addDoc(collection(db, 'products'), {
@@ -2933,6 +2980,30 @@ export default function ProListingBuilder() {
     catch (error) { console.error('Error updating field:', error); }
   };
 
+  // Resume a Pass 2 that auto-research left 'pending' (timeout/failure) when the
+  // item is opened. Uses the LIVE aspects for the item's eBay category.
+  const pass2StartedRef = useRef(new Set());
+  useEffect(() => {
+    const item = queue.find(q => q.id === selectedItem);
+    if (!item || item.pass2Status !== 'pending' || !item.ebayCategoryId || item.status !== 'complete') return;
+    if (pass2StartedRef.current.has(item.id)) return;
+    pass2StartedRef.current.add(item.id);
+    (async () => {
+      try {
+        const r = await fetch(`/api/ebay-category-aspects?categoryId=${item.ebayCategoryId}`);
+        if (!r.ok) throw new Error(`aspects ${r.status}`);
+        const aspects = await r.json();
+        if (!aspects.all?.length) return;
+        console.log(`Resuming pending Pass 2 for ${item.id} (${aspects.all.length} aspects)`);
+        await runPass2(item.id, item, aspects);
+      } catch (e) {
+        console.warn('Could not resume Pass 2:', e.message);
+        pass2StartedRef.current.delete(item.id);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItem, queue]);
+
   // Existing listing / pre-picker draft whose category is still a live leaf:
   // accepted as-is, not saved as a remembered choice for the product type.
   const autoConfirmEbayCategory = async (item, pick) => {
@@ -2958,8 +3029,9 @@ export default function ProListingBuilder() {
         confirmedBy, count: pick.count ?? null,
       },
     });
-    if (!pick.changed) return;
-    // New category: refresh item specifics for it (same as the old manual override)
+    const hasSpecifics = item.pass2Status === 'complete' || (item.ebayItemSpecifics?.length > 0);
+    if (!pick.changed && hasSpecifics) return;
+    // New category, or no item specifics yet: run Pass 2 for it
     try {
       const aspectsRes = await fetch(`/api/ebay-category-aspects?categoryId=${pick.categoryId}`);
       if (aspectsRes.ok) {
@@ -5515,8 +5587,10 @@ export default function ProListingBuilder() {
                     const photoBlocking = !hasPhotos;
                     // eBay category must be confirmed in the picker (live Taxonomy API)
                     const categoryBlocking = !hasCategory || !selected.ebayCategoryConfirmed;
+                    // eBay item specifics (Pass 2) must be finished before sending
+                    const pass2Blocking = ['pending', 'filling'].includes(selected.pass2Status);
 
-                    const isBlocked = isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking || erBlocking || photoBlocking || categoryBlocking;
+                    const isBlocked = isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking || erBlocking || photoBlocking || categoryBlocking || pass2Blocking;
 
                     return (
                       <>
@@ -5534,6 +5608,23 @@ export default function ProListingBuilder() {
                             selected.isEditingExisting ? '📝 Update in SureDone' : '🚀 Send to SureDone'}
                         </button>
 
+                        {/* eBay item specifics still empty for this category (report, not a block) */}
+                        {(() => {
+                          const list = selected.ebayItemSpecifics || [];
+                          const core = { brand: selected.brand, mpn: selected.partNumber, model: selected.model || selected.partNumber, manufacturerpartnumber: selected.partNumber };
+                          const empty = (s) => !String(s.value ?? '').trim() && !String(core[String(s.ebayName || '').toLowerCase().replace(/[^a-z0-9]/g, '')] || '').trim();
+                          const missingReq = list.filter(s => s.required && empty(s)).map(s => s.ebayName);
+                          const missingRec = list.filter(s => !s.required && s.usage === 'RECOMMENDED' && empty(s)).map(s => s.ebayName);
+                          if (!missingReq.length && !missingRec.length) return null;
+                          return (
+                            <div className="mt-3 p-2 rounded border border-amber-200 bg-amber-50 text-xs text-amber-900">
+                              <div className="font-semibold">eBay item specifics still empty for this category</div>
+                              {missingReq.length > 0 && <div className="text-red-700"><strong>Required:</strong> {missingReq.join(', ')}</div>}
+                              {missingRec.length > 0 && <div><strong>Recommended ({missingRec.length}):</strong> {missingRec.join(', ')}</div>}
+                            </div>
+                          );
+                        })()}
+
                         {/* Show what's blocking */}
                         {isBlocked && !isSending && (
                           <div className="mt-3 text-sm space-y-1">
@@ -5545,6 +5636,9 @@ export default function ProListingBuilder() {
                             )}
                             {!hasCategory && (
                               <p className="text-red-600 font-semibold">❌ eBay category required</p>
+                            )}
+                            {pass2Blocking && (
+                              <p className="text-orange-600 font-semibold">⏳ eBay item specifics are {selected.pass2Status === 'filling' ? 'being filled' : 'not filled yet'} (Pass 2){selected.pass2Status === 'pending' && !selected.ebayCategoryConfirmed ? ': confirm the eBay category first' : ''}</p>
                             )}
                             {hasCategory && !selected.ebayCategoryConfirmed && (
                               <p className="text-red-600 font-semibold">❌ Confirm the eBay category (see eBay Category above)</p>
