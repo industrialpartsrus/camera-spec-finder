@@ -1483,6 +1483,8 @@ export default async function handler(req, res) {
         console.log(`EBAY_CATEGORY_INVALID ${JSON.stringify({ sku, ebayCategoryId: product.ebayCategoryId, reason: catCheck.reason })}`);
         return res.status(422).json({ success: false, error: `${catCheck.reason}. Choose a current eBay category before sending.`, ebayCategory: catCheck });
       }
+      const pick = product.ebayCategoryPick || {};
+      console.log(`EBAY_CATEGORY_PICKED ${JSON.stringify({ sku, productType: pick.productType || product.productType || product.productCategory || '', source: pick.source || 'unknown', categoryId: String(product.ebayCategoryId), rank: pick.rank ?? null })}`);
     }
     if (product.ebayCategoryId) {
       formData.append('ebaycatid', product.ebayCategoryId);

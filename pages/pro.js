@@ -4,6 +4,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
+import EbayCategoryPicker from '../components/EbayCategoryPicker';
 import { Search, Plus, Trash2, CheckCircle, Loader, AlertCircle, X, Camera, Upload, Download, RefreshCw, ChevronDown, ChevronUp, ExternalLink, ArrowRight, Check } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, increment } from 'firebase/firestore';
@@ -2813,6 +2814,20 @@ export default function ProListingBuilder() {
           ? (data._metadata.detectedCategoryId || '')
           : (data._metadata?.detectedCategoryId || product.ebayCategoryId || ''),
         ebayCategoryPicker: data._metadata?.ebayCategory || null,
+        productType: product.productType || '',
+        // A lister confirms the category before sending; a remembered choice
+        // confirmed 2+ times (needsConfirmation false) counts as confirmed.
+        ebayCategoryConfirmed: Boolean(data._metadata?.ebayCategory?.categoryId && !data._metadata.ebayCategory.needsConfirmation),
+        ebayCategoryPick: data._metadata?.ebayCategory?.categoryId ? {
+          categoryId: data._metadata.ebayCategory.categoryId,
+          name: data._metadata.ebayCategory.name || '',
+          path: data._metadata.ebayCategory.path || '',
+          source: data._metadata.ebayCategory.source,
+          rank: data._metadata.ebayCategory.rank ?? null,
+          productType: product.productType || '',
+          confirmedBy: data._metadata.ebayCategory.confirmedBy || '',
+          count: data._metadata.ebayCategory.count ?? null,
+        } : null,
         ebayStoreCategoryId: data._metadata?.ebayStoreCategoryId || product.ebayStoreCategoryId || '',
         ebayStoreCategoryId2: data._metadata?.ebayStoreCategoryId2 || '23399313015'
       };
@@ -2891,6 +2906,37 @@ export default function ProListingBuilder() {
   const updateField = async (itemId, field, value) => {
     try { await updateDoc(doc(db, 'products', itemId), { [field]: value }); }
     catch (error) { console.error('Error updating field:', error); }
+  };
+
+  // Lister confirmed an eBay category in EbayCategoryPicker (already checked live
+  // and remembered for the product type by /api/ebay-category-picker).
+  const confirmEbayCategory = async (item, pick) => {
+    const confirmedBy = currentUser?.name || userName || '';
+    await updateDoc(doc(db, 'products', item.id), {
+      ebayCategoryId: pick.categoryId,
+      ebayCategoryConfirmed: true,
+      ebayCategoryPick: {
+        categoryId: pick.categoryId, name: pick.name || '', path: pick.path || '',
+        source: pick.source, rank: pick.rank ?? null, productType: pick.productType || '',
+        confirmedBy, count: pick.count ?? null,
+      },
+    });
+    if (!pick.changed) return;
+    // New category: refresh item specifics for it (same as the old manual override)
+    try {
+      const aspectsRes = await fetch(`/api/ebay-category-aspects?categoryId=${pick.categoryId}`);
+      if (aspectsRes.ok) {
+        const aspects = await aspectsRes.json();
+        if (aspects.all?.length > 0) {
+          await runPass2(item.id, { ...item, ebayCategoryId: pick.categoryId }, aspects);
+          await updateDoc(doc(db, 'products', item.id), {
+            categoryOverrideMessage: `Category changed — item specifics refreshed for ${pick.name}`
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Category change error:', err);
+    }
   };
 
   // Auto-modify title and description when emitter/receiver status changes
@@ -3313,6 +3359,7 @@ export default function ProListingBuilder() {
           }),
           // Only send eBay fields if they have values (don't wipe existing data)
           ...(item.ebayCategoryId && { ebaycatid: item.ebayCategoryId }),
+          ...(item.ebayCategoryPick && { ebayCategoryPick: item.ebayCategoryPick }),
           ...(item.ebayStoreCategoryId && { ebaystoreid: item.ebayStoreCategoryId }),
           ...(item.ebayStoreCategoryId2 && { ebaystoreid2: item.ebayStoreCategoryId2 }),
           ebayshippingprofileid: item.ebayShippingProfileId || '69077991015',
@@ -3463,6 +3510,7 @@ export default function ProListingBuilder() {
           ...(item.shelf && { shelfLocation: item.shelf }),
           ...(item.countryOfOrigin && { countryOfOrigin: item.countryOfOrigin }),
           ebayCategoryId: item.ebayCategoryId || '',
+          ebayCategoryPick: item.ebayCategoryPick || null,
           ebayStoreCategoryId: item.ebayStoreCategoryId || '',
           ebayStoreCategoryId2: item.ebayStoreCategoryId2 || '',
           bigcommerceCategoryId: item.bigcommerceCategoryId || '',
@@ -4313,16 +4361,13 @@ export default function ProListingBuilder() {
                     </div>
                   </div>
 
-                  {/* eBay Product Category */}
+                  {/* Product Category (PLB product type) */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2">eBay Product Category</label>
+                    <label className="block text-sm font-semibold mb-2">Product Category</label>
                     <div className="flex gap-2">
                       <div className="flex-1 px-3 py-2 bg-gray-100 border rounded-lg text-sm">
                         {selected.productCategory ? (
-                          <span className="font-medium">
-                            {selected.productCategory}
-                            {selected.ebayCategoryId && <span className="text-gray-500 ml-2">(ID: {selected.ebayCategoryId})</span>}
-                          </span>
+                          <span className="font-medium">{selected.productCategory}</span>
                         ) : (
                           <span className="text-gray-400">Not detected</span>
                         )}
@@ -4334,168 +4379,15 @@ export default function ProListingBuilder() {
                         <RefreshCw className="w-4 h-4" /> Re-detect
                       </button>
                     </div>
-                    {selected.ebayCategoryId && EBAY_CATEGORY_TAXONOMY[selected.ebayCategoryId] && (
-                      <p className="text-xs text-green-700 mt-2 p-2 bg-green-50 rounded border border-green-200">
-                        📦 <strong>Full eBay Path:</strong> {EBAY_CATEGORY_TAXONOMY[selected.ebayCategoryId].path}
-                      </p>
-                    )}
-                    <details className="mt-2">
-                      <summary className="text-xs text-blue-600 cursor-pointer hover:underline">Override category manually</summary>
+                  </div>
 
-                      {/* Live eBay Category Search */}
-                      <div className="mt-2">
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Search eBay Categories
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Type to search (e.g. 'circuit breakers')..."
-                          value={categorySearchQuery[selected.id] || ''}
-                          onChange={(e) => {
-                            const query = e.target.value;
-                            setCategorySearchQuery(prev => ({ ...prev, [selected.id]: query }));
-
-                            // Clear previous timer
-                            if (categorySearchTimers.current[selected.id]) {
-                              clearTimeout(categorySearchTimers.current[selected.id]);
-                            }
-
-                            // Clear results if query is too short
-                            if (query.trim().length < 2) {
-                              setCategorySearchResults(prev => ({ ...prev, [selected.id]: [] }));
-                              setCategorySearchLoading(prev => ({ ...prev, [selected.id]: false }));
-                              return;
-                            }
-
-                            // Set loading state
-                            setCategorySearchLoading(prev => ({ ...prev, [selected.id]: true }));
-
-                            // Debounce: wait 400ms before searching
-                            categorySearchTimers.current[selected.id] = setTimeout(async () => {
-                              try {
-                                const res = await fetch(`/api/ebay/taxonomy-search?keyword=${encodeURIComponent(query)}`);
-                                if (res.ok) {
-                                  const data = await res.json();
-                                  setCategorySearchResults(prev => ({ ...prev, [selected.id]: data.categories || [] }));
-                                } else {
-                                  setCategorySearchResults(prev => ({ ...prev, [selected.id]: [] }));
-                                }
-                              } catch (err) {
-                                console.error('Category search error:', err);
-                                setCategorySearchResults(prev => ({ ...prev, [selected.id]: [] }));
-                              } finally {
-                                setCategorySearchLoading(prev => ({ ...prev, [selected.id]: false }));
-                              }
-                            }, 400);
-                          }}
-                          className="w-full px-3 py-2 border rounded-lg text-xs"
-                        />
-
-                        {/* Loading indicator */}
-                        {categorySearchLoading[selected.id] && (
-                          <p className="text-xs text-gray-500 mt-1">Searching eBay categories...</p>
-                        )}
-
-                        {/* Search results */}
-                        {categorySearchResults[selected.id]?.length > 0 && (
-                          <div className="mt-2 max-h-64 overflow-y-auto border rounded-lg">
-                            {categorySearchResults[selected.id].map(cat => (
-                              <button
-                                key={cat.id}
-                                type="button"
-                                onClick={async () => {
-                                  const catId = cat.id;
-                                  const catName = cat.name;
-
-                                  // Update category (same logic as dropdown)
-                                  updateField(selected.id, 'ebayCategoryId', catId);
-                                  updateField(selected.id, 'productCategory', catName);
-
-                                  // Clear search
-                                  setCategorySearchQuery(prev => ({ ...prev, [selected.id]: '' }));
-                                  setCategorySearchResults(prev => ({ ...prev, [selected.id]: [] }));
-
-                                  // Re-run Pass 2 with new category's eBay aspects
-                                  try {
-                                    const aspectsRes = await fetch(`/api/ebay-category-aspects?categoryId=${catId}`);
-                                    if (aspectsRes.ok) {
-                                      const aspects = await aspectsRes.json();
-                                      if (aspects.all?.length > 0) {
-                                        const item = { ...selected, productCategory: catName };
-                                        await runPass2(selected.id, item, aspects);
-                                        await updateDoc(doc(db, 'products', selected.id), {
-                                          categoryOverrideMessage: `Category changed — item specifics refreshed for ${catName}`
-                                        });
-                                      }
-                                    }
-                                  } catch (err) {
-                                    console.error('Category override error:', err);
-                                  }
-                                }}
-                                className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b last:border-b-0 text-xs"
-                              >
-                                <div className="font-semibold text-gray-900">{cat.name}</div>
-                                <div className="text-gray-500 text-xs">ID: {cat.id}</div>
-                                {cat.path && cat.path !== cat.name && (
-                                  <div className="text-gray-400 text-xs mt-1">{cat.path}</div>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* No results message */}
-                        {!categorySearchLoading[selected.id] &&
-                         categorySearchQuery[selected.id]?.trim().length >= 2 &&
-                         categorySearchResults[selected.id]?.length === 0 && (
-                          <p className="text-xs text-gray-500 mt-2">No categories found for "{categorySearchQuery[selected.id]}"</p>
-                        )}
-                      </div>
-
-                      {/* Static dropdown fallback */}
-                      <div className="mt-3 pt-3 border-t">
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Or browse all categories
-                        </label>
-                        <select
-                          value={selected.ebayCategoryId || ''}
-                          onChange={async (e) => {
-                            const catId = e.target.value;
-                            const catName = EBAY_CATEGORY_ID_TO_NAME[catId] || '';
-                            updateField(selected.id, 'ebayCategoryId', catId);
-                            if (catName) {
-                              updateField(selected.id, 'productCategory', catName);
-                            }
-                            // Re-run Pass 2 with new category's eBay aspects
-                            if (catId) {
-                              try {
-                                const aspectsRes = await fetch(`/api/ebay-category-aspects?categoryId=${catId}`);
-                                if (aspectsRes.ok) {
-                                  const aspects = await aspectsRes.json();
-                                  if (aspects.all?.length > 0) {
-                                    const item = { ...selected, productCategory: catName };
-                                    await runPass2(selected.id, item, aspects);
-                                    await updateDoc(doc(db, 'products', selected.id), {
-                                      categoryOverrideMessage: `Category changed — item specifics refreshed for ${catName}`
-                                    });
-                                  }
-                                }
-                              } catch (err) {
-                                console.error('Category override error:', err);
-                              }
-                            }
-                          }}
-                          className="w-full px-3 py-2 border rounded-lg text-xs"
-                        >
-                          <option value="">Select eBay category...</option>
-                          {CATEGORY_DROPDOWN_OPTIONS.map(cat => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name} ({cat.id})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </details>
+                  {/* eBay Category: live Taxonomy API picker (components/EbayCategoryPicker.js) */}
+                  <div>
+                    <EbayCategoryPicker
+                      item={selected}
+                      userName={currentUser?.name || userName || ''}
+                      onConfirmed={(pick) => confirmEbayCategory(selected, pick)}
+                    />
                     {selected.categoryOverrideMessage && (
                       <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
                         {selected.categoryOverrideMessage}
@@ -5567,8 +5459,10 @@ export default function ProListingBuilder() {
                     const hasTitle = selected.title && selected.title.length > 5;
                     const hasCategory = selected.ebayCategoryId;
                     const photoBlocking = !hasPhotos;
+                    // eBay category must be confirmed in the picker (live Taxonomy API)
+                    const categoryBlocking = !hasCategory || !selected.ebayCategoryConfirmed;
 
-                    const isBlocked = isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking || erBlocking || photoBlocking;
+                    const isBlocked = isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking || erBlocking || photoBlocking || categoryBlocking;
 
                     return (
                       <>
@@ -5597,6 +5491,9 @@ export default function ProListingBuilder() {
                             )}
                             {!hasCategory && (
                               <p className="text-red-600 font-semibold">❌ eBay category required</p>
+                            )}
+                            {hasCategory && !selected.ebayCategoryConfirmed && (
+                              <p className="text-red-600 font-semibold">❌ Confirm the eBay category (see eBay Category above)</p>
                             )}
                             {!selected.price && (
                               <p className="text-red-600 font-semibold">❌ Price required</p>

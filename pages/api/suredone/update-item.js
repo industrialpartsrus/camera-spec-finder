@@ -89,6 +89,8 @@ export default async function handler(req, res) {
         console.log(`EBAY_CATEGORY_INVALID ${JSON.stringify({ sku: updateData.guid, ebayCategoryId: updateData.ebaycatid, reason: catCheck.reason })}`);
         return res.status(422).json({ success: false, guid: updateData.guid, error: `${catCheck.reason}. Choose a current eBay category before sending.`, ebayCategory: catCheck });
       }
+      const pick = updateData.ebayCategoryPick || {};
+      console.log(`EBAY_CATEGORY_PICKED ${JSON.stringify({ sku: updateData.guid, productType: pick.productType || updateData.usertype || '', source: pick.source || 'unknown', categoryId: String(updateData.ebaycatid), rank: pick.rank ?? null })}`);
     }
     appendIfValue('ebaycatid', updateData.ebaycatid);
     appendIfValue('ebaystoreid', updateData.ebaystoreid);

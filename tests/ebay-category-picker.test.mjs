@@ -43,14 +43,34 @@ test('candidates: leaf-only, ranked, max 5', async () => {
   assert.deepEqual(r.map(x => x.categoryId), ['181700', '260824']);
 });
 
-test('source order: remembered choice (live) wins, no confirmation needed', async () => {
+test('source order: remembered choice (live) wins; confirmed once = still needs confirmation', async () => {
   const r = await resolveCategory({ productType: 'Fuse', title: 't', tableId: '181678' }, {
-    getRememberedChoice: async () => ({ categoryId: '181700', path: 'B&I > Fuses' }),
+    getRememberedChoice: async () => ({ categoryId: '181700', path: 'B&I > Fuses', count: 1, confirmedBy: 'Alex' }),
     checkLeafCategory: live(['181700', '181678']), suggestCategories: suggest,
   });
   assert.equal(r.source, 'remembered');
   assert.equal(r.categoryId, '181700');
+  assert.equal(r.needsConfirmation, true);
+  assert.equal(r.confirmedBy, 'Alex');
+  assert.equal(r.count, 1);
+  assert.equal(r.rank, 1);
+});
+
+test('remembered choice confirmed twice is preselected as confirmed', async () => {
+  const r = await resolveCategory({ productType: 'Fuse', title: 't' }, {
+    getRememberedChoice: async () => ({ categoryId: '181700', count: 2 }),
+    checkLeafCategory: live(['181700']), suggestCategories: suggest,
+  });
   assert.equal(r.needsConfirmation, false);
+});
+
+test('ranking: +20 for Business & Industrial (a bonus, other categories stay)', () => {
+  const r = rankCandidates([
+    { categoryId: '1', name: 'Necklaces & Pendants', path: 'Jewelry & Watches > Necklaces & Pendants' },
+    { categoryId: '2', name: 'Pendant Stations', path: 'Business & Industrial > Pendant Stations' }],
+    { productType: 'Pendant Control', title: 'Crane pendant control 6 button' });
+  assert.deepEqual(r.map(x => x.categoryId), ['2', '1']);
+  assert.ok(r[0].why.some(w => /Business & Industrial/.test(w)));
 });
 
 test('source order: dead remembered -> live table ID', async () => {
