@@ -2908,6 +2908,18 @@ export default function ProListingBuilder() {
     catch (error) { console.error('Error updating field:', error); }
   };
 
+  // Existing listing / pre-picker draft whose category is still a live leaf:
+  // accepted as-is, not saved as a remembered choice for the product type.
+  const autoConfirmEbayCategory = async (item, pick) => {
+    await updateDoc(doc(db, 'products', item.id), {
+      ebayCategoryConfirmed: true,
+      ebayCategoryPick: {
+        categoryId: pick.categoryId, name: pick.name || '', path: '', source: pick.source, rank: null,
+        productType: item.productType || item.productCategory || '', confirmedBy: '', count: null,
+      },
+    });
+  };
+
   // Lister confirmed an eBay category in EbayCategoryPicker (already checked live
   // and remembered for the product type by /api/ebay-category-picker).
   const confirmEbayCategory = async (item, pick) => {
@@ -4387,6 +4399,7 @@ export default function ProListingBuilder() {
                       item={selected}
                       userName={currentUser?.name || userName || ''}
                       onConfirmed={(pick) => confirmEbayCategory(selected, pick)}
+                      onAutoConfirm={(pick) => autoConfirmEbayCategory(selected, pick)}
                     />
                     {selected.categoryOverrideMessage && (
                       <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">

@@ -9,13 +9,15 @@
 import { useEffect, useRef, useState } from 'react';
 
 const SOURCE_LABEL = {
+  existing: 'Existing listing category (still live on eBay)',
+  'earlier-draft': 'Chosen before the picker existed (still live on eBay)',
   remembered: 'Remembered for this product type',
   table: 'Existing category ID (still live on eBay)',
   picker: 'eBay suggestion',
   search: 'Search result',
 };
 
-export default function EbayCategoryPicker({ item, userName, onConfirmed }) {
+export default function EbayCategoryPicker({ item, userName, onConfirmed, onAutoConfirm }) {
   const productType = item.productType || item.productCategory || item.usertype || '';
   const [data, setData] = useState(item.ebayCategoryPicker || null);
   const [loading, setLoading] = useState(false);
@@ -54,7 +56,25 @@ export default function EbayCategoryPicker({ item, userName, onConfirmed }) {
   };
 
   useEffect(() => {
-    if (!item.ebayCategoryPicker && !item.ebayCategoryConfirmed) load();
+    let cancelled = false;
+    (async () => {
+      // Existing listings and drafts from before the picker (ebayCategoryConfirmed never set):
+      // a category that is still a live leaf is accepted as-is (source 'existing' /
+      // 'earlier-draft'), not remembered for the product type. A dead one shows the picker.
+      if (item.ebayCategoryConfirmed === undefined && item.ebayCategoryId && onAutoConfirm) {
+        try {
+          const r = await fetch(`/api/ebay-category-check?categoryId=${encodeURIComponent(item.ebayCategoryId)}`);
+          const d = await r.json();
+          if (cancelled) return;
+          if (r.ok && d.valid) {
+            await onAutoConfirm({ categoryId: d.categoryId, name: d.name || '', source: item.isEditingExisting ? 'existing' : 'earlier-draft' });
+            return;
+          }
+        } catch { /* fall through to the picker */ }
+      }
+      if (!cancelled && !item.ebayCategoryPicker && !item.ebayCategoryConfirmed) load();
+    })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.id]);
 

@@ -5,7 +5,7 @@
 //   POST { productType, categoryId, path, confirmedBy } -> remember the lister's confirmed choice
 
 import { resolveCategory, getCandidates, confirmChoice, RANKING_RULES } from '../../lib/ebay-category-picker';
-import { searchCategoriesByName } from '../../lib/ebay-categories';
+import { searchCategoriesByName, treeStats } from '../../lib/ebay-categories';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
             catch (e) { nameSearch.error = e.message; return []; }
           },
         });
-        return res.status(200).json({ candidates, nameSearch, rulesVersion: RANKING_RULES.version });
+        return res.status(200).json({ candidates, nameSearch: { ...nameSearch, tree: treeStats.last }, rulesVersion: RANKING_RULES.version });
       }
       if (!productType && !title) return res.status(400).json({ error: 'productType or title required' });
       const result = await resolveCategory({ productType, title, tableId });
