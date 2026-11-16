@@ -3,6 +3,8 @@
 // MUST use form-encoded POST to /editor/items/edit (NOT JSON PUT)
 
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
+import { gateItemSpecifics } from '../../../lib/field-gate';
+import { StandardsUnavailableError } from '../../../lib/iprus-standards';
 const { toSureDoneCondition } = require('../../../lib/condition-map');
 
 export default async function handler(req, res) {
@@ -124,15 +126,40 @@ export default async function handler(req, res) {
     // === MAP EBAY ITEM SPECIFICS (same as create flow) ===
     // Flatten ebayItemSpecificsForSuredone object into individual form fields
     // Format: { ebayitemspecificsvoltage: "230/460V", baserpm: "1760", ... }
+    // Item specifics pass the field gate (lib/field-gate.js) first
+    let fieldGate = null;
     if (updateData.ebayItemSpecificsForSuredone && typeof updateData.ebayItemSpecificsForSuredone === 'object') {
-      const specificsCount = Object.keys(updateData.ebayItemSpecificsForSuredone).length;
-      if (specificsCount > 0) {
-        console.log(`=== EBAY ITEM SPECIFICS: ${specificsCount} fields ===`);
-        for (const [fieldName, value] of Object.entries(updateData.ebayItemSpecificsForSuredone)) {
-          if (value && typeof value === 'string' && value.trim()) {
-            formData.append(fieldName, value.trim());
-            console.log(`  ${fieldName} = ${value}`);
+      const entries = Object.entries(updateData.ebayItemSpecificsForSuredone)
+        .filter(([, value]) => value && typeof value === 'string' && value.trim());
+      if (entries.length > 0) {
+        console.log(`=== EBAY ITEM SPECIFICS: ${entries.length} fields ===`);
+        try {
+          fieldGate = await gateItemSpecifics({
+            entries,
+            ebayCategoryId: updateData.ebaycatid,
+            category: updateData.usertype || '',
+            sku: updateData.guid,
+            coreValues: { usertype: updateData.usertype },
+          });
+        } catch (gateErr) {
+          if (gateErr instanceof StandardsUnavailableError) {
+            console.error('FIELD_GATE: standards unavailable, update stopped:', gateErr.message);
+            return res.status(503).json({ success: false, error: gateErr.message, guid: updateData.guid });
           }
+          throw gateErr;
+        }
+        if (!fieldGate.ok) {
+          console.log(`FIELD_GATE_BLOCKED ${JSON.stringify({ sku: updateData.guid, blocked: fieldGate.blocked })}`);
+          return res.status(422).json({
+            success: false,
+            error: 'Item specifics need attention before this update can be sent to SureDone',
+            guid: updateData.guid,
+            fieldGate,
+          });
+        }
+        for (const [fieldName, value] of fieldGate.fields) {
+          formData.append(fieldName, value);
+          console.log(`  ${fieldName} = ${value}`);
         }
       }
     }
@@ -195,7 +222,8 @@ export default async function handler(req, res) {
         success: true,
         message: 'Item updated successfully',
         guid: updateData.guid,
-        response: data
+        response: data,
+        fieldGate
       });
     } else {
       const errorMsg = itemResult.messages || itemResult.codes ||

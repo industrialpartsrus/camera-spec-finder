@@ -8,6 +8,8 @@ import { doc, updateDoc, collection, query, where, getDocs, serverTimestamp } fr
 import { getSureDoneCredentials } from '../../lib/suredone-config';
 import { resolveSpecFieldName } from '../../lib/field-name-resolver';
 import { SUREDONE_FIELD_NAMES, SUREDONE_EBAY_ONLY_FIELDS } from '../../data/suredone-field-names';
+import { gateItemSpecifics } from '../../lib/field-gate';
+import { StandardsUnavailableError } from '../../lib/iprus-standards';
 const { generateAltText } = require('../../lib/generate-alt-text-templates');
 const { toSureDoneCondition } = require('../../lib/condition-map');
 
@@ -1300,7 +1302,8 @@ export default async function handler(req, res) {
     formData.append('partnumber', mpnFormatted);
 
     // === USERTYPE - AI-generated descriptive product type ===
-    formData.append('usertype', userType);
+    // (when empty, the field gate may fill it from an eBay "Type" value)
+    if (userType) formData.append('usertype', userType);
     console.log('UserType field set:', userType);
 
     // === CONDITION ===
@@ -1503,6 +1506,9 @@ export default async function handler(req, res) {
     // Using SHORT field names (no prefix) to populate RECOMMENDED section
 
     const ebayFieldsSet = new Set(); // Track which eBay fields we've already set
+    // Item specifics are collected here (highest priority first) and pass the
+    // field gate (lib/field-gate.js) before anything is appended to formData.
+    const itemSpecificEntries = [];
 
     // === PASS 2: EBAY ITEM SPECIFICS (HIGHEST PRIORITY) ===
     // These come from auto-fill-ebay-specifics.js with resolved field names
@@ -1515,7 +1521,7 @@ export default async function handler(req, res) {
       console.log(`=== PASS 2 EBAY ITEM SPECIFICS: ${pass2Count} fields ===`);
       for (const [fieldName, value] of Object.entries(ebaySpecifics)) {
         if (value && typeof value === 'string' && value.trim()) {
-          formData.append(fieldName, value.trim());
+          itemSpecificEntries.push([fieldName, value.trim()]);
           ebayFieldsSet.add(fieldName);
           console.log(`  PASS2: ${fieldName} = ${value}`);
         }
@@ -1554,7 +1560,7 @@ export default async function handler(req, res) {
                             SPEC_TO_EBAY_FIELD[keyLower] ||
                             SPEC_TO_EBAY_FIELD[keyClean];
           if (ebayField && !ebayFieldsSet.has(ebayField)) {
-            formData.append(ebayField, value);
+            itemSpecificEntries.push([ebayField, value]);
             ebayFieldsSet.add(ebayField);
             console.log(`  INLINE: ${ebayField} = ${value}`);
           } else if (ebayField) {
@@ -1570,7 +1576,7 @@ export default async function handler(req, res) {
           const known = isMultiChannel || isEbayOnly;
           const fieldToSend = isMultiChannel ? resolved : ('ebayitemspecifics' + resolved);
           if (!ebayFieldsSet.has(resolved) && !ebayFieldsSet.has(fieldToSend)) {
-            formData.append(fieldToSend, value);
+            itemSpecificEntries.push([fieldToSend, value]);
             ebayFieldsSet.add(resolved);
             if (known) {
               console.log(`  CANONICAL: ${fieldToSend} = ${value}`);
@@ -1595,14 +1601,14 @@ export default async function handler(req, res) {
                           product.specifications?.countryoforigin;
 
       if (!ebayFieldsSet.has('countryoforigin')) {
-        formData.append('countryoforigin', countryValue);
+        itemSpecificEntries.push(['countryoforigin', countryValue]);
         console.log(`Country of Origin: ${countryValue}`);
       }
     }
 
     // === BUNDLE FIELDS (for multi-part listings with included components) ===
     if (components.length > 0) {
-      formData.append('ebayitemspecificscustombundle', 'Yes');
+      itemSpecificEntries.push(['ebayitemspecificscustombundle', 'Yes']);
 
       const bundleParts = components.map(c => {
         const parts = [c.brand, c.partNumber, c.description].filter(Boolean);
@@ -1611,10 +1617,40 @@ export default async function handler(req, res) {
       const bundleDescription = bundleParts.join(', ');
       const itemsIncluded = bundleParts.join(', ');
 
-      formData.append('ebayitemspecificsbundledescription', bundleDescription);
-      formData.append('ebayitemspecificsitemsincluded', itemsIncluded);
+      itemSpecificEntries.push(['ebayitemspecificsbundledescription', bundleDescription]);
+      itemSpecificEntries.push(['ebayitemspecificsitemsincluded', itemsIncluded]);
       console.log('Bundle fields set:', { custombundle: 'Yes', bundledescription: bundleDescription, itemsincluded: itemsIncluded });
     }
+
+    // === FIELD GATE: only Consolidation Map names (or eBay-required aspects) reach SureDone ===
+    let fieldGate;
+    try {
+      fieldGate = await gateItemSpecifics({
+        entries: itemSpecificEntries,
+        ebayCategoryId: product.ebayCategoryId,
+        category: [categoryKey, userType].filter(Boolean).join(' > '),
+        sku,
+        coreValues: { usertype: userType },
+      });
+    } catch (gateErr) {
+      if (gateErr instanceof StandardsUnavailableError) {
+        console.error('FIELD_GATE: standards unavailable, push stopped:', gateErr.message);
+        return res.status(503).json({ success: false, error: gateErr.message });
+      }
+      throw gateErr;
+    }
+    if (!fieldGate.ok) {
+      console.log(`FIELD_GATE_BLOCKED ${JSON.stringify({ sku, blocked: fieldGate.blocked })}`);
+      return res.status(422).json({
+        success: false,
+        error: 'Item specifics need attention before this listing can be sent to SureDone',
+        fieldGate,
+      });
+    }
+    for (const [fieldName, value] of fieldGate.fields) {
+      formData.append(fieldName, value);
+    }
+    console.log(`Field gate: ${fieldGate.fields.length} sent, ${fieldGate.warnings.length} left out, ${fieldGate.created.length} created`);
 
     // === RAW SPECS AS CUSTOM FIELDS ===
     if (product.rawSpecifications && Array.isArray(product.rawSpecifications)) {
@@ -1739,7 +1775,8 @@ export default async function handler(req, res) {
         bigcommerceBrandId,
         bigcommerceCategories: bigcommerceCategoriesStr,
         userType,
-        action: attemptEdit ? 'edit' : 'add'
+        action: attemptEdit ? 'edit' : 'add',
+        fieldGate
       };
       if (upcWarning) responseObj.warning = upcWarning;
       res.status(200).json(responseObj);
