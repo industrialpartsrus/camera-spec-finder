@@ -115,3 +115,13 @@ test('choice doc id avoids Firestore reserved ids', () => {
   assert.equal(choiceDocId('__x__'), 'pt-__x__');
   assert.equal(choiceDocId('..'), 'pt-..');
 });
+
+test('search box: exact category-name matches from the tree come before suggestions', async () => {
+  const r = await getCandidates({ productType: '', query: 'load cell' }, {
+    searchCategoriesByName: async () => [{ categoryId: '777', name: 'Load Cells', path: 'Business & Industrial > Test, Measurement & Inspection > Load Cells' }],
+    suggestCategories: async () => [C('181922', 'Switching Mode Power Supplies'), C('261328', 'Trading Card Singles')],
+    checkLeafCategory: live(['181922', '261328']),
+  });
+  assert.equal(r[0].categoryId, '777');
+  assert.equal(r.length, 3);
+});
