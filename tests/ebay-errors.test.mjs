@@ -28,3 +28,31 @@ test('ebay errors: two errors in one string, non-eBay codes ignored', () => {
   assert.deepEqual(errs.map(e => e.code), ['717', '87']);
   assert.match(errs[1].plain, /category/);
 });
+
+test('ebay errors: AI2973 ShortMessage on its own line, entities decoded', () => {
+  const item = {
+    result: 'success',
+    errors: 'ebay Main:82 Error | ErrorCode:21919326\nShortMessage:Part Number has an invalid value of &quot;B&Uuml;RKERT 000014212 DN13 PN25 STAINLESS STEEL 316L&quot;. Enter a valid value and try again...\nLongMessage:Part Number has an invalid value of &quot;B&#220;RKERT 000014212 DN13 PN25 STAINLESS STEEL 316L&quot;. The value can be up to 65 characters.',
+  };
+  const errs = ebayErrorsOnly(item);
+  assert.equal(errs.length, 1);
+  assert.equal(errs[0].code, '21919326');
+  assert.equal(errs[0].short, 'Part Number has an invalid value of "BÜRKERT 000014212 DN13 PN25 STAINLESS STEEL 316L". Enter a valid value and try again...');
+  assert.match(errs[0].long, /^Part Number has an invalid value of "BÜRKERT .*65 characters\.$/);
+  assert.equal(errs[0].plain, errs[0].short);
+});
+
+test('ebay errors: same text with literal quotes (as in the HQ report)', () => {
+  const item = { errors: 'ebay Main:82 Error | ErrorCode:21919326\nShortMessage:Part Number has an invalid value of "BÜRKERT 000014212 DN13 PN25 STAINLESS STEEL 316L". Enter a valid value and try again...\nLongMessage:...' };
+  const [e] = ebayErrorsOnly(item);
+  assert.equal(e.short, 'Part Number has an invalid value of "BÜRKERT 000014212 DN13 PN25 STAINLESS STEEL 316L". Enter a valid value and try again...');
+  assert.equal(e.long, '...');
+});
+
+test('ebay errors: ErrorCode:717 weight string from AI2945 (newline format)', () => {
+  const item = { result: 'success', errors: 'ebay Main:82 Error | ErrorCode:717\nShortMessage:Package weight is not valid or is missing.\nLongMessage:Package weight is not valid or is missing. Please enter a valid package weight.' };
+  const [e] = ebayErrorsOnly(item);
+  assert.equal(e.code, '717');
+  assert.equal(e.short, 'Package weight is not valid or is missing.');
+  assert.equal(e.plain, 'eBay needs a package weight (enter the weight, more than 0).');
+});

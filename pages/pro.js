@@ -792,6 +792,25 @@ function shippingProblems(item) {
   return out;
 }
 
+// MPN and Model hold only the part number: SureDone's field holds 35 characters,
+// and eBay rejects a sentence as a Part Number (AI2973, "BÜRKERT 000014212 DN13 PN25 ...").
+const PART_NUMBER_MAX = 35;
+function partNumberProblems(item) {
+  if (!item) return [];
+  const out = [];
+  const check = (label, v) => {
+    const t = String(v ?? '').trim();
+    if (!t) return;
+    if (t.length > PART_NUMBER_MAX || t.split(/\s+/).length >= 4) {
+      out.push(`${label} should be only the part number (now ${t.length} characters, ${t.split(/\s+/).length} words: "${t.slice(0, 50)}${t.length > 50 ? '…' : ''}")`);
+    }
+  };
+  check('MPN', item.partNumber);
+  if (String(item.model ?? '').trim() && String(item.model).trim() !== String(item.partNumber ?? '').trim()) check('Model', item.model);
+  return out;
+}
+const sendProblems = (item) => [...shippingProblems(item), ...partNumberProblems(item)];
+
 // SureDone/eBay Business Policy Profile IDs
 const EBAY_PROFILES = {
   shipping: {
@@ -3404,7 +3423,7 @@ export default function ProListingBuilder() {
     if (needsEmitterReceiverCheck(item.productCategory)) {
       if (!item.emitterReceiverStatus && !emitterReceiverStatus[itemId]) return alert('Please select the emitter/receiver status for this product.');
     }
-    const shipProblems = shippingProblems(item);
+    const shipProblems = sendProblems(item);
     if (shipProblems.length) return alert(`Cannot send yet:\n\n• ${shipProblems.join('\n• ')}`);
 
     setIsSending(true);
@@ -5642,8 +5661,8 @@ export default function ProListingBuilder() {
                     const categoryBlocking = !hasCategory || !selected.ebayCategoryConfirmed;
                     // eBay item specifics (Pass 2) must be finished before sending
                     const pass2Blocking = ['pending', 'filling'].includes(selected.pass2Status);
-                    // eBay rejects a listing with no weight (and no box size on calculated shipping)
-                    const shipBlocking = shippingProblems(selected);
+                    // eBay rejects a listing with no weight (no box size on calculated shipping, or a non-part-number MPN)
+                    const shipBlocking = sendProblems(selected);
 
                     const isBlocked = isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking || erBlocking || photoBlocking || categoryBlocking || pass2Blocking || shipBlocking.length > 0;
 
