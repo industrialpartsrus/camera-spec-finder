@@ -1647,7 +1647,7 @@ export default async function handler(req, res) {
         ebayCategoryId: product.ebayCategoryId,
         category: [categoryKey, userType].filter(Boolean).join(' > '),
         sku,
-        coreValues: { usertype: userType },
+        coreValues: { usertype: userType, model: modelFormatted, brand: brandFormatted, mpn: mpnFormatted },
       });
     } catch (gateErr) {
       if (gateErr instanceof StandardsUnavailableError) {

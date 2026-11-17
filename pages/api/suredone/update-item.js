@@ -156,7 +156,7 @@ export default async function handler(req, res) {
             ebayCategoryId: updateData.ebaycatid,
             category: updateData.usertype || '',
             sku: updateData.guid,
-            coreValues: { usertype: updateData.usertype },
+            coreValues: { usertype: updateData.usertype, model: updateData.model, brand: updateData.brand, mpn: updateData.mpn },
           });
         } catch (gateErr) {
           if (gateErr instanceof StandardsUnavailableError) {

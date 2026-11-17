@@ -12,6 +12,7 @@
 // ============================================================
 
 import { getSureDoneCredentials } from '../../../lib/suredone-config';
+import { parseEbayMessages } from '../../../lib/ebay-errors';
 
 const BASE_URL = 'https://api.suredone.com/v1/editor/items';
 
@@ -26,6 +27,15 @@ function isSuccess(data) {
 
 // A real eBay item ID is numeric and at least 6 digits ("0" means not on eBay)
 const isRealEbayId = (id) => /^\d{6,}$/.test(String(id ?? '').trim());
+
+// eBay rejects a listing with no package weight (ErrorCode 717, AI2945 2026-11-17).
+// Checked on SureDone's own item before any /relist. null = item not found (don't block).
+function missingWeight(item) {
+  if (!item) return false;
+  const w = parseFloat(String(item.weight || item.boxweight || '').replace(/[^0-9.]/g, ''));
+  return !(w > 0);
+}
+const NO_WEIGHT = 'eBay needs a package weight: enter the weight (more than 0) in Pro Builder, update the item, then publish again.';
 
 // Helper: extract error details from SureDone response
 function extractError(data) {
@@ -151,6 +161,7 @@ export default async function handler(req, res) {
   try {
     let result;
     let retried = false;
+    let relistSent = false;   // a /relist went out: the UI polls for a real eBay ID
 
     if (action === 'relist') {
       // Relist: always use POST /relist (NOT /start — that rejects existing SKUs)
@@ -162,14 +173,21 @@ export default async function handler(req, res) {
 
       let itemTitle = '';
       let hasEbayId = false;
+      let itemRec = null;
       for (const key of Object.keys(checkData)) {
         if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
+          itemRec = checkData[key];
           itemTitle = checkData[key].title || '';
           const ebayId = checkData[key].ebayid || '';
           hasEbayId = ebayId.length >= 6 && /^\d+$/.test(ebayId);
           console.log(`[listing-action] ${sku} ebayid=${ebayId || 'none'}, hasEbayId=${hasEbayId}, title="${itemTitle.substring(0, 60)}"`);
           break;
         }
+      }
+
+      if (missingWeight(itemRec)) {
+        console.log(`[listing-action] relist stopped for ${sku}: no weight`);
+        return res.status(200).json({ success: false, action, channel, sku, preCheck: true, instructions: [NO_WEIGHT] });
       }
 
       // Step 1: Clear blockers AND set ebaytitle (REQUIRED for /relist — error 62 if blank)
@@ -197,6 +215,7 @@ export default async function handler(req, res) {
 
       console.log(`[listing-action] POST /relist for ${sku}`);
       result = await suredonePost(formHeaders, 'relist', form);
+      relistSent = true;
 
       // Auto-fix payment profile on failure
       if (!isSuccess(result)) {
@@ -233,11 +252,13 @@ export default async function handler(req, res) {
       const checkUrl = `https://api.suredone.com/v1/search/items/${encodeURIComponent('guid:=' + sku)}`;
       let itemTitle = '';
       let existingEbayId = '';
+      let itemRec = null;
       try {
         const checkRes = await fetch(checkUrl, { headers: jsonHeaders });
         const checkData = await checkRes.json();
         for (const key of Object.keys(checkData)) {
           if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
+            itemRec = checkData[key];
             itemTitle = checkData[key].title || '';
             existingEbayId = String(checkData[key].ebayid || '');
             break;
@@ -252,6 +273,11 @@ export default async function handler(req, res) {
           success: true, action, channel, sku, alreadyListed: true,
           ebayItemId: existingEbayId, ebayUrl: `https://www.ebay.com/itm/${existingEbayId}`,
         });
+      }
+
+      if (missingWeight(itemRec)) {
+        console.log(`[listing-action] start stopped for ${sku}: no weight`);
+        return res.status(200).json({ success: false, action, channel, sku, preCheck: true, instructions: [NO_WEIGHT] });
       }
 
       const clearForm = makeForm(sku);
@@ -277,6 +303,7 @@ export default async function handler(req, res) {
       form.append('googleskip', '1');
       console.log(`[listing-action] POST /relist (start) for ${sku}`);
       result = await suredonePost(formHeaders, 'relist', form);
+      relistSent = true;
 
       // Auto-fix payment profile on failure
       if (!isSuccess(result)) {
@@ -316,8 +343,10 @@ export default async function handler(req, res) {
 
       let hasEbayId = false;
       let itemTitle = '';
+      let itemRec = null;
       for (const key of Object.keys(checkData)) {
         if (!isNaN(key) && checkData[key]?.guid?.toUpperCase() === sku.toUpperCase()) {
+          itemRec = checkData[key];
           const ebayId = checkData[key].ebayid || '';
           hasEbayId = ebayId.length >= 6 && /^\d+$/.test(ebayId);
           itemTitle = checkData[key].title || '';
@@ -338,6 +367,10 @@ export default async function handler(req, res) {
       } else {
         // No eBay ID — fall through to relist (NOT /start — that rejects existing SKUs)
         console.log(`[listing-action] No eBay ID for ${sku}, falling through to relist`);
+        if (missingWeight(itemRec)) {
+          console.log(`[listing-action] relist (from edit) stopped for ${sku}: no weight`);
+          return res.status(200).json({ success: false, action, channel, sku, preCheck: true, instructions: [NO_WEIGHT] });
+        }
 
         // Set ebaytitle + clear blockers
         const clearForm = makeForm(sku);
@@ -361,6 +394,7 @@ export default async function handler(req, res) {
         form.append('googleskip', '1');
         console.log(`[listing-action] POST /relist for ${sku}`);
         result = await suredonePost(formHeaders, 'relist', form);
+        relistSent = true;
       }
 
       // Auto-fix payment profile on failure (applies to both paths)
@@ -409,11 +443,29 @@ export default async function handler(req, res) {
     console.log(`[listing-action] ${action} result for ${sku}:`,
       JSON.stringify(result).substring(0, 500));
 
-    // Determine success and build response
-    const success = isSuccess(result);
+    // Determine success and build response. eBay can reject the item while
+    // SureDone says "success" (AI2945: ErrorCode 717, no weight): an eBay error
+    // in the item's errors/apicodes means it did NOT list. Warnings don't count.
+    const itemResultAll = result['1'] || result[1] || {};
+    const ebayMessages = parseEbayMessages(itemResultAll);
+    const ebayErrors = ebayMessages.filter(m => m.severity === 'error');
+    const ebayWarnings = ebayMessages.filter(m => m.severity === 'warning').map(m => m.plain);
+    const success = isSuccess(result) && ebayErrors.length === 0;
+
+    if (ebayErrors.length) {
+      console.error(`EBAY_REJECTED ${JSON.stringify({ sku, action, errors: ebayErrors.map(e => ({ code: e.code, short: e.short })) })}`);
+      return res.status(200).json({
+        success: false, action, channel, sku, retried, relistSent,
+        ebayRejected: true,
+        ebayErrors: ebayErrors.map(({ code, short, long, plain }) => ({ code, short, long, plain })),
+        ebayWarnings,
+        instructions: ebayErrors.map(e => `eBay: ${e.plain}`),
+        result,
+      });
+    }
 
     if (success) {
-      const itemResult = result['1'] || result[1] || {};
+      const itemResult = itemResultAll;
       const rawEbayId = itemResult.ebayid || itemResult.ebay_id || null;
       const ebayItemId = isRealEbayId(rawEbayId) ? String(rawEbayId) : null;
       const ebayUrl = ebayItemId ? `https://www.ebay.com/itm/${ebayItemId}` : null;
@@ -426,13 +478,15 @@ export default async function handler(req, res) {
         ebayUrl,
         ebayItemId,
         retried,
+        relistSent,
+        ebayWarnings,
       };
 
       if (retried) {
         response.note = 'Payment profile was cleared automatically to resolve an error.';
       }
 
-      console.log(`${action} succeeded for ${sku} (SureDone result: ${(result['1'] || result[1])?.result || result.result}, eBay ID: ${ebayItemId || 'none yet'})`);
+      console.log(`${action} accepted by SureDone for ${sku}${relistSent && !ebayItemId ? ' (not on eBay until a real eBay ID appears)' : ''} (SureDone result: ${(result['1'] || result[1])?.result || result.result}, eBay ID: ${ebayItemId || 'none yet'})`);
       return res.status(200).json(response);
     } else {
       const errors = extractError(result);

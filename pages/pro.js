@@ -778,6 +778,20 @@ const SHIPPING_PROFILES = [
   { id: '161228820015', name: 'Local Pickup Only' }
 ];
 
+// eBay rejects a listing with no package weight (ErrorCode 717, AI2945 2026-11-17);
+// a calculated shipping profile also needs the box size. Returns what is missing.
+const isCalculatedShipping = (id) => /^calculated/i.test(SHIPPING_PROFILES.find(p => p.id === String(id || '69077991015'))?.name || '');
+const positiveNumber = (v) => parseFloat(String(v ?? '').replace(/[^0-9.]/g, '')) > 0;
+function shippingProblems(item) {
+  if (!item) return [];
+  const out = [];
+  if (!positiveNumber(item.weight)) out.push('Weight is empty or 0: eBay needs a package weight');
+  if (isCalculatedShipping(item.ebayShippingProfileId) && !(positiveNumber(item.boxLength) && positiveNumber(item.boxWidth) && positiveNumber(item.boxHeight))) {
+    out.push('Box dimensions (length, width, height) are needed for a calculated shipping profile');
+  }
+  return out;
+}
+
 // SureDone/eBay Business Policy Profile IDs
 const EBAY_PROFILES = {
   shipping: {
@@ -1715,6 +1729,9 @@ export default function ProListingBuilder() {
   const [ebayUrl, setEbayUrlRaw] = useState(null);
   // eBay publish progress: { sku, state: 'publishing' | 'listed' | 'not-listed', ebayId, messages }
   const [publishState, setPublishState] = useState(null);
+  // Which item is open now: a publish that finishes after the lister moved on
+  // must not touch the new item's panel (AI3001 status shown on AI2945, 2026-11-17)
+  const selectedItemRef = useRef(null);
   // Only a real eBay item link counts ("…/itm/0" or ebayid 0 = not on eBay yet)
   const setEbayUrl = (url) => setEbayUrlRaw(url && /\/itm\/\d{6,}/.test(String(url)) ? url : null);
   const [bigcommerceUrl, setBigcommerceUrl] = useState(null);
@@ -1723,6 +1740,8 @@ export default function ProListingBuilder() {
 
   // Fetch listing URLs whenever a different item is selected
   useEffect(() => {
+    selectedItemRef.current = selectedItem;
+    setPublishState(prev => (prev && prev.itemId === selectedItem ? prev : null));
     if (!selectedItem) {
       setEbayUrl(null);
       setBigcommerceUrl(null);
@@ -3385,6 +3404,8 @@ export default function ProListingBuilder() {
     if (needsEmitterReceiverCheck(item.productCategory)) {
       if (!item.emitterReceiverStatus && !emitterReceiverStatus[itemId]) return alert('Please select the emitter/receiver status for this product.');
     }
+    const shipProblems = shippingProblems(item);
+    if (shipProblems.length) return alert(`Cannot send yet:\n\n• ${shipProblems.join('\n• ')}`);
 
     setIsSending(true);
     try {
@@ -3562,7 +3583,10 @@ export default function ProListingBuilder() {
               body: JSON.stringify({ sku: item.originalSku, action: 'edit', channel: 'all' }),
             });
             const publishData = await publishRes.json();
-            if (publishData.success) {
+            if (publishData.relistSent || publishData.ebayRejected || publishData.preCheck) {
+              // Not on eBay yet (relist), or eBay said no: decided by eBay's answer / a real eBay ID
+              reportPublish(item.originalSku, await waitForEbayListing(item.originalSku, itemId, publishData));
+            } else if (publishData.success) {
               alert(`✅ Changes pushed to channels!\n\nSKU: ${item.originalSku}${publishData.ebayItemId ? `\neBay: ${publishData.ebayItemId}` : ''}`);
             } else {
               const errMsg = publishData.instructions?.join('\n\n') || publishData.errors?.[0]?.message || 'Unknown error';
@@ -3669,7 +3693,7 @@ export default function ProListingBuilder() {
             const publishData = await publishRes.json();
             console.log('Publish request result:', publishData);
             // Success = a real eBay item ID appears (not the SureDone action reply)
-            reportPublish(createdSku, await waitForEbayListing(createdSku));
+            reportPublish(createdSku, await waitForEbayListing(createdSku, itemId, publishData));
           } catch (pubErr) {
             console.error('Auto-publish error:', pubErr);
             alert('⚠️ Could not publish listing. You can retry from the listing actions panel.');
@@ -3765,18 +3789,36 @@ export default function ProListingBuilder() {
     }
   };
 
-  // Publishing to eBay is decided by a real eBay item ID appearing on the SureDone
-  // item, not by the SureDone action's reply. Polls get-item for up to ~2 minutes,
-  // then shows eBay's own messages from SureDone's logs (/api/suredone/item-logs).
-  const waitForEbayListing = async (sku) => {
+  // Publishing to eBay is decided by eBay's answer and a real eBay item ID on the
+  // SureDone item, not by SureDone's "success" (AI2945: "success" + eBay ErrorCode 717).
+  //   publishReply: listing-action's JSON. eBay errors in it = not listed, no waiting.
+  // Polls get-item for up to ~2 minutes; stops early when SureDone logs an eBay error.
+  // Only touches the panel while the same item is still open.
+  const waitForEbayListing = async (sku, itemId = selectedItemRef.current, publishReply = null) => {
+    const isCurrent = () => selectedItemRef.current === itemId;
+    const show = (st) => { if (isCurrent()) setPublishState({ itemId, sku, ...st }); };
+    const warnings = publishReply?.ebayWarnings || [];
+
+    if (publishReply?.ebayErrors?.length) {
+      const messages = publishReply.ebayErrors.map(e =>
+        `${e.plain}${e.short && e.short !== e.plain ? ` (eBay${e.code ? ` ${e.code}` : ''}: ${e.short}${e.long && e.long !== e.short ? ` ${e.long}` : ''})` : ''}`);
+      show({ state: 'rejected', messages });
+      return { listed: false, rejected: true, messages };
+    }
+    if (publishReply && publishReply.success === false) {
+      const messages = publishReply.instructions?.length ? publishReply.instructions : [publishReply.error || 'SureDone did not accept the publish request'];
+      show({ state: 'rejected', messages });
+      return { listed: false, rejected: true, messages };
+    }
+
     const startedUtc = new Date(Date.now() - 60000).toISOString().slice(0, 19).replace('T', ' ');
-    setPublishState({ sku, state: 'publishing', messages: [] });
-    const readMessages = async () => {
+    show({ state: 'publishing', messages: [] });
+    const readLogs = async () => {
       try {
-        const l = await (await fetch(`/api/suredone/item-logs?sku=${encodeURIComponent(sku)}&since=${encodeURIComponent(startedUtc)}`)).json();
-        return (l.entries || []).slice(0, 8).map(e => `${e.context} ${e.action}${e.operation ? ` (${e.operation})` : ''}: ${e.result}${e.message ? ` — ${e.message}` : ''}`);
+        return (await (await fetch(`/api/suredone/item-logs?sku=${encodeURIComponent(sku)}&since=${encodeURIComponent(startedUtc)}`)).json()).entries || [];
       } catch { return []; }
     };
+    const logLines = (entries) => entries.slice(0, 8).map(e => `${e.context} ${e.action}${e.operation ? ` (${e.operation})` : ''}: ${e.result}${e.message ? ` — ${e.message}` : ''}`);
     const deadline = Date.now() + 120000;
     while (Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 8000));
@@ -3784,21 +3826,31 @@ export default function ProListingBuilder() {
         const d = await (await fetch(`/api/suredone/get-item?sku=${encodeURIComponent(sku)}`)).json();
         const id = String(d.item?.ebayid || d.item?.ebayitemid || '');
         if (/^\d{6,}$/.test(id)) {
-          setEbayUrl(`https://www.ebay.com/itm/${id}`);
-          const messages = await readMessages();
-          setPublishState({ sku, state: 'listed', ebayId: id, messages });
+          if (isCurrent()) setEbayUrl(`https://www.ebay.com/itm/${id}`);
+          const messages = [...warnings, ...logLines(await readLogs())];
+          show({ state: 'listed', ebayId: id, messages });
           return { listed: true, ebayId: id, messages };
+        }
+        // eBay already said no (and nothing succeeded): stop waiting
+        const entries = await readLogs();
+        const ebayEntries = entries.filter(e => e.context === 'ebay');
+        if (ebayEntries.some(e => /error|fail/i.test(e.result)) && !ebayEntries.some(e => /successfully added/i.test(e.message))) {
+          const messages = logLines(entries);
+          show({ state: 'rejected', messages });
+          return { listed: false, rejected: true, messages };
         }
       } catch { /* keep polling */ }
     }
-    const messages = await readMessages();
-    setPublishState({ sku, state: 'not-listed', messages });
+    const messages = logLines(await readLogs());
+    show({ state: 'not-listed', messages });
     return { listed: false, messages };
   };
 
   const reportPublish = (sku, r) => {
     if (r.listed) {
       alert(`✅ Listed on eBay\n\nSKU: ${sku}\neBay: ${r.ebayId}\nhttps://www.ebay.com/itm/${r.ebayId}`);
+    } else if (r.rejected) {
+      alert(`❌ eBay did not take ${sku}.\n\n• ${r.messages.join('\n• ')}\n\nFix this, update the item, then publish again (Start in the listing actions panel).`);
     } else {
       alert(`⚠️ ${sku} is not on eBay yet (no eBay item ID after 2 minutes).\n\n` +
         (r.messages.length ? `SureDone / eBay said:\n• ${r.messages.join('\n• ')}` : 'SureDone logged no eBay messages for it.') +
@@ -3845,14 +3897,15 @@ export default function ProListingBuilder() {
       });
       const data = await res.json();
 
-      // Start / relist: success = a real eBay item ID appears (polled), not the reply
-      if ((action === 'start' || action === 'relist') && res.ok) {
+      // Start / relist: success = a real eBay item ID appears (polled), not the reply.
+      // Revise of an item with no eBay ID also relists; an eBay rejection is shown in plain words.
+      if (res.ok && ((action === 'start' || action === 'relist') || (['revise', 'edit'].includes(action) && (data.relistSent || data.ebayRejected)))) {
         if (data.alreadyListed) {
           alert(`${currentSku} is already on eBay (${data.ebayItemId}).`);
           if (data.ebayUrl) setEbayUrl(data.ebayUrl);
         } else {
           console.log(`${action} request result:`, data);
-          reportPublish(currentSku, await waitForEbayListing(currentSku));
+          reportPublish(currentSku, await waitForEbayListing(currentSku, selected?.id, data));
         }
         fetchListingUrls(currentSku);
         setActionLoading(null);
@@ -5589,8 +5642,10 @@ export default function ProListingBuilder() {
                     const categoryBlocking = !hasCategory || !selected.ebayCategoryConfirmed;
                     // eBay item specifics (Pass 2) must be finished before sending
                     const pass2Blocking = ['pending', 'filling'].includes(selected.pass2Status);
+                    // eBay rejects a listing with no weight (and no box size on calculated shipping)
+                    const shipBlocking = shippingProblems(selected);
 
-                    const isBlocked = isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking || erBlocking || photoBlocking || categoryBlocking || pass2Blocking;
+                    const isBlocked = isSending || !selected.title || !selected.price || !selected.condition || !selected.shelf || coilBlocking || erBlocking || photoBlocking || categoryBlocking || pass2Blocking || shipBlocking.length > 0;
 
                     return (
                       <>
@@ -5652,6 +5707,9 @@ export default function ProListingBuilder() {
                             {!selected.shelf && (
                               <p className="text-red-600 font-semibold">❌ Shelf location required</p>
                             )}
+                            {shipBlocking.map(m => (
+                              <p key={m} className="text-red-600 font-semibold">❌ {m}</p>
+                            ))}
                             {coilBlocking && (
                               <p className="text-red-600 font-semibold">⚠️ Coil voltage verification required</p>
                             )}
@@ -5774,15 +5832,17 @@ export default function ProListingBuilder() {
                       </div>
 
                       {/* eBay publish progress (success = real eBay item ID) */}
-                      {publishState && (
+                      {publishState && publishState.itemId === selectedItem && (
                         <div className={`mb-2 p-2 rounded border text-xs ${
                           publishState.state === 'publishing' ? 'bg-blue-50 border-blue-200 text-blue-800'
                           : publishState.state === 'listed' ? 'bg-green-50 border-green-200 text-green-800'
+                          : publishState.state === 'rejected' ? 'bg-red-50 border-red-300 text-red-900'
                           : 'bg-amber-50 border-amber-300 text-amber-900'}`}>
                           <div className="font-semibold">
                             {publishState.state === 'publishing' && <>⏳ Publishing {publishState.sku} to eBay… (waiting for an eBay item ID, up to 2 min)</>}
                             {publishState.state === 'listed' && <>✅ {publishState.sku} is on eBay: {publishState.ebayId}</>}
                             {publishState.state === 'not-listed' && <>⚠️ {publishState.sku} is not on eBay yet</>}
+                            {publishState.state === 'rejected' && <>❌ eBay did not take {publishState.sku}</>}
                           </div>
                           {publishState.messages?.length > 0 && (
                             <ul className="mt-1 list-disc ml-4 space-y-0.5">

@@ -157,3 +157,13 @@ test('gate: bundle fields pass through unchanged', { skip }, async () => {
   assert.deepEqual(r.fields, [['ebayitemspecificscustombundle', 'Yes'], ['ebayitemspecificsbundledescription', 'ABB X1, ABB X2']]);
   assert.equal(r.warnings.length, 0);
 });
+
+test('gate: eBay "Model" goes to the core model field, never "not on the map"', { skip }, async () => {
+  const r = await run([['ebayitemspecificsmodel', 'XYZ-100']]);
+  assert.equal(sent(r).model, 'XYZ-100');
+  assert.equal(r.warnings.length, 0);
+  // The route's model wins and nothing is sent twice or warned
+  const r2 = await run([['ebayitemspecificsModel', 'other']], { coreValues: { model: 'XYZ-100' } });
+  assert.equal(r2.fields.length, 0);
+  assert.equal(r2.warnings.length, 0);
+});
